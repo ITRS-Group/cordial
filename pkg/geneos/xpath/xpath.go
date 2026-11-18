@@ -41,10 +41,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
+	"maps"
 	"path"
-	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -70,6 +70,10 @@ type XPath struct {
 	Headline *Headline `json:"headline,omitempty"`
 	Row      *Row      `json:"row,omitempty"`
 	Column   *Column   `json:"column,omitempty"`
+
+	// headlines is set by Parse for a path that ends at ".../headlines",
+	// so that the suffix is kept when the path is formatted again
+	headlines bool
 }
 
 // Elements TODO: Describe its purpose and intended use.
@@ -152,8 +156,63 @@ func NewHeadlinePath(name string) (x *XPath) {
 	return
 }
 
+// Clone returns a deep copy of x, sharing no elements, attribute maps
+// or sampler types with the original. A nil XPath returns nil.
+func (x *XPath) Clone() *XPath {
+	if x == nil {
+		return nil
+	}
+	nx := *x
+	if x.Gateway != nil {
+		v := *x.Gateway
+		nx.Gateway = &v
+	}
+	if x.Probe != nil {
+		v := *x.Probe
+		nx.Probe = &v
+	}
+	if x.Entity != nil {
+		v := *x.Entity
+		v.Attributes = maps.Clone(x.Entity.Attributes)
+		nx.Entity = &v
+	}
+	if x.Sampler != nil {
+		v := *x.Sampler
+		if x.Sampler.Type != nil {
+			t := *x.Sampler.Type
+			v.Type = &t
+		}
+		nx.Sampler = &v
+	}
+	if x.Dataview != nil {
+		v := *x.Dataview
+		nx.Dataview = &v
+	}
+	if x.Headline != nil {
+		v := *x.Headline
+		nx.Headline = &v
+	}
+	if x.Row != nil {
+		v := *x.Row
+		nx.Row = &v
+	}
+	if x.Column != nil {
+		v := *x.Column
+		nx.Column = &v
+	}
+	return &nx
+}
+
+// cloneAttributes returns a copy of attrs, never nil
+func cloneAttributes(attrs map[string]string) map[string]string {
+	if attrs == nil {
+		return make(map[string]string)
+	}
+	return maps.Clone(attrs)
+}
+
 // ResolveTo will, given an element type, return a new XPath to that
-// element, removing lower level elements or adding empty elements to
+// element, which shares nothing with x or the element passed, removing lower level elements or adding empty elements to
 // the level required. If the XPath does not contain an element of the
 // type given then use the argument (which can include populated
 // fields), but if empty then any existing element will be left as-is
@@ -168,27 +227,27 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		return nil
 	}
 
-	// copy the xpath
+	// work on a deep copy so that the returned XPath never shares
+	// elements with the receiver or the element argument
+	c := x.Clone()
+	if c == nil {
+		c = &XPath{}
+	}
 	var nx XPath
-
-	// skip through any pointers
-	// for reflect.ValueOf(element).Kind() == reflect.Pointer {
-	// 	element = reflect.Indirect(reflect.ValueOf(element)).Interface()
-	// }
 
 	// set the element, remove others
 	switch e := any(*element).(type) {
 	case Gateway:
 		nx = XPath{
-			Gateway: x.Gateway,
+			Gateway: c.Gateway,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &e
 		}
 	case Probe:
 		nx = XPath{
-			Gateway: x.Gateway,
-			Probe:   x.Probe,
+			Gateway: c.Gateway,
+			Probe:   c.Probe,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -198,9 +257,9 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		}
 	case Entity:
 		nx = XPath{
-			Gateway: x.Gateway,
-			Probe:   x.Probe,
-			Entity:  x.Entity,
+			Gateway: c.Gateway,
+			Probe:   c.Probe,
+			Entity:  c.Entity,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -209,17 +268,15 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 			nx.Probe = &Probe{}
 		}
 		if nx.Entity == nil {
-			if e.Attributes == nil {
-				e.Attributes = make(map[string]string)
-			}
+			e.Attributes = cloneAttributes(e.Attributes)
 			nx.Entity = &e
 		}
 	case Sampler:
 		nx = XPath{
-			Gateway: x.Gateway,
-			Probe:   x.Probe,
-			Entity:  x.Entity,
-			Sampler: x.Sampler,
+			Gateway: c.Gateway,
+			Probe:   c.Probe,
+			Entity:  c.Entity,
+			Sampler: c.Sampler,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -233,15 +290,19 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 			}
 		}
 		if nx.Sampler == nil {
+			if e.Type != nil {
+				t := *e.Type
+				e.Type = &t
+			}
 			nx.Sampler = &e
 		}
 	case Dataview:
 		nx = XPath{
-			Gateway:  x.Gateway,
-			Probe:    x.Probe,
-			Entity:   x.Entity,
-			Sampler:  x.Sampler,
-			Dataview: x.Dataview,
+			Gateway:  c.Gateway,
+			Probe:    c.Probe,
+			Entity:   c.Entity,
+			Sampler:  c.Sampler,
+			Dataview: c.Dataview,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -262,13 +323,13 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		}
 	case Headline:
 		nx = XPath{
-			Gateway:  x.Gateway,
-			Probe:    x.Probe,
-			Entity:   x.Entity,
-			Sampler:  x.Sampler,
-			Dataview: x.Dataview,
+			Gateway:  c.Gateway,
+			Probe:    c.Probe,
+			Entity:   c.Entity,
+			Sampler:  c.Sampler,
+			Dataview: c.Dataview,
 			Rows:     false,
-			Headline: x.Headline,
+			Headline: c.Headline,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -292,13 +353,13 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		}
 	case Row:
 		nx = XPath{
-			Gateway:  x.Gateway,
-			Probe:    x.Probe,
-			Entity:   x.Entity,
-			Sampler:  x.Sampler,
-			Dataview: x.Dataview,
+			Gateway:  c.Gateway,
+			Probe:    c.Probe,
+			Entity:   c.Entity,
+			Sampler:  c.Sampler,
+			Dataview: c.Dataview,
 			Rows:     true,
-			Row:      x.Row,
+			Row:      c.Row,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -322,14 +383,14 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		}
 	case Column:
 		nx = XPath{
-			Gateway:  x.Gateway,
-			Probe:    x.Probe,
-			Entity:   x.Entity,
-			Sampler:  x.Sampler,
-			Dataview: x.Dataview,
+			Gateway:  c.Gateway,
+			Probe:    c.Probe,
+			Entity:   c.Entity,
+			Sampler:  c.Sampler,
+			Dataview: c.Dataview,
 			Rows:     true,
-			Row:      x.Row,
-			Column:   x.Column,
+			Row:      c.Row,
+			Column:   c.Column,
 		}
 		if nx.Gateway == nil {
 			nx.Gateway = &Gateway{}
@@ -406,86 +467,74 @@ func (x *XPath) IsGateway() bool {
 	return x.Gateway != nil && x.Probe == nil
 }
 
-// return a string representation of an XPath
-func (x *XPath) String() (p string) {
-	if x.Gateway == nil {
-		return
+// writeComponent appends a path component with an optional name
+// predicate
+func writeComponent(b *strings.Builder, component, attr, value string) {
+	b.WriteString(component)
+	if value != "" {
+		fmt.Fprintf(b, "[(@%s=%q)]", attr, value)
 	}
-	p += "/geneos/gateway"
-	if x.Gateway.Name != "" {
-		p += fmt.Sprintf("[(@name=%q)]", x.Gateway.Name)
+}
+
+// String returns the XPath formatted as a Geneos Gateway XPath string,
+// down to the level that x terminates at. Names are quoted so that the
+// result can be passed to [Parse] to get an equivalent XPath, whatever
+// characters, including '/' and '"', the names contain.
+func (x *XPath) String() string {
+	if x == nil || x.Gateway == nil {
+		return ""
 	}
-	p += "/directory"
+	var p strings.Builder
+	writeComponent(&p, "/geneos/gateway", "name", x.Gateway.Name)
+	p.WriteString("/directory")
 
 	if x.Probe == nil {
-		return
+		return p.String()
 	}
-	p += "/probe"
-	if x.Probe.Name != "" {
-		p += fmt.Sprintf("[(@name=%q)]", x.Probe.Name)
-	}
+	writeComponent(&p, "/probe", "name", x.Probe.Name)
 
 	if x.Entity == nil {
-		return
+		return p.String()
 	}
-	p += "/managedEntity"
-	if x.Entity.Name != "" {
-		p += fmt.Sprintf("[(@name=%q)]", x.Entity.Name)
-	}
-	attributeNames := make([]string, 0, len(x.Entity.Attributes))
-	for name := range x.Entity.Attributes {
-		attributeNames = append(attributeNames, name)
-	}
-	slices.Sort(attributeNames)
-	for _, name := range attributeNames {
-		p += fmt.Sprintf("[(attr(%q)=%q)]", name, x.Entity.Attributes[name])
+	writeComponent(&p, "/managedEntity", "name", x.Entity.Name)
+	for _, name := range slices.Sorted(maps.Keys(x.Entity.Attributes)) {
+		fmt.Fprintf(&p, "[(attr(%q)=%q)]", name, x.Entity.Attributes[name])
 	}
 
 	if x.Sampler == nil {
-		return
+		return p.String()
 	}
-	p += "/sampler"
-	if x.Sampler.Name != "" {
-		p += fmt.Sprintf("[(@name=%q)]", x.Sampler.Name)
-	}
+	writeComponent(&p, "/sampler", "name", x.Sampler.Name)
 	if x.Sampler.Type != nil {
-		p += fmt.Sprintf("[(@type=%q)]", *x.Sampler.Type)
+		fmt.Fprintf(&p, "[(@type=%q)]", *x.Sampler.Type)
 	}
 
 	if x.Dataview == nil {
-		return
+		return p.String()
 	}
-	p += "/dataview"
-	if x.Dataview.Name != "" {
-		p += fmt.Sprintf("[(@name=%q)]", x.Dataview.Name)
-	}
+	writeComponent(&p, "/dataview", "name", x.Dataview.Name)
 
 	if x.Rows {
-		p += "/rows"
+		p.WriteString("/rows")
 		if x.Row == nil {
-			return
+			return p.String()
 		}
-		p += "/row"
-		if x.Row.Name != "" {
-			p += fmt.Sprintf("[(@name=%q)]", x.Row.Name)
-		}
+		writeComponent(&p, "/row", "name", x.Row.Name)
 		if x.Column == nil {
-			return
+			return p.String()
 		}
-		p += "/cell"
-		if x.Column.Name != "" {
-			p += fmt.Sprintf("[(@column=%q)]", x.Column.Name)
-		}
+		writeComponent(&p, "/cell", "column", x.Column.Name)
 	} else {
 		if x.Headline == nil {
-			return
+			if x.headlines {
+				p.WriteString("/headlines")
+			}
+			return p.String()
 		}
-		p += "/headlines"
-		if x.Headline.Name != "" {
-			p += fmt.Sprintf("/cell[(@name=%q)]", x.Headline.Name)
-		}
+		p.WriteString("/headlines")
+		writeComponent(&p, "/cell", "name", x.Headline.Name)
 	}
-	return
+	return p.String()
 }
 
 // Parse takes an absolute Geneos XPath and returns an XPath structure.
@@ -509,7 +558,7 @@ func (x *XPath) String() (p string) {
 func Parse(s string) (xpath *XPath, err error) {
 	xpath = &XPath{}
 
-	parts := splitWithEscaping(s, '/', '\\')
+	parts := splitPath(s)
 
 	// if the path is relative, handle it differently
 	if !strings.HasPrefix(s, "/") {
@@ -580,10 +629,11 @@ func Parse(s string) (xpath *XPath, err error) {
 		p--
 		fallthrough
 	case 9:
+		// a path that ends at rows or headlines is kept as such
 		if strings.HasPrefix(parts[p-1], "rows") {
-			// x.Dataview.Column = column
+			xpath.Rows = true
 		} else if strings.HasPrefix(parts[p-1], "headlines") {
-			//
+			xpath.headlines = xpath.Headline == nil
 		} else {
 			err = ErrInvalidPath
 			return
@@ -679,33 +729,38 @@ func Parse(s string) (xpath *XPath, err error) {
 	}
 }
 
+// matchName reports whether name matches the glob pattern. Unlike
+// [path.Match], a '*' or '?' also matches '/', as names such as the
+// rows of a DISK dataview ("/dev/sda1") commonly contain it. A pattern
+// that is not valid never matches.
+func matchName(pattern, name string) bool {
+	const sub = "\x00"
+	match, err := path.Match(strings.ReplaceAll(pattern, "/", sub), strings.ReplaceAll(name, "/", sub))
+	return err == nil && match
+}
+
 // Match checks if the given XPath x matches the filter XPath. It
-// applies glob patterns for names and treats nil elements in the filter
-// as wildcards.
+// applies glob patterns for names, as described for [path.Match] except
+// that wildcards also match '/' in names, and treats nil elements and
+// empty names in the filter as wildcards. A filter for an entity can be
+// only attributes and a filter for a sampler can be only a type. A
+// sampler without a type is matched as if it had an empty type.
 func (x *XPath) Match(filter *XPath) bool {
 	if x == nil || filter == nil {
 		return false
 	}
 
 	// for each element of x, check if the same element in filter would
-	// match, applying glob patterns as per [path.Match]. empty (nil)
-	// elements in filter mean wildcard. empty elements in x must match
-	// exactly. attributes and types have to be treated specially
+	// match. empty (nil) elements in filter mean wildcard. empty elements
+	// in x must match exactly. attributes and types have to be treated
+	// specially
 
 	if filter.Gateway == nil {
 		return true
 	}
-
 	if filter.Gateway.Name != "" {
-		// if there's a filter...
-		if x.Gateway == nil {
-			// ... element name cannot be empty
-			return false
-		}
-
-		// compare names use [path.Match]
-		match, err := path.Match(filter.Gateway.Name, x.Gateway.Name)
-		if err != nil || !match {
+		// if there's a filter, the element must exist and match
+		if x.Gateway == nil || !matchName(filter.Gateway.Name, x.Gateway.Name) {
 			return false
 		}
 	}
@@ -714,16 +769,9 @@ func (x *XPath) Match(filter *XPath) bool {
 		return true
 	}
 	if filter.Probe.Name != "" {
-		if x.Probe == nil {
+		if x.Probe == nil || !matchName(filter.Probe.Name, x.Probe.Name) {
 			return false
 		}
-
-		slog.Debug("Matching probe", slog.String("filter", filter.Probe.Name), slog.String("x", x.Probe.Name))
-		match, err := path.Match(filter.Probe.Name, x.Probe.Name)
-		if err != nil || !match {
-			return false
-		}
-		slog.Debug("Probe matched", slog.String("filter", filter.Probe.Name), slog.String("x", x.Probe.Name))
 	}
 
 	if filter.Entity == nil {
@@ -733,19 +781,12 @@ func (x *XPath) Match(filter *XPath) bool {
 		if x.Entity == nil {
 			return false
 		}
-
-		match, err := path.Match(filter.Entity.Name, x.Entity.Name)
-		if err != nil || !match {
+		if filter.Entity.Name != "" && !matchName(filter.Entity.Name, x.Entity.Name) {
 			return false
 		}
-
 		for k, v := range filter.Entity.Attributes {
-			if _, ok := x.Entity.Attributes[k]; !ok {
-				return false
-			}
-
-			match, err := path.Match(v, x.Entity.Attributes[k])
-			if err != nil || !match {
+			value, ok := x.Entity.Attributes[k]
+			if !ok || !matchName(v, value) {
 				return false
 			}
 		}
@@ -754,22 +795,24 @@ func (x *XPath) Match(filter *XPath) bool {
 	if filter.Sampler == nil {
 		return true
 	}
-	if filter.Sampler.Name != "" || (filter.Sampler.Type != nil && *filter.Sampler.Type != "") {
+	var filterType string
+	if filter.Sampler.Type != nil {
+		filterType = *filter.Sampler.Type
+	}
+	if filter.Sampler.Name != "" || filterType != "" {
 		if x.Sampler == nil {
 			return false
 		}
-
-		match, err := path.Match(filter.Sampler.Name, x.Sampler.Name)
-		if err != nil || !match {
+		if filter.Sampler.Name != "" && !matchName(filter.Sampler.Name, x.Sampler.Name) {
 			return false
 		}
-
-		if x.Sampler.Type != nil {
-			if filter.Sampler.Type != nil {
-				match, err := path.Match(*filter.Sampler.Type, *x.Sampler.Type)
-				if err != nil || !match {
-					return false
-				}
+		if filterType != "" {
+			var samplerType string
+			if x.Sampler.Type != nil {
+				samplerType = *x.Sampler.Type
+			}
+			if !matchName(filterType, samplerType) {
+				return false
 			}
 		}
 	}
@@ -778,12 +821,7 @@ func (x *XPath) Match(filter *XPath) bool {
 		return true
 	}
 	if filter.Dataview.Name != "" {
-		if x.Dataview == nil {
-			return false
-		}
-
-		match, err := path.Match(filter.Dataview.Name, x.Dataview.Name)
-		if err != nil || !match {
+		if x.Dataview == nil || !matchName(filter.Dataview.Name, x.Dataview.Name) {
 			return false
 		}
 	}
@@ -798,31 +836,19 @@ func (x *XPath) Match(filter *XPath) bool {
 	}
 
 	if filter.Headline != nil && filter.Headline.Name != "" {
-		if x.Headline == nil {
-			return false
-		}
-		match, err := path.Match(filter.Headline.Name, x.Headline.Name)
-		if err != nil || !match {
+		if x.Headline == nil || !matchName(filter.Headline.Name, x.Headline.Name) {
 			return false
 		}
 	}
 
 	if filter.Column != nil && filter.Column.Name != "" {
-		if x.Column == nil {
-			return false
-		}
-		match, err := path.Match(filter.Column.Name, x.Column.Name)
-		if err != nil || !match {
+		if x.Column == nil || !matchName(filter.Column.Name, x.Column.Name) {
 			return false
 		}
 	}
 
 	if filter.Row != nil && filter.Row.Name != "" {
-		if x.Row == nil {
-			return false
-		}
-		match, err := path.Match(filter.Row.Name, x.Row.Name)
-		if err != nil || !match {
+		if x.Row == nil || !matchName(filter.Row.Name, x.Row.Name) {
 			return false
 		}
 	}
@@ -831,70 +857,167 @@ func (x *XPath) Match(filter *XPath) bool {
 	return true
 }
 
-// return Xpath as a string
+// MarshalJSON returns the XPath as a JSON string.
 func (x XPath) MarshalJSON() ([]byte, error) {
 	return json.Marshal(x.String())
 }
 
-// return an xpath parsed from a string
+// UnmarshalJSON sets x from a JSON string containing an XPath. A JSON
+// null leaves x unchanged and an empty string results in an empty
+// XPath, which is what MarshalJSON produces for one, so that all valid
+// values round-trip. If the string cannot be parsed then x is not
+// changed.
 func (x *XPath) UnmarshalJSON(b []byte) (err error) {
+	if string(b) == "null" {
+		return nil
+	}
 	var s string
 	if err = json.Unmarshal(b, &s); err != nil {
 		return
 	}
+	if s == "" {
+		*x = XPath{}
+		return nil
+	}
 	nx, err := Parse(s)
+	if err != nil {
+		return
+	}
 	*x = *nx
 	return
 }
 
-// split a string on separator (byte) except when separator is escaped
-// by the escape byte given. typical usage is for when an xpath element
-// has an escaped '/'
-func splitWithEscaping(s string, separator, escape byte) []string {
-	var token []byte
-	var tokens []string
+// splitPath splits an XPath on the '/' separating its components,
+// leaving out any that are inside a double-quoted string or are escaped
+// with a backslash, such as the one in a name like "/dev/sda1". The
+// components returned are unchanged so that quoting and escapes can be
+// processed by the predicate parser.
+func splitPath(s string) (parts []string) {
+	var start int
+	var inQuote bool
 	for i := 0; i < len(s); i++ {
-		if s[i] == separator {
-			tokens = append(tokens, string(token))
-			token = token[:0]
-		} else if s[i] == escape && i+1 < len(s) {
-			i++
-			token = append(token, s[i])
-		} else {
-			token = append(token, s[i])
+		switch s[i] {
+		case '\\':
+			i++ // skip the escaped character
+		case '"':
+			inQuote = !inQuote
+		case '/':
+			if !inQuote {
+				parts = append(parts, s[start:i])
+				start = i + 1
+			}
 		}
 	}
-	tokens = append(tokens, string(token))
-	return tokens
+	return append(parts, s[start:])
 }
 
-// extract the value of an attribute from the xpath component in the form
-// [(@attr="value")] - this just uses a regexp and applies to validation
-func getAttr(s string, attr string) (v string, ok bool) {
-	attrRE := regexp.MustCompile(fmt.Sprintf(`\[\(@%s="(.*?)\\{0}?"\)\]`, attr))
-	m := attrRE.FindStringSubmatch(s)
-	if m == nil {
+// a predicate is one [(@name="value")] or [(attr("name")="value")]
+// following the name of a path component
+type predicate struct {
+	attr  bool // true for attr("name"), false for @name
+	name  string
+	value string
+}
+
+// parseQuoted parses the double-quoted string starting at s[i] and
+// returns its unquoted value and the index after the closing quote.
+// Strings as written by [XPath.String] use the same escapes as Go but
+// as other tools may be less strict, any other backslash sequence
+// stands for the escaped character.
+func parseQuoted(s string, i int) (value string, next int, ok bool) {
+	if i >= len(s) || s[i] != '"' {
 		return
 	}
-	if len(m) > 1 {
-		v = m[1]
-		ok = true
+	for j := i + 1; j < len(s); j++ {
+		switch s[j] {
+		case '\\':
+			j++
+		case '"':
+			raw := s[i : j+1]
+			if v, err := strconv.Unquote(raw); err == nil {
+				return v, j + 1, true
+			}
+			var b strings.Builder
+			for k := i + 1; k < j; k++ {
+				if s[k] == '\\' && k+1 < j {
+					k++
+				}
+				b.WriteByte(s[k])
+			}
+			return b.String(), j + 1, true
+		}
 	}
 	return
 }
 
-var attributeRE = regexp.MustCompile(`\[\(attr\("(.*?)\\{0}?"\)="(.*?)\\{0}?"\)\]`)
+// parsePredicates splits a path component into its element name and
+// predicates. Parsing stops at the first predicate that is not in one
+// of the expected forms.
+func parsePredicates(s string) (element string, preds []predicate) {
+	// find the end of the element name, which cannot be quoted
+	i := strings.IndexByte(s, '[')
+	if i < 0 {
+		return s, nil
+	}
+	element = s[:i]
+
+	for strings.HasPrefix(s[i:], "[(") {
+		i += 2
+		var p predicate
+		switch {
+		case strings.HasPrefix(s[i:], "@"):
+			i++
+			j := i
+			for j < len(s) && s[j] != '=' {
+				j++
+			}
+			p.name = s[i:j]
+			i = j
+		case strings.HasPrefix(s[i:], `attr(`):
+			name, next, ok := parseQuoted(s, i+len("attr("))
+			if !ok || !strings.HasPrefix(s[next:], ")") {
+				return
+			}
+			p.attr, p.name = true, name
+			i = next + 1
+		default:
+			return
+		}
+		if !strings.HasPrefix(s[i:], "=") {
+			return
+		}
+		value, next, ok := parseQuoted(s, i+1)
+		if !ok || !strings.HasPrefix(s[next:], ")]") {
+			return
+		}
+		p.value = value
+		preds = append(preds, p)
+		i = next + 2
+	}
+	return
+}
+
+// extract the value of the first attribute from the xpath component in
+// the form [(@attr="value")]
+func getAttr(s string, attr string) (v string, ok bool) {
+	_, preds := parsePredicates(s)
+	for _, p := range preds {
+		if !p.attr && p.name == attr {
+			return p.value, true
+		}
+	}
+	return
+}
 
 // extract the attributes from the xpath managedEntity component in the form
-// [(attr("KEY")="value")] - this just uses a regexp and applies to validation
+// [(attr("KEY")="value")]
 func getAttributes(s string) (attrs map[string]string) {
 	attrs = map[string]string{}
-	m := attributeRE.FindAllStringSubmatch(s, -1)
-	for _, n := range m {
-		if len(n) != 3 {
-			continue
+	_, preds := parsePredicates(s)
+	for _, p := range preds {
+		if p.attr {
+			attrs[p.name] = p.value
 		}
-		attrs[n[1]] = n[2]
 	}
 	return
 }
