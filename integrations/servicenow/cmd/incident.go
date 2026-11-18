@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
@@ -29,12 +30,17 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
 )
+
+// requestTimeout is the longest the router can take to respond, which
+// includes the requests it makes to ServiceNow
+const requestTimeout = 2 * time.Minute
 
 var short, text, rawtext, search, severity, id, rawid string
 var update_only bool
@@ -91,6 +97,9 @@ func incident(args []string) {
 	}
 
 	if id != "" {
+		// the hash is lower case, as it has always been, which is not the
+		// same as the upper case of [ims.CorrelationID], so that the
+		// incidents that are already open are found by later updates
 		id := fmt.Sprintf("%x", sha1.Sum([]byte(id)))
 		incident["correlation_id"] = id
 	} else if rawid != "" {
@@ -154,7 +163,10 @@ func incident(args []string) {
 
 	u.Path = "/api/v1/incident"
 
-	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestBody))
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Error("error creating HTTP request", slog.Any("error", err))
 		os.Exit(1)
@@ -163,8 +175,9 @@ func incident(args []string) {
 	bearer := fmt.Sprintf("Bearer %s", config.Get[string](cf, "api.apikey"))
 
 	req.Header.Add("Authorization", bearer)
+	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: requestTimeout}
 
 	resp, err := client.Do(req)
 	if err != nil {

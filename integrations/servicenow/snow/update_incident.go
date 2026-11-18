@@ -39,6 +39,7 @@ func UpdateIncident(vc *config.Config, incident_id string, incident IncidentFiel
 	postbytes, err = json.Marshal(incident)
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, err)
+		return
 	}
 
 	s := InitializeConnection(vc)

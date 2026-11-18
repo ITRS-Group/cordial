@@ -19,6 +19,7 @@ package snow
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -50,7 +51,14 @@ func GetAllIncidents(c echo.Context) (err error) {
 
 	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
 
-	l, _ := s.GET(Fields(config.Get[string](vc, "servicenow.queryresponsefields")), Query(q)).QueryTable(config.Get[string](vc, "servicenow.incidenttable"))
+	l, err := s.GET(Fields(config.Get[string](vc, "servicenow.queryresponsefields")), Query(q)).QueryTable(config.Get[string](vc, "servicenow.incidenttable"))
+	if err != nil {
+		log.Error("error getting incidents", slog.Any("error", err), slog.String("user", user))
+		return echo.NewHTTPError(http.StatusBadGateway, fmt.Sprintf("error getting incidents from ServiceNow: %s", err))
+	}
+	if l == nil {
+		l = resultsArray{}
+	}
 
-	return c.JSON(200, l)
+	return c.JSON(http.StatusOK, l)
 }

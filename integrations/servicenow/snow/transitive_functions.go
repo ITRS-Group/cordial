@@ -33,6 +33,9 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
+// requestTimeout is the longest a request to ServiceNow can take
+const requestTimeout = 30 * time.Second
+
 var snowMutex sync.RWMutex
 var snowConnection *Connection
 
@@ -84,10 +87,13 @@ func InitializeConnection(vc *config.Config) *Connection {
 			TokenURL:       "https://" + instance + ".service-now.com/oauth_token.do",
 		}
 
+		client := conf.Client(context.Background())
+		client.Timeout = requestTimeout
+
 		snowMutex.Lock()
 		// with OAuth we don't need to store the username and password
 		snowConnection = &Connection{
-			Client:   conf.Client(context.Background()),
+			Client:   client,
 			Instance: instance,
 			Path:     path,
 			Trace:    trace,
@@ -98,12 +104,13 @@ func InitializeConnection(vc *config.Config) *Connection {
 
 	snowMutex.Lock()
 	snowConnection = &Connection{
-		Client:   &http.Client{Timeout: 30 * time.Second},
-		Instance: instance,
-		Path:     path,
-		Username: username,
-		Password: password,
-		Trace:    trace,
+		Client:    &http.Client{Timeout: requestTimeout},
+		Instance:  instance,
+		Path:      path,
+		Username:  username,
+		Password:  password,
+		Trace:     trace,
+		BasicAuth: true,
 	}
 	snowMutex.Unlock()
 	return snowConnection
@@ -134,13 +141,17 @@ func AssembleRequest(snow TransitiveConnection, table string) (req *http.Request
 
 	u.RawQuery = z
 
-	if req, err = http.NewRequest(snow.Method, u.String(), bytes.NewReader(snow.Payload)); err != nil {
+	// there is no context for the request
+	if req, err = http.NewRequestWithContext(context.Background(), snow.Method, u.String(), bytes.NewReader(snow.Payload)); err != nil {
 		return
 	}
-	if snow.Client == http.DefaultClient {
+	if snow.BasicAuth {
 		req.SetBasicAuth(snow.Username, snow.Password)
 	}
 	req.Header.Add("Accept", "application/json")
+	if len(snow.Payload) > 0 {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	return
 }
