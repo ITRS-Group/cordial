@@ -42,6 +42,8 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
 
 * `tools/geneos`
 
+  * Add `--rebuild`/`-r`, also accepted as `--reload`, to `geneos set` and `geneos unset` to rebuild and reload after saving, even if the configuration is unchanged. Add `--force`/`-F` to force that action for instances with `config.rebuild=initial`; it implies `--rebuild`. Instances with `config.rebuild=never` are neither rebuilt nor reloaded by these options. Profile options are saved and reapplied before member reloads. Existing automatic behavior without the new options is retained.
+
   * A variety of changes and new additions for the `geneos includes` subsystem for managing include files and configuration templates independently of the main `geneos` program version. This is still considered as a feature preview and may undergo further changes before becoming fully stable.
 
     * Add an installation-wide site name, set with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. Gateway configuration includes are installed as `gateway/<site>/<site>.*.xml`, and supplied profiles use `${site}` for their include paths. Spaces become underscores; if no site name is set, `local` is used.
@@ -88,6 +90,12 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
 
   * Profiles, ports and TLS
 
+    * `geneos set profile` and `geneos unset profile` now update saved profile options rather than modifying members directly. Gateway and include-only updates are preserved, named options are available to `${option:NAME}` expressions, and secure parameters, environment variables and secret variables are encoded before saving.
+
+    * Reloading a profile now reloads its members. Forced profile rebuilds also reload members when generated files are unchanged, except for `config.rebuild=never`.
+
+    * Profile rebuilds now report the actions taken for each member, including configuration writes, rebuilds, unchanged or skipped rebuilds, and reload results.
+
     * Gateway listening ports are only moved to match TLS between the conventional 7039 (no TLS) and 7038 (TLS) ports, and a Web Dashboard server between 8080 (HTTP) and 8443 (HTTPS), and between 80 and 443, and only when it is configured with one of the pair and the other is free. Any other port is never changed. Previously, if the other Gateway port was in use, the Gateway was moved to an arbitrary free port such as 7100; it now keeps its configured port and a warning is logged. A new Web Dashboard server is given port 8443 with TLS and 8080 without. The generated Gateway `instance.setup.xml` no longer lists a TLS listen port of 7038 for a TLS Gateway configured on 7039.
 
     * **Behaviour change**: applying a profile again to an existing instance, with `geneos deploy`, `geneos rebuild profile` or `geneos set profile`, now follows the `insecure` option saved with the profile, which was previously only used when an instance was created. An instance that is not TLS capable gets a certificate (an unchanged one kept from earlier is reused) when the profile is secure, and one with TLS parameters has them removed from its configuration, but never the files, when the profile is `insecure`, and it is then rebuilt so that the conventional Gateway and Web Dashboard server ports follow. A user-defined port is never changed. A secure profile fails with an error if no signing certificate is available. A Web Dashboard server's keystore is renamed with a `.disabled` suffix when it becomes insecure. Profiles saved without the `insecure` option are not changed. If you have secured instances by hand that belong to a profile saved as `--insecure`, rebuilding the profile now removes their TLS parameters.
@@ -107,6 +115,8 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
     * The `tcp-reporter-port` of a `ca3` instance now defaults to the instance `port` instead of 9137, so that multiple instances no longer conflict.
 
     * `geneos add` for `ca3`, `netprobe-router`, `sso-agent` and `webserver` instances now copies the initial files from the installed package on the instance's host, instead of from the working directory of the command, and returns an error if they cannot be copied. The directory `packages/ca3` is no longer created.
+
+  * Restore human-readable setup and other byte-slice values in plain-text command output, rather than printing numeric byte arrays.
 
   * `geneos includes`
 

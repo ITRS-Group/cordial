@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -48,8 +49,8 @@ func TestSetProfileKeepsOptionTypes(t *testing.T) {
 	if got, ok := options["minimal"].(bool); !ok || got {
 		t.Errorf("minimal = %#v, want bool false", options["minimal"])
 	}
-	if options["param"] != "port=8080" {
-		t.Errorf("param = %#v, want port=8080", options["param"])
+	if options["port"] != "8080" {
+		t.Errorf("port = %#v, want 8080", options["port"])
 	}
 }
 
@@ -67,8 +68,8 @@ func TestSetProfileAccumulatesTypesAndParams(t *testing.T) {
 	if want := "Layer 1,Layer 2"; options["type"] != want {
 		t.Errorf("type = %#v, want %q", options["type"], want)
 	}
-	if want := "options=-x,port=7037"; options["param"] != want {
-		t.Errorf("param = %#v, want %q", options["param"], want)
+	if options["port"] != "7037" || options["options"] != "-x" {
+		t.Errorf("named options = %#v, want port=7037 and options=-x", options)
 	}
 
 	// setting again replaces by key and keeps the others
@@ -81,13 +82,54 @@ func TestSetProfileAccumulatesTypesAndParams(t *testing.T) {
 	if want := "Layer 1,Layer 2"; options["type"] != want {
 		t.Errorf("type = %#v, want %q", options["type"], want)
 	}
-	if want := "options=-x,port=1"; options["param"] != want {
-		t.Errorf("param = %#v, want %q", options["param"], want)
+	if options["port"] != "1" || options["options"] != "-x" {
+		t.Errorf("named options = %#v, want port=1 and options=-x", options)
+	}
+}
+
+func TestSetProfileIncludesOnly(t *testing.T) {
+	i := newProfileInstance(t, nil)
+	cf, err := values.Set(i, values.Values{Includes: values.Includes{"100": "example.xml"}}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	options := config.Get[map[string]any](cf, "config.options", config.NoExpand())
+	if options["include"] != "100:example.xml" {
+		t.Errorf("include = %#v, want 100:example.xml", options["include"])
+	}
+}
+
+func TestSetProfileRejectsInvalidOrUnencodableValues(t *testing.T) {
+	i := newProfileInstance(t, map[string]any{"site": "original"})
+	for _, test := range []struct {
+		name string
+		vals values.Values
+		key  config.KeyFile
+	}{
+		{name: "invalid option", vals: values.Values{Params: values.NameValues{"site=new", "invalid"}}},
+		{name: "empty option name", vals: values.Values{Params: values.NameValues{"=value"}}},
+		{name: "secure parameter without key", vals: values.Values{SecureParams: values.SecureValues{{Name: "token", Secret: config.Secret("test-secret")}}}},
+		{name: "secure env without key", vals: values.Values{SecureEnvs: values.SecureValues{{Name: "TOKEN", Secret: config.Secret("test-secret")}}}},
+		{name: "unreadable key", vals: values.Values{SecureParams: values.SecureValues{{Name: "token", Secret: config.Secret("test-secret")}}}, key: config.KeyFile(t.TempDir() + "/missing")},
+		{name: "secret variable without key", vals: values.Values{Variables: values.Variables{{Type: "secret", Name: "token", Value: "test-secret"}}}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			cf, err := values.Set(i, test.vals, test.key)
+			if err == nil || cf != nil {
+				t.Fatal("Set should return an error and no configuration")
+			}
+			if profileOptions(i)["site"] != "original" {
+				t.Fatal("failed Set changed the original profile")
+			}
+			if strings.Contains(err.Error(), "test-secret") {
+				t.Fatal("error contains the plaintext secret")
+			}
+		})
 	}
 }
 
 func TestUnsetProfileKeepsOptionTypes(t *testing.T) {
-	i := newProfileInstance(t, map[string]any{"insecure": true, "type": "a,b,ab", "param": "port=1,portrange=2"})
+	i := newProfileInstance(t, map[string]any{"insecure": true, "type": "a,b,ab", "param": "port=1,portrange=2", "port": "8080"})
 
 	if !values.Unset(i, values.UnsetConfigValues{Types: values.UnsetValues{"a"}, Keys: values.UnsetValues{"port"}}) {
 		t.Fatal("Unset reported no change")
@@ -101,6 +143,9 @@ func TestUnsetProfileKeepsOptionTypes(t *testing.T) {
 	}
 	if want := "portrange=2"; options["param"] != want {
 		t.Errorf("param = %#v, want %q", options["param"], want)
+	}
+	if _, found := options["port"]; found {
+		t.Error("Unset left the named port option behind")
 	}
 
 	// unsetting from an instance without any options must not panic

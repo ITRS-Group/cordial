@@ -4342,7 +4342,7 @@ variables:
     value: ${config:home}/${config:logfile}
 ```
 
-The option names supplied from flags are `attribute`, `base`, `env`, `gateway`, `include`, `insecure`, `licence`, `minimal`, `type`, and `variable`, where the command defines them. Flag defaults are included. This is not a list of flags accepted by every command. In particular, `--minimal` and `--licence` are `init` options, not `deploy` options.
+The option names supplied from flags are `attribute`, `base`, `env`, `gateway`, `include`, `insecure`, `licence`, `minimal`, `name`, `type`, and `variable`, where the command defines them. Flag defaults are included. This is not a list of flags accepted by every command. In particular, `--minimal` and `--licence` are `init` options, not `deploy` options.
 
 Additional command arguments in `NAME=VALUE` form can supply option values. For example, a profile can use `name: ${option:site}` and be deployed with:
 
@@ -4351,6 +4351,12 @@ geneos deploy profile application site=application-gateway
 ```
 
 These arguments are saved with the profile options. They are not automatically applied as parameters to every component. Likewise, use `${option:gateway}` or `${option:attribute}` in a definition when you want those command options to control its SAN configuration.
+
+Use `geneos set profile NAME -g HOST:PORT` to update saved Gateway options, or `geneos set profile NAME site=VALUE` to update an option used as `${option:site}`. Repeatable options are merged by name. `geneos unset profile NAME -g HOST` removes a saved Gateway option, and `geneos unset profile NAME -k site` removes a named option. Both commands reapply the profile rather than setting or removing the values directly on every member.
+
+For either command, add `--rebuild`/`-r` (also named `--reload`) to reload members even when their generated configuration is unchanged. Add `--force`/`-F` to also force rebuilding members with `config.rebuild=initial`; this implies `--rebuild`. Members with `config.rebuild=never` are not reloaded by these options. These action flags are not saved as profile options.
+
+The `--secure`/`-s` and `--secureenv`/`-E` options of `geneos set profile` encode values with the selected keyfile before saving them in the profile options. Secret variables supplied with `--variable secret:NAME=VALUE` are also encoded before saving. Keep the referenced keyfile available when using these values.
 
 Use `${option:...}`, not `${flag:...}`. Arbitrary flags are not available to option expressions. The `insecure` and `minimal` options are booleans, so use them as conditions, for example `${option:insecure?8080:8443}`; the options saved with a profile keep their types when it is rebuilt.
 
@@ -4572,13 +4578,12 @@ A rebuild reads the selected YAML definition again and reuses the options saved 
    geneos --profiles ~/config/profiles.yaml restart profile application
    ```
 
-The component's `config.rebuild` setting controls generated files. The normal Gateway setting is `initial`; SAN and Floating Netprobe use `always`. `--force` permits a rebuild for `initial`, but not for `never`. A profile rebuild does not automatically reload or restart its child processes. See the [rebuild command reference](#geneos-rebuild).
+The component's `config.rebuild` setting controls generated files. The normal Gateway setting is `initial`; SAN and Floating Netprobe use `always`. `--force` permits a rebuild for `initial`, but not for `never`. A profile rebuild reloads members whose generated configuration changes; `--force` also reloads members after an unchanged supported rebuild. Use `--reload`/`-r` to request member reloads regardless of changes. Members with `config.rebuild=never` are not reloaded by a rebuild. A rebuild does not restart processes. See the [rebuild command reference](#geneos-rebuild).
 
-To change a saved option, set it on the profile instance before rebuilding. For example:
+To change a saved option and force a rebuild and reload in one command:
 
 ```bash
-geneos set profile health-agent config.options.gateway=health-c.example.com:7038
-geneos rebuild profile health-agent
+geneos set profile health-agent -g health-c.example.com:7038 --force
 ```
 
 Use `geneos show profile health-agent` to inspect the saved options. Passing new SAN flags to `rebuild` is not a substitute for changing those saved values.
@@ -4782,9 +4787,13 @@ The values for the `config.rebuild` option are: `never`, `initial` and `always`.
 
 You can force a rebuild for an instance that has the `config.rebuild` set to `initial` by using the `--force`/`-F` option. Instances with a `never` setting are never rebuilt.
 
+When rebuilding a profile, `--force` also reloads its members after a supported rebuild even if the generated configuration is unchanged. It does not override `config.rebuild=never`.
+
+Profile rebuilds report the actions taken for each member, including configuration writes, rebuilds, unchanged or skipped rebuilds, and reload results.
+
 To change this use something like `geneos set gateway MyGateway config.rebuild=always`
 
-Instances will not normally update their settings when the configuration file changes, although there are options for both Gateways and Netprobes to do this, so you can trigger a configuration reload with the `--reload`/`-r` option. This will send the appropriate signal to matching instances regardless of the underlying configuration being updated or not.
+Instances will not normally update their settings when the configuration file changes, although there are options for both Gateways and Netprobes to do this, so you can trigger a configuration reload with the `--reload`/`-r` option. This will send the appropriate signal to matching instances regardless of the underlying configuration being updated or not, except for instances with `config.rebuild=never`.
 
 The templates used for each `TYPE` are stored in the `templates/` directory under each `TYPE` directory, e.g `[GENEOS]/gateway/templates`. If you do not have any templates because you are adopting an existing installation then the program will use internal defaults. Use the `geneos init template` command to write out the current templates based on the built-in ones. Only files with the extension `.gotmpl` are treated as templates and directories (and their contents) are ignored.
 
@@ -5216,6 +5225,10 @@ The `set` command lets you set one or more configuration parameters for matching
 
 There are two kinds of parameters, basic `NAME=VALUE` pairs, and structured parameters which may include lists and other kinds of values, and are passed to templates for processing. Structured parameters include environment variables, include files and Gateway connection details for Self-Announcing and Floating Netprobes. The parameters that are supported depend on the component TYPE and the templates used to build the instance configuration. Parameters that are common to all component types are described in the "Common Parameters" section below, and component-specific parameters are described in the component help, e.g. `geneos help gateway` for Gateway instances.
 
+Use `--rebuild`/`-r` (also named `--reload`) to rebuild and reload after saving the values, including when the generated configuration is unchanged. Normal `config.rebuild` rules still apply. Use `--force`/`-F` to force the rebuild and reload, including for `config.rebuild=initial`; `--force` implies `--rebuild`. Neither option rebuilds or reloads instances with `config.rebuild=never`. For profiles, saved options are updated and reapplied before the member instances are reloaded.
+
+Without these options, the existing automatic rebuild and reload behavior is unchanged: supported instances rebuild according to `config.rebuild` and reload when the rebuild reports a change.
+
 ## Basic Parameters
 
 Note that `geneos set` will overwrite existing parameters without warning. Setting a basic parameter to an empty string will effectively remove its value. This behaviour may change in a future release and should not be relied on. To remove a parameter use the `geneos unset` command.
@@ -5363,6 +5376,9 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
+  -r, --rebuild[=true|false]          Rebuild and reload after setting values, even if unchanged
+      --reload[=true|false]           Alias for --rebuild
+  -F, --force[=true|false]            Force rebuild and reload, except when config.rebuild=never
       --allow-root[=true|false]       allow running as root (not recommended)
   -G, --config string                 config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
@@ -6327,6 +6343,10 @@ WARNING: Be careful removing keys that are necessary for instances to be managea
 
 You can also unset values for structured parameters. For `--include`/`-i` options the parameter key is the `PRIORITY` of the include file set while for the other options it is the `NAME`. Note that for structured parameters the `NAME` is case-sensitive. See the usage flags for more details.
 
+Use `--rebuild`/`-r` (also named `--reload`) to rebuild and reload after saving the removals, including when no matching values were removed or the generated configuration is unchanged. Normal `config.rebuild` rules still apply. Use `--force`/`-F` to force the rebuild and reload, including for `config.rebuild=initial`; `--force` implies `--rebuild`. Neither option rebuilds or reloads instances with `config.rebuild=never`. For profiles, saved options are updated and reapplied before the member instances are reloaded.
+
+Without these options, a request that removes nothing remains an error. The existing automatic rebuild and reload behavior is unchanged: supported instances rebuild according to `config.rebuild` and reload when the rebuild reports a change.
+
 ## Usage
 
 ```text
@@ -6352,6 +6372,9 @@ geneos unset [flags] [TYPE] [NAME...]
                                   (Repeat as required, san only)
   -M, --entity NAME               Remove a managed entity NAME
                                   (Repeat as required, san only)
+  -r, --rebuild[=true|false]      Rebuild and reload after unsetting values, even if unchanged
+      --reload[=true|false]       Alias for --rebuild
+  -F, --force[=true|false]        Force rebuild and reload, except when config.rebuild=never
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")

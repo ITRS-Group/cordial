@@ -8,6 +8,10 @@ WARNING: Be careful removing keys that are necessary for instances to be managea
 
 You can also unset values for structured parameters. For `--include`/`-i` options the parameter key is the `PRIORITY` of the include file set while for the other options it is the `NAME`. Note that for structured parameters the `NAME` is case-sensitive. See the usage flags for more details.
 
+Use `--rebuild`/`-r` (also named `--reload`) to rebuild and reload after saving the removals, including when no matching values were removed or the generated configuration is unchanged. Normal `config.rebuild` rules still apply. Use `--force`/`-F` to force the rebuild and reload, including for `config.rebuild=initial`; `--force` implies `--rebuild`. Neither option rebuilds or reloads instances with `config.rebuild=never`. For profiles, saved options are updated and reapplied before the member instances are reloaded.
+
+Without these options, a request that removes nothing remains an error. The existing automatic rebuild and reload behavior is unchanged: supported instances rebuild according to `config.rebuild` and reload when the rebuild reports a change.
+
 ## Usage
 
 ```text
@@ -33,6 +37,9 @@ geneos unset [flags] [TYPE] [NAME...]
                                   (Repeat as required, san only)
   -M, --entity NAME               Remove a managed entity NAME
                                   (Repeat as required, san only)
+  -r, --rebuild[=true|false]      Rebuild and reload after unsetting values, even if unchanged
+      --reload[=true|false]       Alias for --rebuild
+  -F, --force[=true|false]        Force rebuild and reload, except when config.rebuild=never
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")

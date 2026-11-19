@@ -416,6 +416,10 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			return fmt.Errorf("write failed for instance %q: %w", name, resp.Err)
 		}
+		actions := []string{"config written"}
+		defer func() {
+			fmt.Printf("%s: %s\n", i, strings.Join(actions, ", "))
+		}()
 
 		if err = instance.ImportFiles(i, common.Imports...); err != nil {
 			return fmt.Errorf("import files for instance %q: %w", name, err)
@@ -425,8 +429,27 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 		if err != nil && !errors.Is(err, geneos.ErrNotSupported) {
 			return fmt.Errorf("rebuild instance %q: %w", name, err)
 		}
-		if changed && err == nil {
-			if err := i.Reload(); err != nil && !errors.Is(err, geneos.ErrNotSupported) && !errors.Is(err, os.ErrProcessDone) {
+		policy := config.Get[string](i.Config(), cf.Join("config", "rebuild"))
+		switch {
+		case errors.Is(err, geneos.ErrNotSupported):
+			actions = append(actions, "rebuild not supported")
+		case changed:
+			actions = append(actions, "configuration rebuilt")
+		case policy == "never" || (policy == "initial" && !forceRebuild):
+			actions = append(actions, fmt.Sprintf("rebuild skipped (config.rebuild=%s)", policy))
+		default:
+			actions = append(actions, "configuration unchanged")
+		}
+		reload := (changed || forceRebuild) && policy != "never"
+		if reload && err == nil {
+			switch err := i.Reload(); {
+			case err == nil:
+				actions = append(actions, "reload signal sent")
+			case errors.Is(err, geneos.ErrNotSupported):
+				actions = append(actions, "reload not supported")
+			case errors.Is(err, os.ErrProcessDone):
+				actions = append(actions, "reload skipped (not running)")
+			default:
 				return fmt.Errorf("reload instance %q: %w", name, err)
 			}
 		}

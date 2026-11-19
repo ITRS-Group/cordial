@@ -1,0 +1,1038 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-19 15:01:34 by PeterGalbavy on ITRSLP372-->
+<!-- Gateway-created setup include file for user AzureAD\PeterGalbavy at 127.0.0.1 -->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
+	<types>
+		<typeGroup name="Layer 2 - Database Health">
+			<typeGroup name="Layer 2 - MySQL Health">
+				<type name="MySQL-Status">
+					<var name="MYSQL_DB_PORT">
+						<integer>3306</integer>
+					</var>
+					<var name="MYSQL_DB_SERVER">
+						<string>localhost</string>
+					</var>
+					<var name="MYSQL_DB_USER">
+						<string>geneos</string>
+					</var>
+					<var name="MYSQL_DB_NAME">
+						<string>geneos_db</string>
+					</var>
+					<var name="MYSQL_STATUS_SAMPLE_INTERVAL">
+						<integer>60</integer>
+					</var>
+					<var name="MYSQL_LOGFILE">
+						<string>/var/log/mysqld.log</string>
+					</var>
+					<var name="MYSQL_SLOW_QUERIES_LOGFILE">
+						<string>/var/log/mysql/mysql-slow.log</string>
+					</var>
+					<var name="MYSQL_STATUS_GLOBAL_HEADLINES">
+						<stringList>
+							<string>cacheHitRate</string>
+							<string>cacheInsertRate</string>
+							<string>cachePruneRate</string>
+						</stringList>
+					</var>
+					<var name="MYSQL_STATUS_VARIABLES_HEADLINES">
+						<stringList>
+							<string>serverVersion</string>
+						</stringList>
+					</var>
+					<sampler ref="MySQL-Status"/>
+					<sampler disabled="true" ref="MySQL-Logs"/>
+					<sampler disabled="true" ref="MySQL-Long-Queries"/>
+				</type>
+			</typeGroup>
+			<typeGroup name="Layer 2 - Oracle Health">
+				<type name="oracledbmonitoring">
+					<sampler ref="Oracle_SQL"/>
+				</type>
+			</typeGroup>
+			<typeGroup name="Layer 2 - SQLServer Health"/>
+			<typeGroup name="Layer 2 - Sybase Health"/>
+		</typeGroup>
+	</types>
+	<samplers>
+		<samplerGroup name="Layer 2 - Database Health">
+			<samplerGroup name="Layer 2 - MySQL Health">
+				<sampler name="MySQL-Status">
+					<var-group>
+						<data>MySQL-Status</data>
+					</var-group>
+					<sampleInterval>
+						<var ref="MYSQL_STATUS_SAMPLE_INTERVAL"/>
+					</sampleInterval>
+					<var-hideColumns>
+						<data>
+							<column>
+								<data>Comment</data>
+							</column>
+							<column>
+								<data>Create_options</data>
+							</column>
+							<column>
+								<data>Checksum</data>
+							</column>
+							<column>
+								<data>Collation</data>
+							</column>
+							<column>
+								<data>Check_time</data>
+							</column>
+							<column>
+								<data>Create_time</data>
+							</column>
+							<column>
+								<data>Auto_increment</data>
+							</column>
+							<column>
+								<data>Data_free</data>
+							</column>
+							<column>
+								<data>Max_data_length</data>
+							</column>
+						</data>
+					</var-hideColumns>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>Table Status</data>
+									</name>
+									<sql>
+										<data>SHOW TABLE STATUS</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Process List</data>
+									</name>
+									<sql>
+										<data>SHOW FULL PROCESSLIST</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Global Status</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL STATUS
+</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Variables</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL VARIABLES</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>INNODB Stats</data>
+									</name>
+									<sql>
+										<data>SELECT * FROM INFORMATION_SCHEMA.INNODB_BUFFER_POOL_STATS</data>
+									</sql>
+								</query>
+							</queries>
+							<connection>
+								<database>
+									<mysql>
+										<var-serverName>
+											<var ref="MYSQL_DB_SERVER"/>
+										</var-serverName>
+										<var-databaseName>
+											<var ref="MYSQL_DB_NAME"/>
+										</var-databaseName>
+										<var-port>
+											<var ref="MYSQL_DB_PORT"/>
+										</var-port>
+									</mysql>
+								</database>
+								<var-userName>
+									<var ref="MYSQL_DB_USER"/>
+								</var-userName>
+								<password>
+									<var ref="MYSQL_DB_PASS"/>
+								</password>
+								<closeConnectionAfterQuery>
+									<data>true</data>
+								</closeConnectionAfterQuery>
+							</connection>
+						</sql-toolkit>
+					</plugin>
+					<dataviews>
+						<dataview name="Global Status">
+							<additions>
+								<var-headlines>
+									<var ref="MYSQL_STATUS_GLOBAL_HEADLINES"/>
+								</var-headlines>
+							</additions>
+						</dataview>
+						<dataview name="Variables">
+							<additions>
+								<var-headlines>
+									<var ref="MYSQL_STATUS_VARIABLES_HEADLINES"/>
+								</var-headlines>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="MySQL-Logs">
+					<var-group>
+						<data>MySQL-Logs</data>
+					</var-group>
+					<plugin>
+						<fkm>
+							<display>
+								<triggerMode>MULTIPLE</triggerMode>
+							</display>
+							<files>
+								<file>
+									<source>
+										<processDescriptor ref="mysqld"/>
+									</source>
+									<multiLine>
+										<startPattern>
+											<data>
+												<regex>^\d{6}\s\d\d:\d\d:\d\d\s</regex>
+											</data>
+										</startPattern>
+										<messageEnd>
+											<maxNumberOfSamplesToWait>
+												<data>2</data>
+											</maxNumberOfSamplesToWait>
+										</messageEnd>
+									</multiLine>
+									<tables>
+										<table>
+											<severity>fail</severity>
+											<keyTable>
+												<data>
+													<keys>
+														<key>
+															<setKey>
+																<match>
+																	<searchString>
+																		<data>ERROR:</data>
+																	</searchString>
+																</match>
+															</setKey>
+														</key>
+													</keys>
+												</data>
+											</keyTable>
+										</table>
+										<table>
+											<severity>fail</severity>
+											<keyTable>
+												<data>
+													<keys>
+														<key>
+															<setKey>
+																<match>
+																	<searchString>
+																		<data>WAITING FOR THIS LOCK TO BE GRANTED</data>
+																	</searchString>
+																</match>
+															</setKey>
+														</key>
+													</keys>
+												</data>
+											</keyTable>
+										</table>
+									</tables>
+									<clearTime>
+										<data>23:59</data>
+									</clearTime>
+									<defaultKeyClearTime>
+										<data>86400</data>
+									</defaultKeyClearTime>
+								</file>
+							</files>
+						</fkm>
+					</plugin>
+				</sampler>
+				<sampler name="MySQL-Long-Queries">
+					<var-group>
+						<data>MySQL-Logs</data>
+					</var-group>
+					<plugin>
+						<fkm>
+							<display>
+								<columns>
+									<column>triggerDetails</column>
+								</columns>
+								<triggerMode>MULTIPLE</triggerMode>
+							</display>
+							<isPCREMode>
+								<data>true</data>
+							</isPCREMode>
+							<files>
+								<file>
+									<source>
+										<filename>
+											<var ref="MYSQL_SLOW_QUERIES_LOGFILE"/>
+										</filename>
+									</source>
+									<multiLine>
+										<startPattern>
+											<data>
+												<regex>^# Query_time:</regex>
+											</data>
+										</startPattern>
+										<messageEnd>
+											<maxNumberOfSamplesToWait>
+												<data>1</data>
+											</maxNumberOfSamplesToWait>
+										</messageEnd>
+									</multiLine>
+									<tables>
+										<table>
+											<severity>warning</severity>
+											<keyTable>
+												<data>
+													<keys>
+														<key>
+															<setKey>
+																<match>
+																	<searchString>
+																		<data>^# Query_time:</data>
+																	</searchString>
+																	<rules>REGEXP</rules>
+																</match>
+															</setKey>
+															<extractors>
+																<extractor>
+																	<name>
+																		<data>timestamp</data>
+																	</name>
+																	<regex>
+																		<data>SET timestamp=(\d+)</data>
+																	</regex>
+																</extractor>
+																<extractor>
+																	<name>
+																		<data>queryTime</data>
+																	</name>
+																	<regex>
+																		<data>Query_time: ([\d\.]+)</data>
+																	</regex>
+																</extractor>
+																<extractor>
+																	<name>
+																		<data>lockTime</data>
+																	</name>
+																	<regex>
+																		<data>Lock_time: ([\d\.]+)</data>
+																	</regex>
+																</extractor>
+																<extractor>
+																	<name>
+																		<data>rowsSent</data>
+																	</name>
+																	<regex>
+																		<data>Rows_sent: ([\d\.]+)</data>
+																	</regex>
+																</extractor>
+																<extractor>
+																	<name>
+																		<data>rowsExamined</data>
+																	</name>
+																	<regex>
+																		<data>Rows_examined: ([\d\.]+)</data>
+																	</regex>
+																</extractor>
+																<extractor>
+																	<name>
+																		<data>call</data>
+																	</name>
+																	<regex>
+																		<data>(?:CALL|call) (.*)</data>
+																	</regex>
+																</extractor>
+															</extractors>
+														</key>
+													</keys>
+												</data>
+											</keyTable>
+										</table>
+									</tables>
+									<clearTime>
+										<data>01:00</data>
+									</clearTime>
+									<defaultKeyClearTime>
+										<data>900</data>
+									</defaultKeyClearTime>
+								</file>
+							</files>
+						</fkm>
+					</plugin>
+					<dataviews>
+						<dataview name="MySQL Long Queries">
+							<additions>
+								<var-columns>
+									<data>
+										<column>
+											<data>dateTime</data>
+										</column>
+									</data>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="Layer 2 - Oracle Health">
+				<sampler name="Oracle_SQL">
+					<var-group>
+						<data>Oracle</data>
+					</var-group>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>ServerStatus</data>
+									</name>
+									<sql>
+										<data>SELECT 
+instance_name, 
+host_name, 
+startup_time, 
+status, 
+parallel, 
+archiver, 
+logins, 
+shutdown_pending, 
+database_status, 
+instance_role, 
+active_state 
+FROM v$instance
+</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>TableSpace</data>
+									</name>
+									<sql>
+										<data>SELECT 
+	(a.tablespace_name) tableName, 
+	round(a.bytes_alloc / 1024 / 1024, 2) mbAllocated, 
+	round(nvl(b.bytes_free, 0) / 1024 / 1024, 2) mb_Free, 
+	round((a.bytes_alloc - nvl(b.bytes_free, 0)) / 1024 / 1024, 2) mb_Used, 
+	round((nvl(b.bytes_free, 0) / a.bytes_alloc) * 100,2) percentFree, 
+	100 - round((nvl(b.bytes_free, 0) / a.bytes_alloc) * 100,2) percentUsed, 
+	(a.autoext) autoExtend
+FROM 
+	( 
+	select  f.tablespace_name, 
+	sum(f.bytes) bytes_alloc, 
+	max(f.autoextensible) autoext 
+	from dba_data_files f 
+	group by tablespace_name 
+	) a, 
+	( 
+	select  f.tablespace_name, 
+	sum(f.bytes)  bytes_free 
+	from dba_free_space f 
+	group by tablespace_name 
+	) b 
+WHERE a.tablespace_name = b.tablespace_name (+) 
+UNION ALL 
+SELECT 
+	(h.tablespace_name) tableName, 
+	round(sum(h.bytes_free + h.bytes_used) / 1048576, 2) mbAllocated, 
+	round(sum((h.bytes_free + h.bytes_used) - nvl(p.bytes_used, 0)) / 1048576, 2) mbFree, 
+	round(sum(nvl(p.bytes_used, 0))/ 1048576, 2) mbUsed, 
+	round((sum((h.bytes_free + h.bytes_used) - nvl(p.bytes_used, 0)) / sum(h.bytes_used + h.bytes_free)) * 100,2) percentFree, 
+	100 - round((sum((h.bytes_free + h.bytes_used) - nvl(p.bytes_used, 0)) / sum(h.bytes_used + h.bytes_free)) * 100,2) percentUsed, 
+	max(f.autoextensible) autoExtend 
+FROM 
+	sys.v_$TEMP_SPACE_HEADER h, sys.v_$Temp_extent_pool p, dba_temp_files f 
+WHERE 
+	p.file_id(+) = h.file_id 
+AND 
+	p.tablespace_name(+) = h.tablespace_name 
+AND 
+	f.file_id = h.file_id 
+AND 
+	f.tablespace_name = h.tablespace_name 
+GROUP BY 
+	h.tablespace_name, f.maxbytes 
+ORDER BY 1
+</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>SessionStatus</data>
+									</name>
+									<sql>
+										<data>select SID,
+  PROCESS,
+  OSUSER,
+  MACHINE,
+  STATUS,
+  SCHEMANAME,
+  PROGRAM,
+  TYPE,
+  STATE
+FROM v$session where TYPE = &apos;USER&apos;</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>LockStatus</data>
+									</name>
+									<sql>
+										<data>SELECT
+  l.SID,
+  user,
+  s.OSUSER,
+  s.TYPE,
+  s.MACHINE,
+  s.PROGRAM,
+  ID1,
+  ID2,
+  LMODE,
+  REQUEST,
+  (CTIME) Seconds,
+  &quot;BLOCK&quot;
+FROM V$LOCK l, v$SESSION s
+WHERE
+l.sid = s.SID and s.TYPE = &apos;USER&apos;</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>LongQuery</data>
+									</name>
+									<sql>
+										<data>SELECT
+l.sid,
+user,
+process,
+machine,
+time_remaining,
+message
+FROM
+v$session_longops l, v$session s
+WHERE
+l.sid = s.sid AND time_remaining &gt; 15</data>
+									</sql>
+								</query>
+							</queries>
+							<connection>
+								<database>
+									<oracle>
+										<var-databaseName>
+											<var ref="ORACLE_DB_NAME"/>
+										</var-databaseName>
+									</oracle>
+								</database>
+								<var-userName>
+									<var ref="ORACLE_USER"/>
+								</var-userName>
+								<password>
+									<var ref="ORACLE_PASS"/>
+								</password>
+							</connection>
+							<showHeadlines>true</showHeadlines>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+		</samplerGroup>
+	</samplers>
+	<samplerIncludes>
+		<samplerIncludeGroup name="Layer 2 - Database Health">
+			<samplerIncludeGroup name="Layer 2 - Oracle Health">
+				<samplerInclude name="Oracle Trace Files">
+					<sampler ref="FKM"/>
+					<plugin>
+						<fkm>
+							<files>
+								<file>
+									<source>
+										<filename>
+											<var ref="ORACLE_TRACE_FILE_DIRECTORY"/>
+											<data>/*.trc</data>
+										</filename>
+									</source>
+								</file>
+							</files>
+						</fkm>
+					</plugin>
+				</samplerInclude>
+			</samplerIncludeGroup>
+		</samplerIncludeGroup>
+	</samplerIncludes>
+	<rules>
+		<ruleGroup name="Layer 2 - Database Health">
+			<ruleGroup name="Layer 2 - MySQL Health">
+				<ruleGroup name="MySQL-Status">
+					<rule name="QueryTime">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;MySQL-Status&quot;)][(@type=&quot;MySQL-Status&quot;)]/dataview[(@name=&quot;Process List&quot;)]/rows/row/cell[(@column=&quot;Time&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="Command">../cell[(@column=&quot;Command&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<if>
+								<and>
+									<equal>
+										<dataItem>
+											<pathAlias ref="Command"/>
+											<property>@value</property>
+										</dataItem>
+										<string>Query</string>
+									</equal>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>600</integer>
+									</gt>
+								</and>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<and>
+										<equal>
+											<dataItem>
+												<pathAlias ref="Command"/>
+												<property>@value</property>
+											</dataItem>
+											<string>Query</string>
+										</equal>
+										<gt>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<integer>300</integer>
+										</gt>
+									</and>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>undefined</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</block>
+					</rule>
+					<rule name="FullTableScans">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;MySQL-Status&quot;)][(@type=&quot;MySQL-Status&quot;)]/dataview[(@name=&quot;Global Status&quot;)]/headlines/cell[(@name=&quot;fullTableScans&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="Handler_read_first">ancestor::dataview/rows/row[(@name=&quot;Handler_read_first&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+							<pathAlias name="Handler_read_key">ancestor::dataview/rows/row[(@name=&quot;Handler_read_key&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+							<pathAlias name="Handler_read_next">ancestor::dataview/rows/row[(@name=&quot;Handler_read_next&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+							<pathAlias name="Handler_read_prev">ancestor::dataview/rows/row[(@name=&quot;Handler_read_prev&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+							<pathAlias name="Handler_read_rnd">ancestor::dataview/rows/row[(@name=&quot;Handler_read_rnd&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+							<pathAlias name="Handler_read_rnd_next">ancestor::dataview/rows/row[(@name=&quot;Handler_read_rnd_next&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<format>
+										<string>%.2f %%</string>
+										<multiply>
+											<divide>
+												<add>
+													<dataItem>
+														<pathAlias ref="Handler_read_rnd"/>
+														<property>@value</property>
+													</dataItem>
+													<dataItem>
+														<pathAlias ref="Handler_read_rnd"/>
+														<property>@value</property>
+													</dataItem>
+												</add>
+												<add>
+													<add>
+														<add>
+															<add>
+																<add>
+																	<dataItem>
+																		<pathAlias ref="Handler_read_first"/>
+																		<property>@value</property>
+																	</dataItem>
+																	<dataItem>
+																		<pathAlias ref="Handler_read_key"/>
+																		<property>@value</property>
+																	</dataItem>
+																</add>
+																<dataItem>
+																	<pathAlias ref="Handler_read_next"/>
+																	<property>@value</property>
+																</dataItem>
+															</add>
+															<dataItem>
+																<pathAlias ref="Handler_read_prev"/>
+																<property>@value</property>
+															</dataItem>
+														</add>
+														<dataItem>
+															<pathAlias ref="Handler_read_rnd"/>
+															<property>@value</property>
+														</dataItem>
+													</add>
+													<dataItem>
+														<pathAlias ref="Handler_read_rnd_next"/>
+														<property>@value</property>
+													</dataItem>
+												</add>
+											</divide>
+											<integer>100</integer>
+										</multiply>
+									</format>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>50</integer>
+								</gt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>40</integer>
+									</gt>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</block>
+					</rule>
+					<rule disabled="true" name="ConnectionCount">
+						<!--Max_used_connection is
+
+"The maximum number of connections that have been in use simultaneously since the server started."
+
+and so a rules to test this is questionable as it is never reset automatically.-->
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;MySQL-Status&quot;)][(@type=&quot;MySQL-Status&quot;)]/dataview[(@name=&quot;Global Status&quot;)]/rows/row[(@name=&quot;Max_used_connections&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="max_connections">ancestor::sampler/dataview[(@name=&quot;ServerVariables&quot;)]/rows/row[(@name=&quot;max_connections&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<if>
+								<lt>
+									<subtract>
+										<dataItem>
+											<pathAlias ref="max_connections"/>
+											<property>@value</property>
+										</dataItem>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+									</subtract>
+									<integer>5</integer>
+								</lt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<lt>
+										<subtract>
+											<dataItem>
+												<pathAlias ref="max_connections"/>
+												<property>@value</property>
+											</dataItem>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+										</subtract>
+										<integer>10</integer>
+									</lt>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</block>
+					</rule>
+					<ruleGroup name="Computed">
+						<rule name="cacheHitRate">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;MySQL-Status&quot;)][(@type=&quot;MySQL-Status&quot;)]/dataview[(@name=&quot;Global Status&quot;)]/headlines/cell[(@name=&quot;cacheHitRate&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<pathAliases>
+								<pathAlias name="Qcache_hits">../../rows/row[@name=&quot;Qcache_hits&quot;]/cell[@column=&quot;Value&quot;]</pathAlias>
+								<pathAlias name="Com_select">../../rows/row[@name=&quot;Com_select&quot;]/cell[@column=&quot;Value&quot;]</pathAlias>
+							</pathAliases>
+							<evaluateOnDataviewSample>true</evaluateOnDataviewSample>
+							<block>
+								<set>
+									<var ref="qcachehits"/>
+									<rate>
+										<dataItem>
+											<pathAlias ref="Qcache_hits"/>
+											<property>@value</property>
+										</dataItem>
+									</rate>
+								</set>
+								<set>
+									<var ref="comselect"/>
+									<rate>
+										<dataItem>
+											<pathAlias ref="Com_select"/>
+											<property>@value</property>
+										</dataItem>
+									</rate>
+								</set>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f%%</string>
+											<divide>
+												<multiply>
+													<integer>100</integer>
+													<var ref="qcachehits"/>
+												</multiply>
+												<add>
+													<var ref="qcachehits"/>
+													<var ref="comselect"/>
+												</add>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</block>
+						</rule>
+						<rule name="cacheInsertRate">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;MySQL-Status&quot;)][(@type=&quot;MySQL-Status&quot;)]/dataview[(@name=&quot;Global Status&quot;)]/headlines/cell[(@name=&quot;cacheInsertRate&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<pathAliases>
+								<pathAlias name="Qcache_hits">../../rows/row[@name=&quot;Qcache_hits&quot;]/cell[@column=&quot;Value&quot;]</pathAlias>
+								<pathAlias name="Qcache_inserts">../../rows/row[@name=&quot;Qcache_inserts&quot;]/cell[@column=&quot;Value&quot;]</pathAlias>
+								<pathAlias name="Com_select">../../rows/row[@name=&quot;Com_select&quot;]/cell[@column=&quot;Value&quot;]</pathAlias>
+							</pathAliases>
+							<evaluateOnDataviewSample>true</evaluateOnDataviewSample>
+							<block>
+								<set>
+									<var ref="qcachehits"/>
+									<rate>
+										<dataItem>
+											<pathAlias ref="Qcache_hits"/>
+											<property>@value</property>
+										</dataItem>
+									</rate>
+								</set>
+								<set>
+									<var ref="qcacheinserts"/>
+									<rate>
+										<dataItem>
+											<pathAlias ref="Qcache_inserts"/>
+											<property>@value</property>
+										</dataItem>
+									</rate>
+								</set>
+								<set>
+									<var ref="comselect"/>
+									<rate>
+										<dataItem>
+											<pathAlias ref="Com_select"/>
+											<property>@value</property>
+										</dataItem>
+									</rate>
+								</set>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f%%</string>
+											<divide>
+												<multiply>
+													<integer>100</integer>
+													<var ref="qcacheinserts"/>
+												</multiply>
+												<add>
+													<var ref="qcachehits"/>
+													<var ref="comselect"/>
+												</add>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</block>
+						</rule>
+						<rule name="cachePruneRate">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;MySQL-Status&quot;)][(@type=&quot;MySQL-Status&quot;)]/dataview[(@name=&quot;Global Status&quot;)]/headlines/cell[(@name=&quot;cachePruneRate&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<pathAliases>
+								<pathAlias name="Qcache_lowmem_prunes">../../rows/row[@name=&quot;Qcache_lowmem_prunes&quot;]/cell[@column=&quot;Value&quot;]</pathAlias>
+								<pathAlias name="Qcache_inserts">../../rows/row[@name=&quot;Qcache_inserts&quot;]/cell[@column=&quot;Value&quot;]</pathAlias>
+							</pathAliases>
+							<evaluateOnDataviewSample>true</evaluateOnDataviewSample>
+							<block>
+								<set>
+									<var ref="qcacheprunes"/>
+									<rate>
+										<dataItem>
+											<pathAlias ref="Qcache_lowmem_prunes"/>
+											<property>@value</property>
+										</dataItem>
+									</rate>
+								</set>
+								<set>
+									<var ref="qcacheinserts"/>
+									<rate>
+										<dataItem>
+											<pathAlias ref="Qcache_inserts"/>
+											<property>@value</property>
+										</dataItem>
+									</rate>
+								</set>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f%%</string>
+											<divide>
+												<multiply>
+													<integer>100</integer>
+													<var ref="qcacheprunes"/>
+												</multiply>
+												<var ref="qcacheinserts"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</block>
+						</rule>
+						<rule name="serverVersion">
+							<targets>
+								<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;MySQL-Status&quot;)][(@type=&quot;MySQL-Status&quot;)]/dataview[(@name=&quot;Variables&quot;)]/headlines/cell[(@name=&quot;serverVersion&quot;)]</target>
+							</targets>
+							<priority>1</priority>
+							<pathAliases>
+								<pathAlias name="version">ancestor::dataview/rows/row[(@name=&quot;version&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+								<pathAlias name="version_comment">ancestor::dataview/rows/row[(@name=&quot;version_comment&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+							</pathAliases>
+							<block>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<concat>
+											<dataItem>
+												<pathAlias ref="version_comment"/>
+												<property>@value</property>
+											</dataItem>
+											<string> </string>
+											<dataItem>
+												<pathAlias ref="version"/>
+												<property>@value</property>
+											</dataItem>
+										</concat>
+									</update>
+								</transaction>
+							</block>
+						</rule>
+					</ruleGroup>
+				</ruleGroup>
+			</ruleGroup>
+			<ruleGroup name="Layer 2 - Oracle Health"/>
+		</ruleGroup>
+	</rules>
+	<environments>
+		<environmentGroup name="Layer 2 - Database Health"/>
+	</environments>
+	<staticVars>
+		<fkmTables>
+			<fkmTableGroup name="Layer 2 - Database Health"/>
+		</fkmTables>
+		<processDescriptors>
+			<processDescriptorGroup name="Layer 2 - Database Health">
+				<processDescriptorGroup name="Layer 2 - MySQL Health">
+					<processDescriptor name="mysqld">
+						<alias>
+							<data>mysqld</data>
+						</alias>
+						<ID>
+							<searchString>
+								<data>^/usr/libexec/mysqld</data>
+							</searchString>
+						</ID>
+						<logFile>
+							<var ref="MYSQL_LOGFILE"/>
+						</logFile>
+					</processDescriptor>
+				</processDescriptorGroup>
+			</processDescriptorGroup>
+		</processDescriptors>
+		<databaseConnections>
+			<databaseConnectionGroup name="Layer 2 - Database Health"/>
+		</databaseConnections>
+	</staticVars>
+	<exportedData>
+		<dataSet name="Layer 2 - Database Health">
+			<paths>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Database Health&quot;)]</path>
+			</paths>
+		</dataSet>
+	</exportedData>
+</gateway>

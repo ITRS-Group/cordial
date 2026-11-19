@@ -177,9 +177,9 @@ func Suffix(suffix string) Option {
 }
 
 // PlainValue overrides the output of Value as JSON and instead it
-// is written as a string, in the format `prefix + value as %s +
-// suffix`, where prefix and suffix can be set using Prefix and
-// Suffix respectively, if the defaults are not suitable.
+// is written as plain text, with byte slices treated as text and other
+// values formatted with fmt.Sprint. Prefix and suffix can be set using
+// Prefix and Suffix respectively, if the defaults are not suitable.
 func PlainValue() Option {
 	return func(wo *options) {
 		wo.asJSON = false

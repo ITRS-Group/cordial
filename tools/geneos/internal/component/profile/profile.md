@@ -247,7 +247,7 @@ variables:
     value: ${config:home}/${config:logfile}
 ```
 
-The option names supplied from flags are `attribute`, `base`, `env`, `gateway`, `include`, `insecure`, `licence`, `minimal`, `type`, and `variable`, where the command defines them. Flag defaults are included. This is not a list of flags accepted by every command. In particular, `--minimal` and `--licence` are `init` options, not `deploy` options.
+The option names supplied from flags are `attribute`, `base`, `env`, `gateway`, `include`, `insecure`, `licence`, `minimal`, `name`, `type`, and `variable`, where the command defines them. Flag defaults are included. This is not a list of flags accepted by every command. In particular, `--minimal` and `--licence` are `init` options, not `deploy` options.
 
 Additional command arguments in `NAME=VALUE` form can supply option values. For example, a profile can use `name: ${option:site}` and be deployed with:
 
@@ -256,6 +256,12 @@ geneos deploy profile application site=application-gateway
 ```
 
 These arguments are saved with the profile options. They are not automatically applied as parameters to every component. Likewise, use `${option:gateway}` or `${option:attribute}` in a definition when you want those command options to control its SAN configuration.
+
+Use `geneos set profile NAME -g HOST:PORT` to update saved Gateway options, or `geneos set profile NAME site=VALUE` to update an option used as `${option:site}`. Repeatable options are merged by name. `geneos unset profile NAME -g HOST` removes a saved Gateway option, and `geneos unset profile NAME -k site` removes a named option. Both commands reapply the profile rather than setting or removing the values directly on every member.
+
+For either command, add `--rebuild`/`-r` (also named `--reload`) to reload members even when their generated configuration is unchanged. Add `--force`/`-F` to also force rebuilding members with `config.rebuild=initial`; this implies `--rebuild`. Members with `config.rebuild=never` are not reloaded by these options. These action flags are not saved as profile options.
+
+The `--secure`/`-s` and `--secureenv`/`-E` options of `geneos set profile` encode values with the selected keyfile before saving them in the profile options. Secret variables supplied with `--variable secret:NAME=VALUE` are also encoded before saving. Keep the referenced keyfile available when using these values.
 
 Use `${option:...}`, not `${flag:...}`. Arbitrary flags are not available to option expressions. The `insecure` and `minimal` options are booleans, so use them as conditions, for example `${option:insecure?8080:8443}`; the options saved with a profile keep their types when it is rebuilt.
 
@@ -477,13 +483,12 @@ A rebuild reads the selected YAML definition again and reuses the options saved 
    geneos --profiles ~/config/profiles.yaml restart profile application
    ```
 
-The component's `config.rebuild` setting controls generated files. The normal Gateway setting is `initial`; SAN and Floating Netprobe use `always`. `--force` permits a rebuild for `initial`, but not for `never`. A profile rebuild does not automatically reload or restart its child processes. See the [rebuild command reference](../../../docs/geneos_rebuild.md).
+The component's `config.rebuild` setting controls generated files. The normal Gateway setting is `initial`; SAN and Floating Netprobe use `always`. `--force` permits a rebuild for `initial`, but not for `never`. A profile rebuild reloads members whose generated configuration changes; `--force` also reloads members after an unchanged supported rebuild. Use `--reload`/`-r` to request member reloads regardless of changes. Members with `config.rebuild=never` are not reloaded by a rebuild. A rebuild does not restart processes. See the [rebuild command reference](../../../docs/geneos_rebuild.md).
 
-To change a saved option, set it on the profile instance before rebuilding. For example:
+To change a saved option and force a rebuild and reload in one command:
 
 ```bash
-geneos set profile health-agent config.options.gateway=health-c.example.com:7038
-geneos rebuild profile health-agent
+geneos set profile health-agent -g health-c.example.com:7038 --force
 ```
 
 Use `geneos show profile health-agent` to inspect the saved options. Passing new SAN flags to `rebuild` is not a substitute for changing those saved values.

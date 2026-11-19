@@ -190,6 +190,44 @@ func TestGeneralReportWritesErrors(t *testing.T) {
 	}
 }
 
+func TestPlainValueWritesByteSlicesAsText(t *testing.T) {
+	tests := []struct {
+		name   string
+		report func(*bytes.Buffer, any, ...Option)
+	}{
+		{
+			name: "multiple responses",
+			report: func(output *bytes.Buffer, value any, options ...Option) {
+				GeneralResponses{"x": {Value: value}}.Report(output, options...)
+			},
+		},
+		{
+			name: "single response",
+			report: func(output *bytes.Buffer, value any, options ...Option) {
+				(General{Value: value}).Report(output, options...)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, value := range []struct {
+				value any
+				want  string
+			}{
+				{value: []byte("<setup/>"), want: "<setup/>"},
+				{value: 42, want: "42"},
+			} {
+				var output bytes.Buffer
+				tt.report(&output, value.value, PlainValue(), Suffix(""), StderrWriter(io.Discard))
+				if got := output.String(); !strings.HasSuffix(got, value.want) {
+					t.Errorf("output for %#v = %q, want it to end with %q", value.value, got, value.want)
+				}
+			}
+		})
+	}
+}
+
 func TestReportSliceValueIsValidJSON(t *testing.T) {
 	responses := GeneralResponses{
 		"a": {Value: []any{map[string]int{"n": 1}, map[string]int{"n": 2}, map[string]int{"n": 3}}, Dataview: &Dataview{}},

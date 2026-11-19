@@ -145,6 +145,7 @@ func setProfile3(key, split string, vals map[string]string, options map[string]a
 		slices.Sort(pairs)
 
 		options[key] = strings.Join(pairs, ",")
+		changed = len(vals) > 0
 	}
 	return
 }
@@ -172,13 +173,43 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 	if ct.IsA("profile") {
 		options := profileOptions(cf)
 
+		if (len(values.SecureParams) > 0 || len(values.SecureEnvs) > 0) && keyfile == "" {
+			return nil, fmt.Errorf("keyfile is required to set secure profile parameters or environment variables")
+		}
+		encodedParams, err := updateEncoded(i, values.SecureParams, keyfile)
+		if err != nil {
+			return nil, err
+		}
+		encodedEnvs, err := updateEncoded(i, values.SecureEnvs, keyfile)
+		if err != nil {
+			return nil, err
+		}
+
 		changed := setProfile("gateway", ":", values.Gateways, options)
 		changed = setProfile("env", "=", values.Envs, options) || changed
+		changed = setProfile("env", "=", encodedEnvs, options) || changed
 		changed = setProfile("attribute", "=", values.Attributes, options) || changed
 		changed = setProfile("type", "", values.Types, options) || changed
-		changed = setProfile("param", "=", values.Params, options) || changed
+		for _, param := range slices.Concat([]string(values.Params), encodedParams) {
+			if param == "" {
+				continue
+			}
+			name, value, found := strings.Cut(param, "=")
+			if !found || name == "" {
+				return nil, fmt.Errorf("profile options must be NAME=VALUE pairs")
+			}
+			options[name] = value
+			changed = true
+		}
 
-		changed = setProfile2("variable", ":", "=", values.Variables, options) || changed
+		variables := slices.Clone(values.Variables)
+		for n, variable := range variables {
+			variables[n], err = prepareVariable(i, variable, keyfile)
+			if err != nil {
+				return nil, err
+			}
+		}
+		changed = setProfile2("variable", ":", "=", variables, options) || changed
 
 		changed = setProfile3("include", ":", values.Includes, options) || changed
 
@@ -380,18 +411,12 @@ func setMapValue[V any](i geneos.Instance, cf *config.Config, confKey string, ke
 	return true
 }
 
-// setVariableValue updates the variable item configuration cf for
-// the given confKey. Any old style map is converted and then updated
-// with the new items.
-//
-// variables of type "secret" are checked and if the value is empty then
-// the user is prompted for the value, which is then encrypted with
-// their user keyfile. non empty values are checked for encoding, and if
-// in plain text then they are encoded
-func setVariableValue(i geneos.Instance, cf *config.Config, confKey string, item Variable, keyfile config.KeyFile) (changed bool) {
+// prepareVariable validates a variable and encodes secret values before
+// they are saved as string variables. Empty secrets must be prompted for
+// by the caller.
+func prepareVariable(i geneos.Instance, item Variable, keyfile config.KeyFile) (Variable, error) {
 	if item.Name == "" {
-		i.Log().Error("variable name is required")
-		return false
+		return item, fmt.Errorf("variable name is required")
 	}
 
 	switch item.Type {
@@ -402,8 +427,7 @@ func setVariableValue(i geneos.Instance, cf *config.Config, confKey string, item
 		// value is empty then the user should have been prompted for it
 		// already
 		if keyfile == "" {
-			i.Log().Error("keyfile is required to set secret variable", slog.String("name", item.Name))
-			return false
+			return item, fmt.Errorf("keyfile is required to set secret variable %q", item.Name)
 		}
 		if strings.HasPrefix(item.Value, "${enc:") {
 			// value is already encrypted, just use it as is
@@ -412,14 +436,22 @@ func setVariableValue(i geneos.Instance, cf *config.Config, confKey string, item
 			// encrypt value and store as special secret type
 			item.Value, err = keyfile.EncodeString(i.Host(), item.Value, true)
 			if err != nil {
-				log.Error("failed to encrypt secret for variable", slog.Any("error", err), slog.String("name", item.Name))
-				return false
+				return item, fmt.Errorf("failed to encrypt secret for variable %q: %w", item.Name, err)
 			}
 		}
 		// now mark it as a string
 		item.Type = "string"
 	case "":
 		item.Type = "string"
+	}
+	return item, nil
+}
+
+func setVariableValue(i geneos.Instance, cf *config.Config, confKey string, item Variable, keyfile config.KeyFile) (changed bool) {
+	item, err := prepareVariable(i, item, keyfile)
+	if err != nil {
+		i.Log().Error("failed to set variable", slog.Any("error", err))
+		return false
 	}
 
 	// save it back, over any existing variables with the same name

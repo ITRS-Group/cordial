@@ -55,7 +55,11 @@ var reloadCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, ReloadInstance).Report(os.Stdout)
+		targets := instance.ProfileAndMembers
+		if ct != nil && ct.IsA("profile") {
+			targets = instance.ProfileOnly
+		}
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, ReloadInstance, targets).Report(os.Stdout)
 	},
 }
 

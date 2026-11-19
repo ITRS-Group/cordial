@@ -374,6 +374,7 @@ type profileLifecycleInstance struct {
 	events     *[]string
 	imported   string
 	force      *bool
+	changed    bool
 	rebuildErr error
 	reloadErr  error
 }
@@ -385,7 +386,7 @@ func (i *profileLifecycleInstance) Rebuild(force bool) (bool, error) {
 	if err != nil || string(contents) != "imported before rebuild" {
 		return false, fmt.Errorf("rebuild ran before import: %q, %v", contents, err)
 	}
-	return i.rebuildErr == nil, i.rebuildErr
+	return i.changed, i.rebuildErr
 }
 
 func (i *profileLifecycleInstance) Reload() error {
@@ -396,19 +397,26 @@ func (i *profileLifecycleInstance) Reload() error {
 func TestApplyInstanceLifecycle(t *testing.T) {
 	failure := errors.New("lifecycle failure")
 	for _, test := range []struct {
-		name       string
-		missing    bool
-		rebuildErr error
-		reloadErr  error
-		wantErr    error
-		events     []string
+		name         string
+		missing      bool
+		changed      bool
+		rebuildNever bool
+		noForce      bool
+		rebuildErr   error
+		reloadErr    error
+		wantErr      error
+		events       []string
 	}{
-		{name: "success", events: []string{"rebuild", "reload"}},
+		{name: "success", changed: true, events: []string{"rebuild", "reload"}},
 		{name: "import failure", missing: true, wantErr: os.ErrNotExist},
-		{name: "rebuild failure", rebuildErr: failure, wantErr: failure, events: []string{"rebuild"}},
-		{name: "reload failure", reloadErr: failure, wantErr: failure, events: []string{"rebuild", "reload"}},
-		{name: "unsupported rebuild", rebuildErr: geneos.ErrNotSupported, events: []string{"rebuild"}},
-		{name: "unsupported reload", reloadErr: geneos.ErrNotSupported, events: []string{"rebuild", "reload"}},
+		{name: "rebuild failure", changed: true, rebuildErr: failure, wantErr: failure, events: []string{"rebuild"}},
+		{name: "reload failure", changed: true, reloadErr: failure, wantErr: failure, events: []string{"rebuild", "reload"}},
+		{name: "unsupported rebuild", changed: true, rebuildErr: geneos.ErrNotSupported, events: []string{"rebuild"}},
+		{name: "unsupported reload", changed: true, reloadErr: geneos.ErrNotSupported, events: []string{"rebuild", "reload"}},
+		{name: "force reloads unchanged rebuild", events: []string{"rebuild", "reload"}},
+		{name: "force respects rebuild never", rebuildNever: true, events: []string{"rebuild"}},
+		{name: "changed rebuild never", changed: true, rebuildNever: true, events: []string{"rebuild"}},
+		{name: "unchanged without force", noForce: true, events: []string{"rebuild"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := newProfileTestRoot(t)
@@ -434,19 +442,26 @@ func TestApplyInstanceLifecycle(t *testing.T) {
 				return &profileLifecycleInstance{
 					Instance: factory(name), events: &events, force: &force,
 					imported:   filepath.Join(member.Home(), "applied.txt"),
+					changed:    test.changed,
 					rebuildErr: test.rebuildErr, reloadErr: test.reloadErr,
 				}
 			}
 			common := profile.Common{Imports: []string{"applied.txt=" + source}}
-			err = profile.ApplyInstance(geneos.LOCAL, config.New(), ct, member.Name(), common, values.Values{}, nil, true)
+			if test.rebuildNever {
+				config.Set(member.Config(), "config.rebuild", "never")
+				if resp := instance.Write(member, instance.NoRebuild()); resp.Err != nil {
+					t.Fatal(resp.Err)
+				}
+			}
+			err = profile.ApplyInstance(geneos.LOCAL, config.New(), ct, member.Name(), common, values.Values{}, nil, !test.noForce)
 			if !errors.Is(err, test.wantErr) {
 				t.Fatalf("ApplyInstance error = %v, want %v", err, test.wantErr)
 			}
 			if !slices.Equal(events, test.events) {
 				t.Fatalf("calls = %v, want %v", events, test.events)
 			}
-			if len(events) > 0 && !force {
-				t.Fatal("force flag was not passed to the rebuild")
+			if len(events) > 0 && force != !test.noForce {
+				t.Fatalf("rebuild force = %t, want %t", force, !test.noForce)
 			}
 		})
 	}
@@ -505,6 +520,64 @@ func TestProfileDispatchTargets(t *testing.T) {
 	}
 }
 
+type profileReloadTestInstance struct {
+	geneos.Instance
+	reloaded   *[]string
+	reloadErrs map[string]error
+}
+
+func (i *profileReloadTestInstance) Reload() error {
+	*i.reloaded = append(*i.reloaded, i.Name())
+	return i.reloadErrs[i.Name()]
+}
+
+func TestProfileReloadsMembers(t *testing.T) {
+	newProfileTestRoot(t)
+	ct := geneos.ParseComponent("licd")
+	factory := ct.New
+	var reloaded []string
+	reloadErrs := map[string]error{}
+	ct.New = func(name string) geneos.Instance {
+		return &profileReloadTestInstance{Instance: factory(name), reloaded: &reloaded, reloadErrs: reloadErrs}
+	}
+	t.Cleanup(func() { ct.New = factory })
+
+	for _, name := range []string{"member-a", "member-b"} {
+		if _, err := instance.Add(geneos.LOCAL, ct, name, instance.Insecure(true),
+			instance.WithValues(values.Values{Params: []string{"config.profile=reload-test"}})); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := instance.Add(geneos.LOCAL, ct, "other-member", instance.Insecure(true)); err != nil {
+		t.Fatal(err)
+	}
+
+	subject := geneos.ParseComponent("profile").New("reload-test")
+	failure := errors.New("reload failed")
+	for _, test := range []struct {
+		name       string
+		errA, errB error
+		wantErr    error
+	}{
+		{name: "success"},
+		{name: "unsupported and failure", errA: geneos.ErrNotSupported, errB: failure, wantErr: failure},
+		{name: "stopped and failure", errA: os.ErrProcessDone, errB: failure, wantErr: failure},
+		{name: "unsupported and stopped", errA: geneos.ErrNotSupported, errB: os.ErrProcessDone},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			reloaded = nil
+			reloadErrs["member-a"], reloadErrs["member-b"] = test.errA, test.errB
+			err := subject.Reload()
+			if !errors.Is(err, test.wantErr) || errors.Is(err, geneos.ErrNotSupported) || errors.Is(err, os.ErrProcessDone) {
+				t.Fatalf("Reload() error = %v, want %v without ignored member errors", err, test.wantErr)
+			}
+			if !slices.Equal(reloaded, []string{"member-a", "member-b"}) {
+				t.Errorf("reloaded members = %v, want [member-a member-b]", reloaded)
+			}
+		})
+	}
+}
+
 func TestProfileRebuildPropagatesForce(t *testing.T) {
 	newProfileTestRoot(t)
 	ct := geneos.ParseComponent("licd")
@@ -528,7 +601,7 @@ func TestProfileRebuildPropagatesForce(t *testing.T) {
 	var events []string
 	var force bool
 	ct.New = func(name string) geneos.Instance {
-		return &profileLifecycleInstance{Instance: factory(name), events: &events, imported: imported, force: &force}
+		return &profileLifecycleInstance{Instance: factory(name), events: &events, imported: imported, force: &force, changed: true}
 	}
 	for _, want := range []bool{false, true} {
 		events = nil

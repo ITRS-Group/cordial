@@ -35,6 +35,7 @@ import (
 )
 
 var unsetCmdValues = values.UnsetConfigValues{}
+var unsetCmdRebuild, unsetCmdForce bool
 
 func init() {
 	Cmd.AddCommand(unsetCmd)
@@ -49,6 +50,10 @@ func init() {
 	unsetCmd.Flags().VarP(&unsetCmdValues.Variables, "variable", "v", "Remove the variable `NAME`\n(Repeat as required, san only)")
 
 	unsetCmd.Flags().VarP(&unsetCmdValues.Entities, "entity", "M", "Remove a managed entity `NAME`\n(Repeat as required, san only)")
+
+	unsetCmd.Flags().BoolVarP(&unsetCmdRebuild, "rebuild", "r", false, "Rebuild and reload after unsetting values, even if unchanged")
+	unsetCmd.Flags().BoolVar(&unsetCmdRebuild, "reload", false, "Alias for --rebuild")
+	unsetCmd.Flags().BoolVarP(&unsetCmdForce, "force", "F", false, "Force rebuild and reload, except when config.rebuild=never")
 
 	unsetCmd.Flags().SortFlags = false
 }
@@ -109,14 +114,16 @@ geneos unset san -g Gateway1
 				}
 			}
 
-			if !changed {
+			if !changed && !unsetCmdRebuild && !unsetCmdForce {
 				resp.Err = fmt.Errorf("nothing unset: no matching values found")
 				return
 			}
 
-			resp.Completed = []string{"values unset successfully"}
-			resp = responses.MergeResponse(resp, instance.Write(i))
+			if changed {
+				resp.Completed = []string{"values unset successfully"}
+			}
+			resp = responses.MergeResponse(resp, writeWithRebuild(i, unsetCmdRebuild, unsetCmdForce))
 			return
-		}, instance.ProfileMembersOnly).Report(os.Stdout)
+		}, instance.ProfileOnly).Report(os.Stdout)
 	},
 }

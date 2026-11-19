@@ -6,9 +6,13 @@ The values for the `config.rebuild` option are: `never`, `initial` and `always`.
 
 You can force a rebuild for an instance that has the `config.rebuild` set to `initial` by using the `--force`/`-F` option. Instances with a `never` setting are never rebuilt.
 
+When rebuilding a profile, `--force` also reloads its members after a supported rebuild even if the generated configuration is unchanged. It does not override `config.rebuild=never`.
+
+Profile rebuilds report the actions taken for each member, including configuration writes, rebuilds, unchanged or skipped rebuilds, and reload results.
+
 To change this use something like `geneos set gateway MyGateway config.rebuild=always`
 
-Instances will not normally update their settings when the configuration file changes, although there are options for both Gateways and Netprobes to do this, so you can trigger a configuration reload with the `--reload`/`-r` option. This will send the appropriate signal to matching instances regardless of the underlying configuration being updated or not.
+Instances will not normally update their settings when the configuration file changes, although there are options for both Gateways and Netprobes to do this, so you can trigger a configuration reload with the `--reload`/`-r` option. This will send the appropriate signal to matching instances regardless of the underlying configuration being updated or not, except for instances with `config.rebuild=never`.
 
 The templates used for each `TYPE` are stored in the `templates/` directory under each `TYPE` directory, e.g `[GENEOS]/gateway/templates`. If you do not have any templates because you are adopting an existing installation then the program will use internal defaults. Use the `geneos init template` command to write out the current templates based on the built-in ones. Only files with the extension `.gotmpl` are treated as templates and directories (and their contents) are ignored.
 

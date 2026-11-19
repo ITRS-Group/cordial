@@ -4,6 +4,10 @@ The `set` command lets you set one or more configuration parameters for matching
 
 There are two kinds of parameters, basic `NAME=VALUE` pairs, and structured parameters which may include lists and other kinds of values, and are passed to templates for processing. Structured parameters include environment variables, include files and Gateway connection details for Self-Announcing and Floating Netprobes. The parameters that are supported depend on the component TYPE and the templates used to build the instance configuration. Parameters that are common to all component types are described in the "Common Parameters" section below, and component-specific parameters are described in the component help, e.g. `geneos help gateway` for Gateway instances.
 
+Use `--rebuild`/`-r` (also named `--reload`) to rebuild and reload after saving the values, including when the generated configuration is unchanged. Normal `config.rebuild` rules still apply. Use `--force`/`-F` to force the rebuild and reload, including for `config.rebuild=initial`; `--force` implies `--rebuild`. Neither option rebuilds or reloads instances with `config.rebuild=never`. For profiles, saved options are updated and reapplied before the member instances are reloaded.
+
+Without these options, the existing automatic rebuild and reload behavior is unchanged: supported instances rebuild according to `config.rebuild` and reload when the rebuild reports a change.
+
 ## Basic Parameters
 
 Note that `geneos set` will overwrite existing parameters without warning. Setting a basic parameter to an empty string will effectively remove its value. This behaviour may change in a future release and should not be relied on. To remove a parameter use the `geneos unset` command.
@@ -151,6 +155,9 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
+  -r, --rebuild[=true|false]          Rebuild and reload after setting values, even if unchanged
+      --reload[=true|false]           Alias for --rebuild
+  -F, --force[=true|false]            Force rebuild and reload, except when config.rebuild=never
       --allow-root[=true|false]       allow running as root (not recommended)
   -G, --config string                 config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")

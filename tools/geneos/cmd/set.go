@@ -41,6 +41,7 @@ import (
 var userKeyfileMutex sync.Mutex
 var setCmdKeyfile config.KeyFile
 var setCmdValues = values.Values{}
+var setCmdRebuild, setCmdForce bool
 
 //go:embed _docs/set.md
 var setCmdDescription string
@@ -59,6 +60,10 @@ func init() {
 	setCmd.Flags().VarP(&setCmdValues.Attributes, "attribute", "a", values.AttributesOptionsText)
 	setCmd.Flags().VarP(&setCmdValues.Types, "type", "t", values.TypesOptionsText)
 	setCmd.Flags().VarP(&setCmdValues.Variables, "variable", "v", values.VarsOptionsText)
+
+	setCmd.Flags().BoolVarP(&setCmdRebuild, "rebuild", "r", false, "Rebuild and reload after setting values, even if unchanged")
+	setCmd.Flags().BoolVar(&setCmdRebuild, "reload", false, "Alias for --rebuild")
+	setCmd.Flags().BoolVarP(&setCmdForce, "force", "F", false, "Force rebuild and reload, except when config.rebuild=never")
 
 	setCmd.Flags().SortFlags = false
 }
@@ -125,7 +130,7 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 		}
 
 		setCmdValues.Params = params
-		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, setValues, setCmdValues, instance.ProfileMembersOnly).Report(os.Stdout)
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, setValues, setCmdValues, instance.ProfileOnly).Report(os.Stdout)
 	},
 }
 
@@ -182,7 +187,7 @@ func setValues(i geneos.Instance, args ...any) (resp *responses.General) {
 	// only overwrite instance config on success
 	i.SetConfig(cf)
 
-	resp = responses.MergeResponse(resp, instance.Write(i))
+	resp = responses.MergeResponse(resp, writeWithRebuild(i, setCmdRebuild, setCmdForce))
 	if resp.Err == nil {
 		i.AuditEvent("action/set", nil, auditSetValues(v)...)
 	}

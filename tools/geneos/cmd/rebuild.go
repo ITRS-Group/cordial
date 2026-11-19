@@ -19,11 +19,14 @@ package cmd
 
 import (
 	_ "embed"
+	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -61,21 +64,54 @@ var rebuildCmd = &cobra.Command{
 			return
 		}
 		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
-			resp = responses.New[responses.General](i)
-
-			var changed bool
-			if changed, resp.Err = i.Rebuild(rebuildCmdForce); resp.Err != nil {
-				return
-			}
-			if changed {
-				resp.Completed = append(resp.Completed, "configuration rebuilt")
-			}
-			i.Log().Debug("configuration rebuilt (if supported)", slog.Bool("force", rebuildCmdForce))
-			if !rebuildCmdReload {
-				return
-			}
-			resp2 := ReloadInstance(i)
-			return responses.MergeResponse(resp, resp2)
+			return rebuildInstance(i, rebuildCmdForce, rebuildCmdReload)
 		}, instance.ProfileOnly).Report(os.Stdout)
 	},
+}
+
+func writeWithRebuild(i geneos.Instance, rebuild, force bool) *responses.General {
+	if !rebuild && !force {
+		return instance.Write(i)
+	}
+	resp := instance.Write(i, instance.NoRebuild())
+	if resp.Err != nil {
+		return resp
+	}
+	return responses.MergeResponse(resp, rebuildInstance(i, force, true))
+}
+
+func rebuildInstance(i geneos.Instance, force, reload bool) (resp *responses.General) {
+	resp = responses.New[responses.General](i)
+	if config.Get[string](i.Config(), config.Join("config", "rebuild")) == "never" {
+		return
+	}
+
+	var changed bool
+	if changed, resp.Err = i.Rebuild(force); resp.Err != nil {
+		return
+	}
+	if changed {
+		resp.Completed = append(resp.Completed, "configuration rebuilt")
+	}
+	i.Log().Debug("configuration rebuilt (if supported)", slog.Bool("force", force))
+	if !reload {
+		return
+	}
+	if !i.Type().IsA("profile") {
+		return responses.MergeResponse(resp, ReloadInstance(i))
+	}
+
+	for _, member := range instance.Instances(i.Host(), nil, instance.MatchParameters(config.Join("config", "profile")+"="+i.Name())) {
+		if config.Get[string](member.Config(), config.Join("config", "rebuild")) == "never" {
+			continue
+		}
+		if err := member.Reload(); err != nil {
+			if !errors.Is(err, geneos.ErrNotSupported) && !errors.Is(err, os.ErrProcessDone) {
+				resp.Err = errors.Join(resp.Err, fmt.Errorf("reload %s: %w", member, err))
+			}
+			continue
+		}
+		resp.Completed = append(resp.Completed, fmt.Sprintf("reload signal sent to %s", member))
+	}
+	return
 }

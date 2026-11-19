@@ -162,7 +162,7 @@ func (responses GeneralResponses) Report(writer any, options ...Option) (err err
 					}
 				} else {
 					fmt.Fprintf(w, opts.prefixformat, resp.Instance)
-					fmt.Fprint(w, logger.Redact(fmt.Sprint(resp.Value)))
+					fmt.Fprint(w, logger.Redact(plainValueString(resp.Value)))
 					fmt.Fprint(w, opts.suffix)
 				}
 			}
@@ -324,7 +324,7 @@ func (resp General) Report(writer any, options ...Option) {
 				w.Write(logger.RedactJSON(b))
 			} else {
 				fmt.Fprintf(w, opts.prefixformat, resp.Instance)
-				fmt.Fprint(w, logger.Redact(fmt.Sprint(resp.Value)))
+				fmt.Fprint(w, logger.Redact(plainValueString(resp.Value)))
 				fmt.Fprint(w, opts.suffix)
 			}
 		}
@@ -347,6 +347,13 @@ func (resp General) Report(writer any, options ...Option) {
 	}
 
 	resp.reportErr(opts)
+}
+
+func plainValueString(value any) string {
+	if data, ok := value.([]byte); ok {
+		return string(data)
+	}
+	return fmt.Sprint(value)
 }
 
 // reportErr writes the error, if any, that is not ignored, or otherwise

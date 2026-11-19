@@ -53,6 +53,12 @@ func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
 		changed = unsetProfile("include", ":", unset.Includes, options) || changed
 		changed = unsetProfile("type", "", unset.Types, options) || changed
 		changed = unsetProfile("param", "=", unset.Keys, options) || changed
+		for _, key := range unset.Keys {
+			if _, found := options[key]; found {
+				delete(options, key)
+				changed = true
+			}
+		}
 
 		changed = unsetProfile2("variable", ":", "=", unset.Variables, options) || changed
 

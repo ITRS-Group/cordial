@@ -19,6 +19,7 @@ limitations under the License.
 package profile
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -234,7 +235,13 @@ func (i *Profile) Command(skipFileCheck bool) (args, env []string, home string, 
 
 // Reload will flow down to the configured instances
 func (i *Profile) Reload() (err error) {
-	return geneos.ErrNotSupported
+	var errs []error
+	for _, member := range instance.Instances(i.Host(), nil, instance.MatchParameters(config.Join("config", "profile")+"="+i.Name())) {
+		if err := member.Reload(); err != nil && !errors.Is(err, geneos.ErrNotSupported) && !errors.Is(err, os.ErrProcessDone) {
+			errs = append(errs, fmt.Errorf("reload instance %q: %w", member.String(), err))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // Rebuild the profile from the configuration, which may trigger
