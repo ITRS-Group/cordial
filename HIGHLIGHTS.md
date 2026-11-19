@@ -3,26 +3,28 @@
 New features and notable capabilities, grouped by version, newest first. Versions without selected highlights are omitted. For upgrade-sensitive changes, see [UPDATENOTES](UPDATENOTES.md).
 
 > [!NOTE]
-> This is a short list of the most significant changes only. The [CHANGELOG](CHANGELOG.md) is the primary source and has the full details of every new feature, change and fix in each version.
+> This is a short list of the most significant changes only. The [CHANGELOG](CHANGELOG.md) records notable features, changes and fixes; the [update notes](UPDATENOTES.md) cover breaking and upgrade-sensitive changes.
 
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
 > [!NOTE]
 > Built with Go 1.27.4.
 
-* **Reliability:** An in-depth code review led to numerous fixes across the tools, including regressions and inconsistent behaviour. These fixes are intended to make existing workflows behave as users expect; intentional changes that may affect upgrades are covered in the [update notes](UPDATENOTES.md).
+* **Automation and reliability:** `geneos` reports failures consistently and returns a non-zero status when any requested item fails. Significant fixes protect existing files, instance directories and certificate stores after failed operations, restore broken installation workflows, and prevent credential exposure through logs, redirects or unintended configuration expansion.
 
-* **Includes (preview):** Manage include files and configuration templates independently of the `geneos` program version, with a separate versioned includes archive in releases. Existing Gateway setups that use the old `config` includes can be moved to the new layout with `geneos includes fix`. This is still considered a feature preview and may undergo further changes before becoming fully stable.
+* **Monitoring Health:** The supplied `health-agent` and `health-gateway` profiles replace Monitor-Of-The-Monitors. Monitoring includes, identifiers, GDNA reports and dashboards use `layer` rather than `level` names. Existing installations need migration; see the [update notes](UPDATENOTES.md#v1310-in-development).
 
-* **Site names:** Set an installation-wide site name, with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or `geneos deploy`, which is used for the Gateway include directory and file names. The supplied profiles use it in their include paths.
+* **Geneos management:** Profile options persist correctly, secrets are encoded before saving, and rebuilds show member actions. `set` and `unset` can rebuild and reload in one operation. TLS import and inspection support more certificate sources, package installation handles multiple archives, and `adb info`, `clean` and the new `edit` alias improve XPath and URL inspection and editing. Gateway XML updates better preserve existing content.
 
-* **TLS commands:** `geneos tls import` has `--file`/`-f` to name files without confusing them with instances, and `--roots-only` to add only root CA certificates to the `ca-bundle` from PEM, PFX/PKCS#12 or Java trust store files. `geneos tls info` accepts newline or NUL separated lists of paths, and glob patterns, as passed by a Toolkit sampler.
+* **Gateway includes (preview):** Manage includes and templates independently of the `geneos` version, with site-specific configuration and a separate versioned archive. New `geneos includes install`, `delete`/`remove` and `fix` commands install releases, prune unused versions and repair references. Existing setups using the old `config` includes can move to the site layout with `fix`. This remains a preview.
 
-* **Dashboard files:** `geneos adb info` can list the XPaths and URLs in an Active Dashboard file, and `geneos adb clean` can filter or replace URLs.
+* **Incident integrations:** ServiceNow and ServiceDesk Plus handling now requires authentication and correlation, reports failures to clients, and avoids duplicate submissions after an incident is accepted. Request data stays literal, and configuration reloads refresh connection credentials.
 
-* **Packages:** `geneos package install` accepts repeatable `--archive` options as well as positional archives, directories and URLs.
+* **Background processes:** `servicenow2 proxy`, `ims-gateway` and `gdna` support `stop`, `restart`, `reload` and `status`. Startup checks and locked PID files detect failures and prevent duplicate starts; reloads apply configuration without interrupting work in progress.
 
-* **Background processes:** `servicenow2 proxy`, `ims-gateway` and `gdna start` can now be controlled with `stop`, `restart`, `reload` and `status` commands, and `reload` applies a changed configuration without interrupting work in progress.
+* **GDNA:** Failed fetches no longer leave partial source data, licence and coverage reports are corrected, and a failed run no longer stops scheduled processing. Reloaded source configuration takes effect, report errors prevent incomplete email delivery, and log settings are applied consistently.
+
+* **Release contents:** Includes ship in their own versioned archive, alongside expanded release documentation. The original `servicenow`, `pagerduty` and `san-config` are no longer distributed; use v1.30.1 or build from source. For ServiceNow, use `servicenow2` or `ims-gateway`.
 
 ## [v1.30.1](CHANGELOG.md#version-v1301)
 

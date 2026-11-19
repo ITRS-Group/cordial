@@ -1,15 +1,39 @@
 # Update Notes
 
-This is a summary of breaking and other upgrade-sensitive changes in Cordial. When updating across multiple versions, review every relevant section between your installed version and the version you are installing. Versions without selected update notes are omitted; their omission does not guarantee that an update needs no attention. See the [CHANGELOG](CHANGELOG.md) for full details and fixes, and [HIGHLIGHTS](HIGHLIGHTS.md) for new features.
+This records breaking and other upgrade-sensitive changes in Cordial. When updating across multiple versions, review every relevant section between your installed version and the version you are installing. Versions without selected update notes are omitted; their omission does not guarantee that an update needs no attention. See the [CHANGELOG](CHANGELOG.md) for notable changes and fixes, and [HIGHLIGHTS](HIGHLIGHTS.md) for release highlights.
 
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
 > [!NOTE]
 > Built with Go 1.27.4.
 
+* **`geneos` automation and configuration**
+
+  * **Breaking change - exit status:** Commands now exit with a non-zero status if any requested instance, host, file or other item fails, rather than reporting failures and exiting successfully. Other items are still processed where supported. Explicit names that do not exist are failures; unmatched patterns or component types with no instances are not. Commands that validate all names first still fail before acting. Already-running starts, stopped-instance stops/restarts/reloads, unsupported actions and disabled instances skipped by a start-all are not failures. Review scripts and Geneos actions that relied on a zero exit status after an error; this also applies to legacy `ctl` commands.
+
+  * **Stricter validation:** Unknown hosts are rejected, never treated as all hosts. `add` and `deploy` reject existing instances, although `deploy` and `init` still reapply existing profiles. Undefined profiles and unsupported multi-component profile port overrides are errors. Failures previously only logged by package, TLS, restore, host, AES and configuration commands now fail the command.
+
+  * **Configuration files and output:** `geneos config set`, `unset` and `show` use the file selected with `--config`/`-G`. Empty JSON results are `[]`, not `null`, and `tls list` reports instance certificate `remaining` as a duration. Check output consumers.
+
+  * **Initialization and trust:** `geneos init`, including with `--force`, keeps existing user-wide root and signing certificates and creates only missing ones. Use `geneos tls init --overwrite` to replace them deliberately. Root certificates that are expired or not valid root CAs are rejected by commands that read them.
+
+  * **Profile updates:** `set profile` and `unset profile` now change saved options and reapply the profile, rather than modifying members directly. Update the profile YAML or saved options for lasting member changes. Reapplying a profile also removes environment entries no longer defined by it, for all component types.
+
+  * **Profile TLS settings:** Reapplying a profile follows its saved `insecure` option, including for existing members. A saved insecure profile removes member TLS parameters even if TLS was enabled by hand; certificate files are kept, and a Web Dashboard keystore is renamed with a `.disabled` suffix. A secure profile requires a usable signing certificate. Profiles without a saved `insecure` option are unaffected. Review saved options before a deploy, rebuild or set.
+
+  * **Ports and TLS defaults:** Custom ports are preserved. Conventional Gateway and Web Dashboard TLS ports change only when the matching port is available; an occupied target port is no longer replaced by an arbitrary free port. SAN and floating Netprobe gateway ports change only for the conventional 7038/7039 pair. TLS-enabled instances now always receive the instance or global minimum TLS version, defaulting to `1.2`.
+
+  * **Rebuild and reload:** Profile reloads now reach members, and forced profile rebuilds reload even when generated files are unchanged. Rebuild-driven reloads skip `config.rebuild=never`. The new force action on `set` and `unset` implies rebuild and reload, but does not override `never`. Review automation that previously depended on these operations having no effect.
+
+  * **Archive and download handling:** Download timeouts now detect connection delays and stalled transfers, not total transfer duration. Non-file ZIP inputs are staged locally and limited to 8 GiB by default; change `download.max-archive-size` or `ITRS_DOWNLOAD_MAX_ARCHIVE_SIZE` if necessary. ZIP symlinks are skipped, or rejected if they escape the destination. `restore` requires a recognizable archive extension or an explicit decompression type for STDIN, refuses terminal input, and `--list` no longer writes or rebuilds anything.
+
+  * **Audit retention:** Previously ignored rotation settings now take effect, including the default 10 MiB size, 30 days, 5 backups and gzip compression. Set instance or global `audit` settings if older logs must be retained longer.
+
+  * **AES options:** `aes set` reads a keyfile from STDIN only without `--keyfile` or `--crc`. `--crc` cannot be combined with `--keyfile` or `--shared`. Check scripts relying on the previously ignored CRC option.
+
 * **`geneos` sites, includes and packages**
 
-  * **Site names:** You can set an site name with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. The default site name is `local`. You should use the same site name for all Geneos deployments.
+  * **Site names:** You can set a site name with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. The default site name is `local`. You should use the same site name for all Geneos deployments.
 
     At this time the only function of the site name is to determine the location where configuration includes are installed, which is under `gateway/<site>/<site>.*.xml`, instead of the previous `gateway/includes/config/config.*.xml` locations. This will likely expand in the future to offer further customization and control over site-specific configurations.
 
@@ -20,6 +44,8 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
   * **Minor breaking change — includes commands:** Remove `--force`/`-F` from scripts using `geneos includes extract` or `update`; re-extraction no longer requires it. Existing top-level files and links are only replaced with `extract --update`, `install --update` or `update`. Existing configuration templates are never replaced.
 
   * **Minor breaking change — include list output:** Update consumers of JSON, pretty, CSV and Toolkit output for separate status and boolean fields instead of compact flags. CSV and Toolkit headings use camelCase; column and table headings use NormalCase. Gateway-local entries use `gatewayLocal` and `G`, not `local` and `L`. Paths shown for some files have also changed; gateway-local references retain their configured paths, except the main local setup is relative to the instance.
+
+  * **Referenced include versions:** `update`, `delete` and `install --update` check Gateway references before removing obsolete links. A referenced link without a same-basename replacement blocks the update; migrate Gateway references and site overrides before removing renamed includes.
 
 * **Monitoring Health and layer renaming**
 
@@ -37,6 +63,12 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
 
   * **GDNA Netprobe options:** The `--hostname`/`-H` option of `gdna start` and `gdna report`, and the `--tls`/`-T` option of `gdna report`, were ignored in favour of the configuration and now take effect. Check scripts that pass them with values that differ from your configuration.
 
+  * **Source names:** HTTP/HTTPS licence source names now include an explicit URL port, for example `http:server:7041`. Existing database source names and `source` include, exclude or group patterns using the old name will not match; update them. URLs without a port are unchanged.
+
+  * **Retention and timeouts:** The documented `gdna.log.max-age` now takes effect, defaulting to 14 days rather than the previous hard-coded 30. Set it to `30` to retain the old behavior; an explicit legacy `gdna.log.stale-after` remains supported. SMTP uses the documented `email.timeout` (default `10s`), with legacy `_smtp_timeout` still honored when set.
+
+  * **Reports and filters:** An unreadable filters file, other than a missing file, or failed filter/group/allocation loading now fails the run. Report errors also fail the run, and an email is withheld if any report in it fails. Split reports require `split-values-query`. Reports run in name order, so a single-report output uses the first match by name; `${report-name}` and `${report-group}` now have their documented meanings. XLSX email attachments now honor `email.scramble`, which defaults to enabled.
+
 * **Running in the background**
 
   * **`--daemon` and PID files:** For `servicenow2 proxy`, `ims-gateway` and `gdna start`, `--daemon` now waits for the server to be listening, or `gdna` to be running its schedules, exits with a non-zero code if it fails to start, and holds a PID file, in the user's cache directory unless set with `--pidfile` or `server.pidfile` (`gdna.pidfile` for `gdna`), which prevents a second instance starting with the same file. If you run more than one on a server, give each its own PID file. The `stop`, `restart`, `reload` and `status` commands find the process using this file, so give them the same configuration file or `--pidfile` option that the process uses. `reload` and the `SIGUSR1` signal are not available on Windows; use `restart`.
@@ -45,15 +77,23 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
 
 * **Incident integrations (`servicenow2`, `ims-gateway` and `geneos incident`)**
 
-  * **Authentication token required:** The `servicenow2` proxy and `ims-gateway` refuse to start without `server.authentication.token`. The gateway previously accepted requests with no `Authorization` header if the token was empty.
+  * **Authentication and listening address:** The `servicenow2` proxy and `ims-gateway` refuse to start without `server.authentication.token`; the proxy also requires `server.listen`. The gateway previously accepted requests with no `Authorization` header if the token was empty.
 
   * **Example gateway configuration:** If you copied the response messages from an earlier `ims-gateway.example.yaml`, replace `${_number}`, `${_error}` and similar with the `__` prefixed names, such as `${__number}`, which are the only ones the gateway supplies; the others expand to nothing.
 
-  * **Proxy responses, logs and timeout:** The `servicenow2` proxy returns `502`, or `504` on a timeout, when ServiceNow cannot be reached or reports an error. Its request log now uses the `ims-gateway` field names and records every request, and a response to a rejected token or a panic is now in the gateway's JSON format. Set the ServiceNow timeout with `servicenow.timeout`, as `proxy.timeout`, previously read from the wrong section, is only used if it is not set. Update anything that depends on these.
+  * **Responses, logs and timeout:** The `servicenow2` proxy and IMS Gateway return `502`, or `504` on a timeout, when ServiceNow cannot be reached or reports an error; a create or update with no returned record also fails. The proxy request log now uses the `ims-gateway` field names and records every request, and a response to a rejected token or a panic is now in the gateway's JSON format. Set the proxy's ServiceNow timeout with `servicenow.timeout`, as `proxy.timeout`, previously read from the wrong section, is only used if it is not set. The IMS Gateway uses `snow.timeout`. Update anything that depends on these.
 
   * **Failures now fail:** `servicenow2 client`, `geneos incident raise` and `geneos incident query` now exit with a non-zero code, and an error message, in cases that previously exited with zero, such as a missing or invalid configuration file, no proxy or gateway URL, or a response that does not report success. Review Geneos actions and scripts that depend on the exit code. Only a proxy or gateway that cannot be reached, or reports `502`, `503` or `504`, results in the next configured URL being tried, and `geneos incident raise` now sends to only the first that accepts the incident.
 
   * **Incident correlation:** The `servicenow2` proxy and `ims-gateway` now reject a request with no `correlation_id` (a `400` error), because the lookup for an existing incident would otherwise match any active incident for the configuration item. `geneos incident raise` now sets `correlation_id` from `__incident_correlation`, as documented, as well as the older `__snow_correlation`; if your `ims.yaml` sets `__incident_correlation`, incidents raised by earlier versions have no correlation ID and will not be updated by newer ones. For `servicenow2` set `correlation_id` or `_correlation_id` in the client configuration.
+
+    ServiceDesk Plus also requires `correlation_id` or `__incident_correlation`. Correlation hashes from `ims.CorrelationID`, used by the IMS Gateway and `geneos incident`, are now lowercase hexadecimal, matching the ServiceNow clients. Records created with an older uppercase hash will not be found automatically.
+
+  * **CMDB tables:** The proxy's `_cmdb_table` and IMS Gateway's `__snow_cmdb_table` now default to `cmdb_ci` and accept only table names containing letters, digits and underscores. Values containing paths are rejected with `400`. Configure the intended table explicitly if you depended on the old missing-value behavior.
+
+  * **Literal request data and transformations:** Incident field values and ServiceDesk Plus GET queries are no longer expanded as configuration. Move any intended expansions into trusted configuration templates. `__` fields are excluded from ServiceNow payloads even without a transformation, but remain available to response templates. Dependent transformation renames now use the original fields rather than a random order, and invalid filter patterns fail instead of silently removing fields.
+
+  * **Redirects and credentials:** ServiceNow/proxy clients no longer follow HTTP redirects; configure final API URLs directly. Other affected HTTP clients keep credentials and OAuth tokens on the original scheme, host and port and reject HTTPS-to-HTTP redirects. ServiceDesk Plus tokens are read only from the user configuration directory, not the working directory.
 
   * **Older `servicenow2` clients:** An earlier `servicenow2 client` still works with the new proxy, as the requests and responses are unchanged, and a client that sets `correlation_id` or `_correlation_id` is unaffected by the correlation check. However, it does not have the new error handling: it ignores any `4xx`, `5xx` or other failure response from the proxy, including the new `400`, `502` and `504` errors, and exits with a zero code and no message, as it did before. Upgrade the clients, as well as the proxy, to be told when an incident could not be created or updated.
 
@@ -64,6 +104,36 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
   * **Removed from releases:** The original `servicenow` integration, `pagerduty` and `san-config`, together with their configurations and documentation, are no longer shipped. Use the versions in v1.30.1 or build them from source. For ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain in releases.
 
   * **Release archive includes:** The main archive no longer contains `/etc/geneos/includes`. Use the separate versioned `geneos-includes` archive or the embedded files managed by `geneos includes` instead.
+
+* **Email, webhooks and exported reports**
+
+  * **SMTP authentication and ports:** SMTP selects the strongest offered authentication mechanism unless `_smtp_auth` selects one. Unencrypted authentication with `_smtp_tls=none` requires an explicit `plain-noenc` or `login-noenc`. Port 465 selects implicit TLS unless TLS is disabled. A failed custom-port connection no longer falls back to port 25 without TLS, and an explicit port 25 is no longer changed to 587. Invalid sender addresses fail.
+
+  * **Teams webhooks:** `libalert` and `libemail` require HTTPS URLs whose entire host is a supported Microsoft host; previously accepted lookalike or non-HTTPS URLs are rejected. `libalert` uses milliseconds for `_TIMEOUT`, matching `libemail`, and alert values are no longer expanded as configuration. No accepted webhook now means failure rather than success.
+
+  * **`dv2email`:** Filter lists keep items matching any pattern rather than requiring every pattern. Explicit output filenames no longer gain timestamps; only `auto` names do. The unused `--inline-css` option is hidden and ignored, serial numbering starts at 1, and entity-split output is ordered by entity name. Review consumers relying on the previous output.
+
+  * **Report formatting:** Formatted reporters sort by the first column only, keeping input order for ties. Previously ineffective scrambling, headlines and writer options now apply. XLSX updates replace the table rather than append, and duplicate first-column values no longer discard rows.
+
+* **Configuration, remote execution and Go libraries**
+
+  * **Configuration expansion:** Values from lookups, environment, files, URLs, expressions and decoded secrets are inserted literally, without a second expansion pass. Configuration references and `Prefix` results still expand recursively, up to `Loop` (default 10); use `PrefixVerbatim` for untrusted prefix results. `$${` now escapes a literal `${`, lookup tables take precedence for all names, and self-references remain unexpanded instead of looping. Rewrite configurations that depended on the old expansion order or re-expanding external values.
+
+  * **Defaults and key/value parsing:** `UseDefaults(false)` disables all defaults, including `WithDefaults` and `DefaultsFrom`. Precedence is explicit settings and environment, main file, defaults files, embedded defaults, then `DefaultsFrom`. `SetKeyValuePairs` now interprets `key==value` as the value `=value` instead of ignoring it. Review callers relying on the old behavior.
+
+  * **File permissions and saved settings:** Credentials files and their new directories use `0600`/`0700`, and keyfile directories use `0700`. Ordinary configuration writes still include defaults and environment-derived settings unless filtered; they retain `0644`/`0775` defaults, configurable with `FileMode`/`DirMode`. Unreadable or corrupt existing keyfiles now fail rather than appearing usable.
+
+  * **Remote commands:** SSH arguments, environment and working directories are now quoted literally, so shell expansion of `$`, backticks and backslashes no longer happens implicitly. Remote processes use the remote home rather than inheriting local `HOME`/`USERPROFILE`. Remote Windows `Start`, `Run` and `Uname` return unsupported errors rather than trying Unix commands. Review commands that relied on shell expansion or local environment values.
+
+  * **Certificate APIs:** The `ecdh` key-type name now generates an ECDSA P-256 signing key, parsed as `ecdsa`. Private-key readers and writers normalize PKCS#1 and SEC1 keys to PKCS#8; malformed and encrypted PEM keys are rejected or skipped by `DecodePEM`. Invalid root CAs are rejected, unreadable nonempty stores are never replaced, and `ChangePassword` fails if a key cannot be decrypted. `Template` returns `nil` for invalid options instead of dropping them; use `NewTemplate` for an error.
+
+  * **Gateway Hub API:** `gwhub.EntitiesMetricsRows` now takes `EntitiesMetricsRowsRequest` and returns `EntitiesMetricsRowsResponse`; use the deprecated `EntitiesMetricsRowsLegacy` temporarily if needed. `FormatDuration(0)` returns `PT0S`, and `ParseDuration` rejects years, months and empty durations such as `P`.
+
+  * **Geneos XML model:** `fkm.File.Alias` is now `*SingleLineStringVar`, `sqltoolkit.DBConnection.Password` is `*Value`, and the processes plugin's `Parameter` uses `Name` for element text and no longer has `Value`. `StringList.UnmarshalText` and `NameValueList.UnmarshalText` reject nonempty text; `common.NewValue` joins slice elements with commas and returns `nil` for `nil`. Update Go callers constructing these types.
+
+  * **Network APIs:** `streams.RESTStream` now verifies HTTPS certificates; self-signed endpoints require a trusted certificate or explicit `streams.SkipVerify(true)`. Requests default to a 30-second timeout, and XML-RPC API responses to 60 seconds, configurable through their timeout options. REST non-2xx responses return typed `HTTPError`; redirected POST/PUT requests return `RedirectError`. Unimplemented Geneos REST methods return unsupported errors instead of success.
+
+  * **Process and logging APIs:** `process.PID` requires all specified arguments and returns the lowest matching PID. `SignalProcess` rejects nonpositive PIDs. Background `Start` returns the PID, foreground starts return zero, and `Batch` returns the channel used to stop child reaping. `logger.RedactSlice` no longer changes its input, and `Init` no longer sets global `color.NoColor`; use the handler's `Color` option. Rebuild downstream Go consumers and review these changed contracts.
 
 ## [v1.30.1](CHANGELOG.md#version-v1301)
 
