@@ -2682,9 +2682,26 @@ Geneos Gateway includes package reusable monitoring definitions and editable con
 
 The `itrs.*.xml` files are functional includes. Treat them as read-only and upgrade them by installing a newer release. The `config.*.xml` files are local configuration templates; customize these or copy their settings into the Gateway setup. Installing files does not automatically add them to a Gateway's setup or enable monitoring.
 
+## Monitoring Layers
+
+The Geneos Best Practice layers describe the scope and depth of monitoring, from the monitoring platform itself through infrastructure and applications to services and business activity. Layer numbers are not file versions or include priorities.
+
+| Layer | Meaning |
+| --- | --- |
+| **0 - Foundation** | Shared Gateway configuration and monitoring-platform services, such as authentication, severity definitions and configuration validation. |
+| **1 - Infrastructure** | Server health: CPU, memory, disk, hardware and network monitoring. The supplied include calls this `Server Health`. |
+| **2 - Application Baseline** | Common monitoring building blocks for applications, including processes, logs and Windows services. |
+| **3 - Applications** | Application-specific monitoring that builds on the baseline where appropriate, such as Geneos instance, component and Gateway-load monitoring. |
+| **4 - End-to-End** | Monitoring complete service paths across application and infrastructure boundaries. |
+| **5 - Business Activity** | Monitoring business transactions, activity and outcomes rather than only the underlying technology. |
+
+The supplied functional includes currently cover Layers 0 to 3.
+
 ## Files
 
-Release archives are named `geneos-includes-v<version>.tar.gz` and have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, `scripts/install-includes.sh` for users installing without the `geneos` command, and a `docs/` directory with this README and the Markdown include documentation plus generated PDF versions. The `geneos includes install` command strips this wrapper and does not copy the script or documentation into the Gateway's live include directory.
+Release archives are named `geneos-includes-v<version>.tar.gz` and have a single top-level directory named `geneos-includes-v<version>`. It contains functional includes under `itrs-v<version>/`, an unversioned `config/` directory of templates, `scripts/install-includes.sh` for users installing without the `geneos` command, and a `docs/` directory with this README and the Markdown include documentation plus generated PDF versions. Installation strips the wrapper but preserves the `itrs-` prefix; the script and documentation are not copied into the Gateway's live include directory.
+
+The prefix is the include **source**, independently of the deployment's site. User-created archives can use another source, for example `acme-ops-v1.2.3/` containing `acme-ops.*.xml`. Source names begin with a letter or digit and use letters, digits, dots, underscores or hyphens; `config` is reserved for templates. The suffix is a `v`-prefixed semantic version; prerelease and build metadata are supported, and the archive wrapper's version must match this suffix. Legacy unprefixed semantic-version directories remain supported as the `itrs` source. Listings show the full directory name in version columns.
 
 | File | Purpose |
 | --- | --- |
@@ -2697,44 +2714,45 @@ Release archives are named `geneos-includes-v<version>.tar.gz` and have a single
 | `config.layer1.server-health.xml` | Gateway setup template for server health configuration and overrides. |
 | `config.layer2.programs-and-logs.xml` | Gateway setup template for Layer 2 Application Baseline configuration. |
 | `config.layer3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Layer 3 Geneos. |
-| `config.layer4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.layer4.analytics.xml` functional include in this set. |
 
-Choose a site name representing the company, customer, or client using the Geneos deployment, rather than a region or environment. For example, for Acme Corp, an installation with `geneos config set site=acme` has files organized like this:
+Choose a site name representing the company, customer, or client using the Geneos deployment, rather than a region or environment. For example, an installation with `geneos config set site=acme`, ITRS includes and an additional `acme` source has files organized like this:
 
 ```text
 gateway/
 ├── includes/
-│   ├── itrs.layer0.foundation.xml -> v1.31.0/itrs.layer0.foundation.xml
-│   ├── itrs.layer1.server-health.xml -> v1.31.0/itrs.layer1.server-health.xml
-│   ├── itrs.layer2.programs-and-logs.xml -> v1.31.0/itrs.layer2.programs-and-logs.xml
-│   ├── itrs.layer3.geneos.xml -> v1.31.0/itrs.layer3.geneos.xml
-│   └── v1.31.0/
-│       ├── itrs.layer0.foundation.xml
-│       ├── itrs.layer1.server-health.xml
-│       ├── itrs.layer2.programs-and-logs.xml
-│       └── itrs.layer3.geneos.xml
+│   ├── itrs.layer0.foundation.xml -> itrs-v1.31.0/itrs.layer0.foundation.xml
+│   ├── acme.trading.xml -> acme-v1.2.3/acme.trading.xml
+│   ├── ...
+│   ├── itrs-v1.31.0/
+│   │   ├── itrs.layer0.foundation.xml
+│   │   └── ...
+│   └── acme-v1.2.3/
+│       ├── acme.trading.xml
+│       └── ...
 └── acme/
-    ├── acme.layer0.authentication.xml
-    ├── acme.layer0.foundation.xml
-    ├── acme.layer1.server-health.xml
-    ├── acme.layer2.programs-and-logs.xml
-    ├── acme.layer3.geneos.xml
-    └── acme.layer4.analytics.xml
+    ├── acme-config.layer0.authentication.xml
+    ├── acme-config.trading.xml
+    └── ...
 ```
 
-The links let Gateway setups use a stable path while the target version changes. Configuration templates are regular files, copied only when absent and not overwritten by later installs. The archive itself always uses the `config` names listed above.
+The links let Gateway setups use a stable path while the target version changes. Configuration templates are regular files named `<site>-config.*.xml`, copied only when absent and not overwritten by later installs. Keeping `-config` in the filename distinguishes a site override from a functional include even when source and site have the same name. The archive itself always uses the `config` names listed above. Templates from different sources share the site directory, so choose distinct template basenames unless they are deliberately shared.
 
 > [!NOTE]
 > Please note the following when choosing and using a site name:
 >
 > - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+>
 > - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+>
 > - If no site name is set, the directory and prefix are `local`.
+>
 > - Only one site name is supported per installation.
+>
 > - Use the same site name on all Geneos servers for consistent paths.
+>
 > - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
 
-On installation, files from the older `gateway/includes/config` directory are copied to the site directory before new templates are installed. Existing destination files are not replaced, and the old directory remains for previous Gateway setups.
+On installation, referenced files from the older `gateway/includes/config` directory and the previous `<site>.*.xml` site naming are copied to `<site>-config.*.xml` before new templates are installed. Existing destination files are not replaced, and originals remain for previous Gateway setups. Run `geneos includes fix` to migrate references where the old and new contents match. The standalone installer cannot check references and copies all legacy config files.
 
 ## Installation
 
@@ -2748,7 +2766,7 @@ geneos includes install
 geneos includes install /path/to/geneos-includes-v1.31.0.tar.gz
 ```
 
-Add `--update` to replace existing top-level include paths with links to the installed version.
+Add `--update` to replace existing top-level include paths with links to the installed version. Obsolete-link cleanup is restricted to that source, and updates refuse to replace a link owned by another source.
 
 > [!IMPORTANT]
 > Include and site filenames have changed from `levelN` to `layerN`, and Gateway types, groups, environments and XPath targets now use `Layer N` names. The former `itrs.level1.infrastructure.xml` and `itrs.level2.application-core.xml` are now `itrs.layer1.server-health.xml` and `itrs.layer2.programs-and-logs.xml`. Back up your configuration and install without `--update`; copy or merge site overrides into the new site files without overwriting existing settings. Update Gateway setups, SANs, customised profiles and any other references before running `geneos includes update`. Existing configurations are not renamed automatically.
@@ -2763,11 +2781,11 @@ cd geneos-includes-v1.31.0
 ./scripts/install-includes.sh /path/to/geneos
 ```
 
-The script installs into a fresh version directory, keeps existing config templates, and creates only missing top-level links. It uses `gateway/local/local.*.xml` and does not read the `geneos` site setting; use `geneos includes install` for a site name such as `acme`. It is intended for initial installation and does not replace the `geneos includes install` command's archive validation, backups, or Gateway-reference checks. If the version is already present, or you need to update live links, use `geneos includes install --update` or inspect and back up the affected files first.
+The script installs into a fresh version directory, keeps existing config templates, and creates only missing top-level links. It uses `gateway/local/local-config.*.xml` and does not read the `geneos` site setting; use `geneos includes install` for a site name such as `acme`. It is intended for initial installation and does not replace the `geneos includes install` command's archive validation, backups, or Gateway-reference checks. If the version is already present, or you need to update live links, use `geneos includes install --update` or inspect and back up the affected files first.
 
 ## How-To
 
-Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.layer1.server-health.xml`, and the site template, for example `../../acme/acme.layer1.server-health.xml`; adjust relative paths for the Gateway setup location and your site name. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
+Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.layer1.server-health.xml`, and the site template, for example `../../acme/acme-config.layer1.server-health.xml`; adjust relative paths for the Gateway setup location and your site name. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
 
 ### Manage with the `geneos` command
 
@@ -2776,12 +2794,20 @@ Installing include files only makes them available on disk. Use the Gateway Setu
 | `geneos includes list`                     | List configured/available includes                          |
 | `geneos includes list --all`               | Include version directories in the listing                  |
 | `geneos includes list --gateway`           | Show include use by Gateway                                 |
-| `geneos includes update --version v1.31.0` | Point top-level links at a version                          |
+| `geneos includes update --version itrs-v1.31.0` | Point top-level links at a version                          |
 | `geneos includes fix --dry-run`            | Preview repairs for broken include references               |
 | `geneos includes fix`                      | Repair broken references with unique same-name replacements |
-| `geneos includes delete 'v1.30.*'`         | Delete unused version directories and their links           |
+| `geneos includes delete 'itrs-v1.30.*'`         | Delete unused version directories and their links           |
 
 Both the `geneos includes update` and `geneos includes delete` commands check Gateway setups before removing obsolete links or versions. The `geneos includes install --update` command also updates links while installing. Use `geneos includes COMMAND --help` to see available options; the global `--host`/`-H` option selects the destination host.
+
+### Auditing
+
+The `install`/`extract`, `update`, `delete`/`remove` and `fix` commands follow the standard `audit.commands` and `audit.actions` settings, enabled by default. `list` is not audited.
+
+File action records include the host, full file path, result and relevant source, link target or backup path. Extractions, backups, legacy copies, link changes and individual deletions are recorded without instance details in the global audit log. Unchanged or preserved files are reported on the console but are not recorded as filesystem changes.
+
+Gateway setup and saved-configuration repairs by `fix` instead include Gateway instance details and a description of each old-to-new include location, with the setup backup path where available. These use the standard instance audit logging, including the global log and a local instance log where applicable. `fix --dry-run` audits the command invocation but does not record file changes.
 
 ### Manage with shell tools
 
@@ -2796,7 +2822,7 @@ find "$INCLUDES_DIR" -maxdepth 1 -type l -xtype l -print
 To switch links to an already installed version, first inspect the Gateway setup references and back up any regular files at the link paths. Then repoint links for files present in the selected version:
 
 ```shell
-VERSION=v1.31.0
+VERSION=itrs-v1.31.0
 INCLUDES_DIR=/path/to/geneos/gateway/includes
 
 for source in "$INCLUDES_DIR/$VERSION"/itrs.*.xml; do
@@ -2813,7 +2839,7 @@ done
 This updates matching links only. It does not detect obsolete references or remove old links. Before removing an old version, inspect its links and every Gateway setup that may refer to them; `geneos includes delete` performs broader reference checks.
 
 ```shell
-OLD_VERSION=v1.30.0
+OLD_VERSION=itrs-v1.30.0
 INCLUDES_DIR=/path/to/geneos/gateway/includes
 
 # Preview top-level links with a direct relative target under this version.
@@ -2859,7 +2885,7 @@ For a broken link, inspect its target with `readlink` and confirm there is exact
 
 Delete unused version directories and their top-level symlinks from `gateway/includes` on the selected host. The `remove` alias has the same behaviour.
 
-With no version pattern, all unused semantic-version directories are removed and versions referenced by gateways are skipped. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match directory names exactly, including any `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
+With no version pattern, all unused source-prefixed and legacy semantic-version directories are removed and versions referenced by gateways are skipped. The prefix identifies the include **source**, for example `itrs` in `itrs-v1.31.0`. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match full directory names, including the source and `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
 
 Before removing any version, the command checks every symlink directly in the parent `gateway/includes` directory and loads gateway setups using the same loader as `list --gateway`. All links for a version are checked before any are removed. A gateway reference to even one link or directly into the version protects every link and the entire version directory. Include groups, disabled and optional includes, relative and absolute targets, link chains, directory aliases, and dangling references into the version are checked.
 
@@ -2869,10 +2895,10 @@ Links originating elsewhere are not removed: those are manually managed by the u
 
 ```shell
 geneos includes delete
-geneos includes delete 'v1.30.*'
-geneos includes delete 'v1.29.*' 'v1.30.*'
-geneos includes delete --version 'v1.31.0-rc.*'
-geneos includes remove -V 'v1.29.*'
+geneos includes delete 'itrs-v1.30.*'
+geneos includes delete 'itrs-v1.29.*' 'acme-v1.30.*'
+geneos includes delete --version 'itrs-v1.31.0-rc.*'
+geneos includes remove -V 'v1.29.*' # legacy directories
 ```
 
 Use the global `--host` (`-H`) option to select the installation destination. Links are checked again immediately before each directory is removed. Deleted directories are not backed up; earlier deletions are not rolled back if a later filesystem operation fails or a new protecting link appears during deletion.
@@ -2907,9 +2933,11 @@ Repair broken local include references, and update references to the old `config
 
 Only references with exactly one valid same-basename replacement are changed. HTTP and HTTPS locations, valid files, unmatched names, and ambiguous matches are left unchanged. Candidates are installed shared and versioned includes and valid include references from gateway setups. Symlinks and paths resolving to the same file count as one candidate. Multiple distinct versions of a file make the match ambiguous.
 
-References to files under `gateway/includes/config` are also changed to the corresponding site file `gateway/<site>/<site>.*` (a `config.` prefix becomes the site name; other names and subdirectories are unchanged) but only if that file exists with exactly the same content as the old one. Changed or missing site files leave the reference as it is.
+References to files under `gateway/includes/config` are also changed to the corresponding site file `gateway/<site>/<site>-config.*` (`config.*` gains a `<site>-` prefix; other names and subdirectories are unchanged) but only if that file exists with exactly the same content as the old one. The previous `gateway/<site>/<site>.*` naming can be migrated to `<site>-config.*` on the same condition. Changed or missing site files leave the reference as it is.
 
 Each matching gateway reports its repairs or `no changes made`. Broken references without a unique replacement are reported with the number of matching files and left unchanged; these skips are not command errors.
+
+Command and action auditing follow the standard audit settings. Each setup or saved-configuration write records the Gateway instance, file path, result and a description of each old-to-new include location; setup events also include the backup path where available. Dry runs audit the invocation but do not record file changes.
 
 Replacement locations under the installation's top-level `gateway` directory are relative to the gateway instance directory. Locations outside it are absolute. Matching paths in the instance configuration's `includes` key are updated through the standard instance read/write APIs, including include entries containing pipe-separated labels. Other configuration keys are not inspected or changed. JSON and YAML configurations retain their selected format. Gateway setups are not rebuilt or reloaded.
 
@@ -2952,29 +2980,36 @@ geneos includes fix [NAMES...] [flags]
 
 Install include files embedded in the `geneos` executable or from a local `.tar.gz` archive to the selected host. With no archive argument, the embedded files and configuration templates are installed. `extract` is an alias for `install` and accepts the same arguments and options.
 
-The archive must contain a single top-level directory named `geneos-includes-<version>` (for example `geneos-includes-v1.31.0`). Inside it, one directory named with a `v`-prefixed semantic version (for example `v1.31.0` or `v1.31.0-rc.1`) contains `itrs.*.xml` include files. Unversioned `config.*.xml` templates belong in a separate `config/` directory; the standalone `scripts/install-includes.sh` may also be included. The wrapper's version must match the version directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins, and `geneos includes install` strips the wrapper before staging the files.
+The archive must contain a single top-level directory named `geneos-includes-<version>` (for example `geneos-includes-v1.31.0`). Inside it, one directory named `<source>-<version>` (for example `itrs-v1.31.0` or `acme-ops-v1.31.0-rc.1`) contains `<source>.*.xml` functional include files. The prefix identifies the include **source**, independently of the deployment's site. Source names use letters, digits, dots, underscores or hyphens and begin with a letter or digit. The suffix is a `v`-prefixed semantic version, including optional prerelease and build metadata. Legacy unprefixed version directories remain supported as the `itrs` source.
 
-Managed includes are installed under `gateway/includes/<version>`, including when that directory already exists. Changed files are backed up to timestamped `.bak` files; unchanged files are left in place.
+Unversioned `config.*.xml` templates belong in a separate `config/` directory; `config` is reserved and cannot be a functional include source. The standalone `scripts/install-includes.sh` and `docs/` Markdown/PDF documentation may also be included. The wrapper's version must match the semantic-version suffix of the contents directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins. Installation strips only the wrapper, preserving the full source-prefixed directory name.
 
-Configuration templates are installed under `gateway/<site>/<site>.*.xml`, next to `gateway/includes`. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment; for example, use `geneos config set site=acme` for Acme Corp. The archive retains its original `config/` and `config.*.xml` names.
+Managed includes are installed under `gateway/includes/<source>-<version>`, including when that directory already exists. Embedded includes use the `itrs` source. Changed files are backed up to timestamped `.bak` files; unchanged files are left in place.
+
+Configuration templates are installed under `gateway/<site>/<site>-config.*.xml`, next to `gateway/includes`. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment; for example, use `geneos config set site=acme` for Acme Corp. The `-config` infix distinguishes local overrides from functional includes when source and site have the same name. The archive retains its original `config/` and `config.*.xml` names. Templates from different sources share this site directory; use distinct template basenames to avoid sharing a destination.
 
 > [!NOTE]
 > Please note the following when choosing and using a site name:
 >
 > - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+>
 > - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+>
 > - If no site name is set, the directory and prefix are `local`.
+>
 > - Only one site name is supported per installation.
+>
 > - Use the same site name on all Geneos servers for consistent paths.
+>
 > - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
 
-Before installing templates, files under `gateway/includes/config` that are in active use by a Gateway setup on the selected host, as shown by `geneos includes list --gateway`, are copied to the new site directory without replacing existing destinations. Unused files and remote includes are not copied. `config.*` file prefixes become the site name, and subdirectories are created as needed. The original directory is left intact for older Gateway setups. Existing symlinks in the old directory are copied as regular files containing their targets' contents; broken links cause an error. Templates are installed only when no destination exists.
+Before installing templates, files under `gateway/includes/config` that are in active use by a Gateway setup on the selected host, as shown by `geneos includes list --gateway`, are copied to the new site directory without replacing existing destinations. Unused files and remote includes are not copied. `config.*` filenames gain a `<site>-` prefix, and subdirectories are created as needed. Referenced files using the previous `gateway/<site>/<site>.*.xml` naming are also copied to `<site>-config.*.xml`. Originals are left intact for older Gateway setups. Existing symlinks are copied as regular files containing their targets' contents; broken links cause an error. Templates are installed only when no destination exists. Run `geneos includes fix` to migrate references where old and new contents match.
 
 The standalone `scripts/install-includes.sh` cannot make this check without the `geneos` command and so still copies every file from the old directory.
 
 Missing top-level include links are created automatically. Existing files and links are left alone unless `--update` (`-U`) is given, which replaces them with links to the installed version. When an archive is supplied, updates target the version in the archive; otherwise they target the version embedded in the executable.
 
-With `--update`, a preflight checks obsolete links against gateway setups before any links are changed, as for `includes update`. Same-basename replacement files in the installed version are valid updates, regardless of the old target directory. If any obsolete link without a replacement is referenced, the update fails with all links unchanged; extracted files remain installed. After a successful preflight, links are updated and unused obsolete links are removed. Without `--update`, no obsolete links are removed.
+With `--update`, a preflight checks obsolete links against gateway setups before any links are changed, as for `includes update`. Cleanup is restricted to the installed source; other sources' links are retained. A replacement link belonging to another source is an error. Same-basename replacement files are otherwise valid updates, regardless of the old target directory. If any obsolete link without a replacement is referenced, the update fails with all links unchanged; extracted files remain installed. After a successful preflight, links are updated and unused obsolete links for that source are removed. Without `--update`, no obsolete links are removed.
 
 ```shell
 geneos includes install
@@ -2984,6 +3019,8 @@ geneos includes install --update geneos-includes-v1.31.0.tar.gz
 ```
 
 The archive is read locally; the global `--host` (`-H`) option selects the installation destination. Completed filesystem operations are not rolled back if a later operation fails.
+
+Installation reports extracted or unchanged versioned files, extracted or preserved site templates, copied or skipped legacy configuration files, and created, updated or preserved top-level include paths. Existing site templates are reported as skipped, not compared or overwritten.
 
 ## Usage
 
@@ -3015,7 +3052,7 @@ List include files found in the selected Geneos installation and include referen
 
 The include view reports copies, Gateway usage, status flags, modification time, size, and location. Shared and versioned paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files, whose locations are shown exactly as configured in the Gateway setup. The main Gateway setup file is an exception: its local path is shown relative to that Gateway's instance directory in both the include and Gateway views.
 
-The version view lists the current include links and available semantic-version directories. Use `--all` to list each file inside those directories.
+The version view lists the current include links and available source-prefixed semantic-version directories, such as `itrs-v1.31.0` and `acme-ops-v2.0.0-rc.1`, as well as legacy unprefixed versions. The prefix identifies the include **source**. Version columns retain the full directory name, including the source, wherever shown. Use `--all` to list each file inside those directories. In long and machine-readable version views, `TargetVersion` (`targetVersion`) identifies each current link's target version separately from the `Version` row label.
 
 The Gateway view lists includes configured for each Gateway, ordered by priority. The `File` field contains only the include file's basename; nested group names do not change it. Gateway-local includes are omitted unless `--all` is set.
 
@@ -3035,12 +3072,19 @@ Machine-readable formats include `status`, `shared`, `gatewayLocal`, `remote`, `
 Flags identify include properties:
 
 * `D` - Disabled in the Gateway setup
+
 * `G` - Gateway-local include
+
 * `o` - Optional include
+
 * `R` - Read-only file
+
 * `S` - Shared include
+
 * `U` - HTTP or HTTPS URL include
+
 * `V` - Versioned include
+
 * `X` - Local file is missing
 
 Remote locations are queried with HTTP HEAD requests for modification time and size unless `--no-remote` is set. Failures to retrieve remote metadata do not prevent listing the configured location.
@@ -3079,15 +3123,15 @@ geneos includes list [NAMES...] [flags]
 
 Update the top-level include symlinks to point to files in a versioned include directory on the selected host.
 
-By default, the links are updated to the version embedded in the running `geneos` executable. Use `--version` to select another semantic version already present under `gateway/includes`. If the selected version directory is missing, the command returns an error; the current embedded version is extracted automatically when needed.
+By default, the links are updated to `itrs-<version>` embedded in the running `geneos` executable. Use `--version` to select a full directory name already present under `gateway/includes`, such as `itrs-v1.31.0` or `acme-ops-v2.0.0-rc.1`. The prefix is the include **source**; its final version suffix is a `v`-prefixed semantic version, including optional prerelease and build metadata. Legacy unprefixed semantic-version directories remain selectable and are treated as the `itrs` source. If the selected directory is missing, the command returns an error; only the current source-prefixed embedded version is extracted automatically when needed.
 
-Links that already point to the selected version are left unchanged. If a target path already exists with a different link or file, it is removed before creating the new symlink.
+Links that already point to the selected version are left unchanged. If a target path already exists with a different link or file, it is removed before creating the new symlink, except that a link owned by another source blocks the update before any links change.
 
 Before changing any links, a preflight checks obsolete top-level symlinks using the same gateway setup loader as `list --gateway`, including nested include groups. Links with same-basename replacement files in the selected version are valid updates, regardless of their current target directory or link chain. If a gateway references an obsolete link with no replacement, the entire update fails without changing or removing any links. The error lists the affected links and gateway names; update those gateway setups to remove or replace the obsolete include references, then retry. Disabled and optional includes also protect obsolete links. Unreadable setups or unsafe link resolution also fail the preflight.
 
-After a successful preflight, replacement links are updated and unused obsolete links are removed. References directly into older version directories do not block link cleanup, since those directories and regular files are not removed. Link changes are sequential, not atomic; completed changes are not rolled back if a later filesystem operation fails.
+After a successful preflight, replacement links are updated and unused obsolete links for the selected source are removed. Other sources' links are left alone. References directly into older version directories do not block link cleanup, since those directories and regular files are not removed. Link changes are sequential, not atomic; completed changes are not rolled back if a later filesystem operation fails.
 
-Version values must be valid semantic versions. This prevents a version argument from selecting a path outside the includes directory.
+Version values must be valid source-prefixed or legacy semantic versions. This prevents a version argument from selecting a path outside the includes directory.
 
 ## Usage
 
@@ -3102,7 +3146,7 @@ geneos includes update [flags]
   -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
-  -V, --version string            Specify version to update includes to
+  -V, --version string            Specify full source-version directory to update includes to
 ```
 
 ## SEE ALSO
@@ -4115,16 +4159,21 @@ Use the same option when you deploy or rebuild that profile. The installed profi
 
 The supplied configuration is [internal/profile/profiles.defaults.yaml](../../profile/profiles.defaults.yaml). Use it as an example. Put installation-specific changes in your selected profile file, not in the source file.
 
-Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}.layer1.server-health.xml` to `../../acme/acme.layer1.server-health.xml`.
+Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}-config.layer1.server-health.xml` to `../../acme/acme-config.layer1.server-health.xml`.
 
 > [!NOTE]
 > Please note the following when choosing and using a site name:
 >
 > - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+>
 > - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+>
 > - If no site name is set, the directory and prefix are `local`.
+>
 > - Only one site name is supported per installation.
+>
 > - Use the same site name on all Geneos servers for consistent paths.
+>
 > - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them, update literal legacy profile paths to use `${site}` if needed, and run `geneos includes install` to populate the new site directory.
 
 ## Use a Supplied Profile
@@ -4189,6 +4238,7 @@ Use `init` for a new installation. You need access to suitable release archives 
 Use this procedure on an existing Geneos host. The receiving Gateway must have the Types requested by the profile. For TLS, both sides must trust the certificate chain.
 
 1. Check the Gateway address and the Types in the `health-agent` definition.
+
 2. Deploy the profile with an issued certificate bundle. The bundle must contain the SAN's certificate, private key, and certificate chain:
 
    ```bash
@@ -4231,6 +4281,7 @@ Use a YAML list for component instances. A single mapping is also accepted, as s
          - name: application-gateway
            params:
              - gatewayname=Application Gateway
+
              - port=7100
        netprobe:
          - name: application-probe
@@ -4416,8 +4467,11 @@ is the same as:
 ```yaml
 params:
   - gatewayname=Application Gateway
+
   - licdhost=licence.example.com
+
   - licdport=7041
+
   - licdsecure=true
 ```
 
@@ -4432,7 +4486,9 @@ A TLS capable Gateway on the conventional insecure port 7039 is moved to the TLS
 The `insecure` option is saved with the profile. When the profile is applied again, for example by `geneos deploy` with the profile name or by `geneos rebuild profile`, the TLS state of each existing instance is compared with the saved option and changed to match, and the instance is then rebuilt so that the port conventions above follow:
 
 * If the option is not `insecure` and the instance is not TLS capable, the certificate and key kept from an earlier secure state are used again if they are still valid, otherwise a new instance certificate is created as `geneos add` does. If a certificate bundle is given in the profile it is imported first and used. If no signing certificate is available the update fails with an error, rather than leaving the instance insecure; run `geneos tls init` or use `--insecure`.
+
 * If the option is `insecure` and the instance has TLS parameters, they are removed from the instance configuration only. The certificate and key files are never deleted. A certificate bundle given in the profile takes precedence over `insecure`, as it does when an instance is created.
+
 * If the state already matches, or the profile has no saved `insecure` option, nothing is changed.
 
 A Web Dashboard server is only started with HTTPS if its keystore exists, so when its TLS is removed the keystore is set aside by renaming it with a `.disabled` suffix, and it is built again when TLS is enabled. The keystore and truststore of an `sso-agent` are not changed, because it always has a keystore for its signing key and its use of TLS is set in `conf/sso-agent.conf`. Instances are reported as `updated` and an audit event is recorded.
@@ -4466,6 +4522,7 @@ san:
         - Layer 2 - Application Baseline
       attributes:
         - APPLICATION=Geneos
+
         - CATEGORY=Application
       variables:
         - name: application
@@ -4513,7 +4570,9 @@ san:
           - Layer 2 - Geneos Gateway
         attributes:
           - ${option:attribute}
+
           - COMPONENT=Gateway
+
           - GATEWAY=${config:name}
         variables:
           - name: gatewayName
@@ -4525,8 +4584,11 @@ san:
 ```
 
 1. Install the Gateway instances to monitor before you apply this profile.
+
 2. Deploy the profile with `--gateway HOST:PORT` and any required `--attribute` options.
+
 3. Inspect the SAN setup file. Confirm the selected names, Types, and file paths.
+
 4. Start or restart the named profile and check the receiving Gateway.
 
 `for-each` examines installed instances when the profile is applied. It does not detect later installation changes automatically.
@@ -4559,6 +4621,7 @@ Supply repeated `--gateway HOST:PORT` options at deployment. The generated confi
 A rebuild reads the selected YAML definition again and reuses the options saved with the installed profile instance. It applies the definition to its component instances. It does not download software releases.
 
 1. Edit the profile in the same file used for deployment.
+
 2. Apply the definition again:
 
    ```bash
@@ -4566,6 +4629,7 @@ A rebuild reads the selected YAML definition again and reuses the options saved 
    ```
 
 3. Check the affected instances with `geneos show`. For a SAN, check the generated managed entities.
+
 4. If a Gateway's generated files must change, rebuild that Gateway explicitly:
 
    ```bash
@@ -4614,10 +4678,15 @@ Thus, an omitted list can remove existing settings. Conversely, removing an arbi
 Current implementation limits:
 
 - Use profile application on the local host. Although deployment accepts host selection, the application handlers and SAN `for-each` processing use `geneos.LOCAL`. Do not rely on remote profile deployment to configure the selected host correctly.
+
 - Component entries are processed without a defined dependency order. Install components before a SAN profile that discovers them, then rebuild that profile after installation changes.
+
 - `deploy --signing-bundle` is used when it initialises a local installation. It is not passed through to profile deployment in an existing installation. Use `--certs-bundle` for issued instance certificates there.
+
 - Application is not transactional. An error can leave some instances updated and others unchanged. Check the result before retrying.
+
 - Removing an instance from the YAML does not delete the installed instance. Renaming an entry can create a new instance and leave the old one in place.
+
 - [`geneos profile extract`](#geneos-profile-extract) and its `update` alias write the embedded defaults to the standard user profiles file. If that file differs, it is backed up as `profiles-YYYYMMDDHHMMSS.yaml` before replacement; if it already matches, no file change is made. A custom file selected with `--profiles` is not overwritten.
 
 ## Usage

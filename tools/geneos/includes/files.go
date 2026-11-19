@@ -39,12 +39,16 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 	if st != nil && !override {
 		return fmt.Errorf("includes directory already exists at %s and replacement is disabled", dir)
 	}
-	incs, err := fs.Glob(sourceFS, IncludePattern)
+	pattern, err := includePattern(version)
+	if err != nil {
+		return err
+	}
+	incs, err := fs.Glob(sourceFS, pattern)
 	if err != nil {
 		return err
 	}
 	if len(incs) == 0 {
-		return fmt.Errorf("no include files found matching: %s", IncludePattern)
+		return fmt.Errorf("no include files found matching: %s", pattern)
 	}
 	if err = h.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -77,7 +81,9 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 			}
 			ts := time.Now().Format("20060102150405")
 			backupPath := fmt.Sprintf("%s.%s.bak", p, ts)
-			if err := h.Rename(p, backupPath); err != nil {
+			err := h.Rename(p, backupPath)
+			auditIncludeFile(h, "backup", backupPath, err, slog.String("source", p))
+			if err != nil {
 				return err
 			}
 			fmt.Println("Backed up existing include file to", backupPath)
@@ -101,12 +107,8 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 		return err
 	}
 	legacyDir := h.PathTo(ct, "includes", "config")
-	if _, statErr := h.Lstat(legacyDir); statErr == nil {
-		used, err := gatewayIncludePaths(h)
-		if err != nil {
-			return fmt.Errorf("find include files in use by gateways: %w", err)
-		}
-		if err = copyLegacyConfig(h, legacyDir, dir, site, used); err != nil {
+	for _, source := range []string{legacyDir, dir} {
+		if err = copyLegacyConfig(h, source, dir, site); err != nil {
 			return err
 		}
 	}
@@ -115,17 +117,19 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 		return err
 	}
 	for _, conf := range confs {
-		p := h.Join(dir, site+strings.TrimPrefix(filepath.Base(conf), "config"))
+		p := h.Join(dir, site+"-"+filepath.Base(conf))
 		_, err := h.Lstat(p)
 		if err == nil {
-			log.Debug("Config file already exists", slog.String("file", p))
+			fmt.Println("Skipping existing site config file", p)
 		} else if errors.Is(err, fs.ErrNotExist) {
 			if err := copyIncludeFile(sourceFS, conf, h, p, 0664); err != nil {
 				if errors.Is(err, fs.ErrExist) {
+					fmt.Println("Skipping existing site config file", p)
 					continue
 				}
 				return fmt.Errorf("failed to extract config include %q: %w", conf, err)
 			}
+			fmt.Println("Extracted site config file", p)
 		} else {
 			return fmt.Errorf("failed to inspect config include path %q: %w", p, err)
 		}
@@ -153,11 +157,9 @@ func gatewayIncludePaths(h *geneos.Host) (used map[string]struct{}, err error) {
 	return used, nil
 }
 
-// copyLegacyConfig copies only those regular files from the old config
-// directory that are in the used set of include paths, renaming
-// `config.*` files to use the site prefix. Parent directories are
-// created as needed.
-func copyLegacyConfig(h *geneos.Host, source, destination, site string, used map[string]struct{}) error {
+// copyLegacyConfig copies referenced files from the old config directory
+// or the previous site naming, keeping originals and existing destinations.
+func copyLegacyConfig(h *geneos.Host, source, destination, site string) error {
 	info, err := h.Lstat(source)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
@@ -168,7 +170,8 @@ func copyLegacyConfig(h *geneos.Host, source, destination, site string, used map
 	if !info.IsDir() {
 		return fmt.Errorf("old config path %q is not a directory", source)
 	}
-	err = h.WalkDir(source, func(name string, entry fs.DirEntry, walkErr error) error {
+	var used map[string]struct{}
+	err = h.WalkDir(source, func(name string, entry fs.DirEntry, walkErr error) (err error) {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -176,19 +179,38 @@ func copyLegacyConfig(h *geneos.Host, source, destination, site string, used map
 			return nil
 		}
 		sourcePath := h.Join(source, name)
-		if _, ok := used[sourcePath]; !ok {
-			return nil
-		}
 		targetName := h.Base(name)
-		if strings.HasPrefix(targetName, "config.") {
-			targetName = site + strings.TrimPrefix(targetName, "config")
+		if source == destination {
+			if !strings.HasPrefix(targetName, site+".") {
+				return nil
+			}
+			targetName = site + "-config" + strings.TrimPrefix(targetName, site)
+		} else if strings.HasPrefix(targetName, "config.") {
+			targetName = site + "-" + targetName
+		}
+		if used == nil {
+			used, err = gatewayIncludePaths(h)
+			if err != nil {
+				return fmt.Errorf("find include files in use by gateways: %w", err)
+			}
+		}
+		if _, ok := used[sourcePath]; !ok {
+			fmt.Println("Skipping unused legacy config file", sourcePath)
+			return nil
 		}
 		target := h.Join(destination, h.Dir(name), targetName)
 		if _, err := h.Lstat(target); err == nil {
+			fmt.Println("Skipping legacy config file", sourcePath, "->", target, "(destination exists)")
 			return nil
 		} else if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
+		copied := false
+		defer func() {
+			if copied || err != nil {
+				auditIncludeFile(h, "copy", target, err, slog.String("source", sourcePath))
+			}
+		}()
 		if err := h.MkdirAll(h.Dir(target), 0755); err != nil {
 			return err
 		}
@@ -206,9 +228,15 @@ func copyLegacyConfig(h *geneos.Host, source, destination, site string, used map
 		defer input.Close()
 		err = copyToNewIncludeFile(h, target, input, info.Mode().Perm())
 		if errors.Is(err, fs.ErrExist) {
+			fmt.Println("Skipping legacy config file", sourcePath, "->", target, "(destination exists)")
 			return nil
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		copied = true
+		fmt.Println("Copied legacy config file", sourcePath, "->", target)
+		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("copy old config directory %q: %w", source, err)
@@ -234,6 +262,11 @@ func copyToNewIncludeFile(h *geneos.Host, name string, source io.Reader, mode fs
 }
 
 func copyIncludeFile(sourceFS fs.FS, source string, h *geneos.Host, destination string, mode fs.FileMode) (err error) {
+	defer func() {
+		if !errors.Is(err, fs.ErrExist) {
+			auditIncludeFile(h, "extract", destination, err, slog.String("source", source))
+		}
+	}()
 	src, err := sourceFS.Open(source)
 	if err != nil {
 		return err

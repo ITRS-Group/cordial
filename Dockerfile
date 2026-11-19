@@ -284,13 +284,13 @@ COPY --from=cordial-docs /docs/geneos-includes/ /includes-source/docs/
 RUN set -eux; \
     version=$(cat /VERSION); \
     archive_root="geneos-includes-$version"; \
-    mkdir -p "/includes/$archive_root/$version" "/includes/$archive_root/config" "/includes/$archive_root/scripts" "/includes/$archive_root/docs"; \
-    cp /includes-source/itrs.*.xml "/includes/$archive_root/$version/"; \
+    mkdir -p "/includes/$archive_root/itrs-$version" "/includes/$archive_root/config" "/includes/$archive_root/scripts" "/includes/$archive_root/docs"; \
+    cp /includes-source/itrs.*.xml "/includes/$archive_root/itrs-$version/"; \
     cp /includes-source/config.*.xml "/includes/$archive_root/config/"; \
     cp /includes-source/scripts/install-includes.sh "/includes/$archive_root/scripts/"; \
     cp /includes-source/docs/* "/includes/$archive_root/docs/"; \
     find /includes -type f -exec chmod a-x {} \;; \
-    find "/includes/$archive_root/$version" -type f -exec chmod a-w {} \;; \
+    find "/includes/$archive_root/itrs-$version" -type f -exec chmod a-w {} \;; \
     chmod 0555 "/includes/$archive_root/scripts/install-includes.sh"; \
     tar --sort=name -czf "/geneos-includes-$version.tar.gz" -C /includes "$archive_root"
 

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 func TestInstallEmbeddedLinkModes(t *testing.T) {
@@ -36,13 +36,98 @@ func TestInstallEmbeddedLinkModes(t *testing.T) {
 			}
 			want := "previous/itrs.layer0.foundation.xml"
 			if update {
-				want = filepath.Join(cordial.VERSION, "itrs.layer0.foundation.xml")
+				want = filepath.Join(embeddedIncludeVersion(), "itrs.layer0.foundation.xml")
 			}
 			if target, err := os.Readlink(link); err != nil || target != want {
 				t.Fatalf("include link = %q, %v; want %q", target, err, want)
 			}
 		})
 	}
+}
+
+func TestInstallReportsActions(t *testing.T) {
+	capture := func(t *testing.T, run func() error) string {
+		t.Helper()
+		output, err := os.CreateTemp(t.TempDir(), "install-output-*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer output.Close()
+		previous := os.Stdout
+		os.Stdout = output
+		defer func() { os.Stdout = previous }()
+		if err := run(); err != nil {
+			t.Fatal(err)
+		}
+		data, err := os.ReadFile(output.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+
+	t.Run("templates-and-links", func(t *testing.T) {
+		h := newTestGatewayHost(t)
+		configs, err := filepath.Glob("files/config.*.xml")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, action := range []string{"Extracted", "Skipping existing"} {
+			output := capture(t, func() error { return Install(h, "", true, false) })
+			for _, conf := range configs {
+				path := h.PathTo("gateway", geneos.SiteName(), geneos.SiteName()+"-"+filepath.Base(conf))
+				want := action + " site config file " + path + "\n"
+				if !strings.Contains(output, want) {
+					t.Errorf("missing %q in output:\n%s", want, output)
+				}
+			}
+			if action == "Skipping existing" {
+				want := "Skipping existing include path " + h.PathTo("gateway", "includes", "itrs.layer0.foundation.xml") + "\n"
+				if !strings.Contains(output, want) {
+					t.Errorf("missing %q in output:\n%s", want, output)
+				}
+			}
+		}
+	})
+
+	t.Run("legacy-config", func(t *testing.T) {
+		h := newTestGatewayHost(t)
+		site := geneos.SiteName()
+		legacy := h.PathTo("gateway", "includes", "config")
+		destination := h.PathTo("gateway", site)
+		for _, directory := range []string{legacy, destination} {
+			if err := os.MkdirAll(directory, 0755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		for _, path := range []string{
+			filepath.Join(legacy, "config.used.xml"),
+			filepath.Join(legacy, "config.kept.xml"),
+			filepath.Join(legacy, "config.unused.xml"),
+			filepath.Join(destination, site+"-config.kept.xml"),
+			filepath.Join(destination, site+".previous.xml"),
+		} {
+			if err := os.WriteFile(path, []byte("custom"), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		writeTestGatewaySetup(t, h, `<gateway><includes>
+<include><location>../../includes/config/config.used.xml</location></include>
+<include><location>../../includes/config/config.kept.xml</location></include>
+<include><location>../../`+site+`/`+site+`.previous.xml</location></include>
+</includes></gateway>`)
+		output := capture(t, func() error { return Install(h, "", true, false) })
+		for _, want := range []string{
+			"Copied legacy config file " + filepath.Join(legacy, "config.used.xml") + " -> " + filepath.Join(destination, site+"-config.used.xml"),
+			"Skipping legacy config file " + filepath.Join(legacy, "config.kept.xml") + " -> " + filepath.Join(destination, site+"-config.kept.xml") + " (destination exists)",
+			"Skipping unused legacy config file " + filepath.Join(legacy, "config.unused.xml"),
+			"Copied legacy config file " + filepath.Join(destination, site+".previous.xml") + " -> " + filepath.Join(destination, site+"-config.previous.xml"),
+		} {
+			if !strings.Contains(output, want+"\n") {
+				t.Errorf("missing %q in output:\n%s", want, output)
+			}
+		}
+	})
 }
 
 func TestIncludesInstallArgumentsAndAlias(t *testing.T) {
@@ -65,7 +150,7 @@ func TestIncludesInstallArgumentsAndAlias(t *testing.T) {
 
 func TestInstallEmbeddedRejectsExistingVersionDirectoryWithoutForce(t *testing.T) {
 	h := newTestGatewayHost(t)
-	versionDir := h.PathTo("gateway", "includes", cordial.VERSION)
+	versionDir := h.PathTo("gateway", "includes", embeddedIncludeVersion())
 	if err := os.MkdirAll(versionDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +198,7 @@ func TestInstallEmbeddedCreatesVersionedAndConfigFiles(t *testing.T) {
 	if err := Install(h, "", false, false); err != nil {
 		t.Fatal(err)
 	}
-	versionDir := h.PathTo("gateway", "includes", cordial.VERSION)
+	versionDir := h.PathTo("gateway", "includes", embeddedIncludeVersion())
 	versionFiles, err := os.ReadDir(versionDir)
 	if err != nil {
 		t.Fatal(err)
@@ -139,15 +224,14 @@ func TestInstallEmbeddedCreatesVersionedAndConfigFiles(t *testing.T) {
 	}
 	for _, path := range []string{
 		h.PathTo("gateway", "includes", "itrs.layer0.foundation.xml"),
-		h.PathTo("gateway", "local", "local.layer0.authentication.xml"),
-		h.PathTo("gateway", "local", "local.layer0.foundation.xml"),
+		h.PathTo("gateway", "local", "local-config.layer0.authentication.xml"),
+		h.PathTo("gateway", "local", "local-config.layer0.foundation.xml"),
 		h.PathTo("gateway", "includes", "itrs.layer1.server-health.xml"),
-		h.PathTo("gateway", "local", "local.layer1.server-health.xml"),
+		h.PathTo("gateway", "local", "local-config.layer1.server-health.xml"),
 		h.PathTo("gateway", "includes", "itrs.layer2.programs-and-logs.xml"),
-		h.PathTo("gateway", "local", "local.layer2.programs-and-logs.xml"),
+		h.PathTo("gateway", "local", "local-config.layer2.programs-and-logs.xml"),
 		h.PathTo("gateway", "includes", "itrs.layer3.geneos.xml"),
-		h.PathTo("gateway", "local", "local.layer3.geneos.xml"),
-		h.PathTo("gateway", "local", "local.layer4.analytics.xml"),
+		h.PathTo("gateway", "local", "local-config.layer3.geneos.xml"),
 	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("installed layer file %q: %v", path, err)
@@ -158,7 +242,7 @@ func TestInstallEmbeddedCreatesVersionedAndConfigFiles(t *testing.T) {
 		h.PathTo("gateway", "includes", "itrs.level1.server-health.xml"),
 		h.PathTo("gateway", "includes", "itrs.level2.programs-and-logs.xml"),
 		h.PathTo("gateway", "includes", "itrs.level3.geneos.xml"),
-		h.PathTo("gateway", "local", "local.level3.geneos.xml"),
+		h.PathTo("gateway", "local", "local-config.level3.geneos.xml"),
 	} {
 		if _, err := os.Lstat(path); !os.IsNotExist(err) {
 			t.Errorf("obsolete file %q was installed: %v", path, err)
@@ -235,7 +319,7 @@ func TestInstallCreatesVersionedIncludesAndConfig(t *testing.T) {
 		mode     os.FileMode
 	}{
 		{h.PathTo("gateway", "includes", version, "itrs.test.xml"), "managed", 0444},
-		{h.PathTo("gateway", "local", "local.test.xml"), "template", 0664},
+		{h.PathTo("gateway", "local", "local-config.test.xml"), "template", 0664},
 	} {
 		data, err := os.ReadFile(file.path)
 		if err != nil || string(data) != file.contents {
@@ -255,6 +339,76 @@ func TestInstallCreatesVersionedIncludesAndConfig(t *testing.T) {
 	}
 	if _, err := os.Stat(h.PathTo("gateway", "includes", "docs")); !os.IsNotExist(err) {
 		t.Fatalf("archive documentation was unexpectedly installed into the Gateway include directory: %v", err)
+	}
+}
+
+func TestInstallSourceVersions(t *testing.T) {
+	for _, source := range []string{"itrs", "acme", "acme-ops"} {
+		t.Run(source, func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			previous := config.Get[string](config.Global(), "site")
+			config.Set(config.Global(), "site", source)
+			t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+			version := source + "-v1.2.3-rc.1+build.7"
+			root := "geneos-includes-v1.2.3-rc.1+build.7"
+			archive := writeTestIncludeArchive(t,
+				includeArchiveEntry{name: root + "/", kind: tar.TypeDir},
+				includeArchiveEntry{name: root + "/" + version + "/" + source + ".test.xml", contents: "managed"},
+				includeArchiveEntry{name: root + "/config/config.test.xml", contents: "template"},
+			)
+			if err := Install(h, archive, false, false); err != nil {
+				t.Fatal(err)
+			}
+			link := h.PathTo("gateway", "includes", source+".test.xml")
+			if target, err := os.Readlink(link); err != nil || target != version+"/"+source+".test.xml" {
+				t.Fatalf("source link = %q, %v", target, err)
+			}
+			if data, err := os.ReadFile(link); err != nil || string(data) != "managed" {
+				t.Fatalf("functional include = %q, %v", data, err)
+			}
+			template := h.PathTo("gateway", source, source+"-config.test.xml")
+			if data, err := os.ReadFile(template); err != nil || string(data) != "template" {
+				t.Fatalf("site template = %q, %v", data, err)
+			}
+		})
+	}
+}
+
+func TestInstallPreservesPreviousSiteConfig(t *testing.T) {
+	h := newTestGatewayHost(t)
+	site := geneos.SiteName()
+	directory := h.PathTo("gateway", site)
+	if err := os.MkdirAll(directory, 0755); err != nil {
+		t.Fatal(err)
+	}
+	legacy := filepath.Join(directory, site+".test.xml")
+	if err := os.WriteFile(legacy, []byte("custom"), 0640); err != nil {
+		t.Fatal(err)
+	}
+	location := "../../" + site + "/" + site + ".test.xml"
+	writeTestGatewaySetup(t, h, "<gateway><includes><include><location>"+location+"</location></include></includes></gateway>")
+	if err := os.WriteFile(h.PathTo("gateway", "gateways", "test", "gateway.json"), []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	source := fstest.MapFS{
+		"files/itrs.test.xml":   &fstest.MapFile{Data: []byte("include")},
+		"files/config.test.xml": &fstest.MapFile{Data: []byte("template")},
+	}
+	if err := extractIncludes(h, source, "itrs-v1.2.3", true); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := os.ReadFile(filepath.Join(directory, site+"-config.test.xml")); err != nil || string(data) != "custom" {
+		t.Fatalf("migrated site config = %q, %v", data, err)
+	}
+	if err := Fix(h, false); err != nil {
+		t.Fatal(err)
+	}
+	setup, err := os.ReadFile(h.PathTo("gateway", "gateways", "test", "gateway.setup.xml"))
+	if err != nil || !strings.Contains(string(setup), "../../"+site+"/"+site+"-config.test.xml") {
+		t.Fatalf("migrated site reference = %s, %v", setup, err)
+	}
+	if data, err := os.ReadFile(legacy); err != nil || string(data) != "custom" {
+		t.Fatalf("legacy site config changed = %q, %v", data, err)
 	}
 }
 
@@ -294,7 +448,7 @@ func TestInstallMigratesLegacyConfig(t *testing.T) {
 			if err := os.Symlink("config.test.xml", filepath.Join(legacy, "config.link.xml")); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(target, test.prefix+".kept.xml"), []byte("existing"), 0644); err != nil {
+			if err := os.WriteFile(filepath.Join(target, test.prefix+"-config.kept.xml"), []byte("existing"), 0644); err != nil {
 				t.Fatal(err)
 			}
 			var locations strings.Builder
@@ -312,11 +466,11 @@ func TestInstallMigratesLegacyConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 			for name, want := range map[string]string{
-				test.prefix + ".test.xml": "custom",
-				test.prefix + ".link.xml": "custom",
-				test.prefix + ".kept.xml": "existing",
-				test.prefix + ".new.xml":  "new template",
-				"nested/other.txt":        "nested",
+				test.prefix + "-config.test.xml": "custom",
+				test.prefix + "-config.link.xml": "custom",
+				test.prefix + "-config.kept.xml": "existing",
+				test.prefix + "-config.new.xml":  "new template",
+				"nested/other.txt":               "nested",
 			} {
 				filename := filepath.Join(target, name)
 				data, err := os.ReadFile(filename)
@@ -328,7 +482,7 @@ func TestInstallMigratesLegacyConfig(t *testing.T) {
 					t.Errorf("file %q is not regular: %v, %v", filename, info, err)
 				}
 			}
-			for _, name := range []string{test.prefix + ".unused.xml", "nested/unused.txt"} {
+			for _, name := range []string{test.prefix + "-config.unused.xml", "nested/unused.txt"} {
 				if _, err := os.Lstat(filepath.Join(target, name)); !os.IsNotExist(err) {
 					t.Errorf("unused legacy file %q was copied: %v", name, err)
 				}
@@ -342,7 +496,7 @@ func TestInstallMigratesLegacyConfig(t *testing.T) {
 			}
 			found := false
 			for _, file := range shared {
-				if file.Path == filepath.Join(target, test.prefix+".test.xml") {
+				if file.Path == filepath.Join(target, test.prefix+"-config.test.xml") {
 					found = true
 				}
 			}
@@ -406,9 +560,9 @@ func TestStandaloneInstallerMigratesLegacyConfig(t *testing.T) {
 		t.Fatalf("standalone install failed: %v\n%s", err, output)
 	}
 	for name, want := range map[string]string{
-		"local.test.xml":         "custom",
-		"local.link.xml":         "custom",
-		"nested/local.extra.xml": "nested",
+		"local-config.test.xml":         "custom",
+		"local-config.link.xml":         "custom",
+		"nested/local-config.extra.xml": "nested",
 	} {
 		filename := filepath.Join(root, "gateway", "local", name)
 		data, err := os.ReadFile(filename)
@@ -422,6 +576,51 @@ func TestStandaloneInstallerMigratesLegacyConfig(t *testing.T) {
 	}
 	if data, err := os.ReadFile(filepath.Join(legacy, "config.test.xml")); err != nil || string(data) != "custom" {
 		t.Errorf("legacy config changed: %q, %v", data, err)
+	}
+}
+
+func TestStandaloneInstallerSourceVersions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("standalone installer requires Unix shell tools")
+	}
+	for _, source := range []string{"itrs", "acme-ops"} {
+		t.Run(source, func(t *testing.T) {
+			root, archive := t.TempDir(), t.TempDir()
+			version := source + "-v1.2.3-rc-vendor+build.7"
+			for _, directory := range []string{version, "config"} {
+				if err := os.MkdirAll(filepath.Join(archive, directory), 0755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for name, content := range map[string]string{
+				version + "/" + source + ".test.xml": "managed",
+				"config/config.test.xml":             "template",
+			} {
+				if err := os.WriteFile(filepath.Join(archive, name), []byte(content), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			siteDir := filepath.Join(root, "gateway", "local")
+			if err := os.MkdirAll(siteDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(siteDir, "local.test.xml"), []byte("custom"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			command := exec.Command("sh", "files/install-includes.sh", root)
+			command.Env = append(os.Environ(), "INCLUDES_SOURCE="+archive)
+			if output, err := command.CombinedOutput(); err != nil {
+				t.Fatalf("standalone install failed: %v\n%s", err, output)
+			}
+			link := filepath.Join(root, "gateway", "includes", source+".test.xml")
+			if target, err := os.Readlink(link); err != nil || target != version+"/"+source+".test.xml" {
+				t.Fatalf("standalone source link = %q, %v", target, err)
+			}
+			template := filepath.Join(root, "gateway", "local", "local-config.test.xml")
+			if data, err := os.ReadFile(template); err != nil || string(data) != "custom" {
+				t.Fatalf("standalone site template = %q, %v", data, err)
+			}
+		})
 	}
 }
 
@@ -545,7 +744,7 @@ func TestInstallReinstallAndConfigPreservation(t *testing.T) {
 	if data, err := os.ReadFile(backups[0]); err != nil || string(data) != "first" {
 		t.Fatalf("include backup = %q, %v", data, err)
 	}
-	config := h.PathTo("gateway", "local", "local.test.xml")
+	config := h.PathTo("gateway", "local", "local-config.test.xml")
 	if data, err := os.ReadFile(config); err != nil || string(data) != "local" {
 		t.Fatalf("preserved config = %q, %v", data, err)
 	}
@@ -574,6 +773,9 @@ func TestInstallRejectsInvalidArchiveEntries(t *testing.T) {
 		{name: "config-only", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/config/config.test.xml"}}},
 		{name: "no-prefix", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/1.2.3/itrs.test.xml"}}},
 		{name: "short-version", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/v1.2/itrs.test.xml"}}},
+		{name: "source-version-mismatch", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/itrs-v2.0.0/itrs.test.xml"}}},
+		{name: "wrong-source-file", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/acme-v1.2.3/itrs.test.xml"}}},
+		{name: "multiple-sources", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/acme-v1.2.3/acme.test.xml"}}},
 		{name: "leading-zero", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/v01.2.3/itrs.test.xml"}}},
 		{name: "prerelease-leading-zero", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/v1.2.3-01/itrs.test.xml"}}},
 		{name: "multiple-versions", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/v2.0.0/itrs.other.xml"}}},

@@ -9,16 +9,16 @@ Files included, relative to your Geneos installation directory, for the example 
 | File | Purpose |
 | ---- | ------- |
 | `gateway/includes/itrs.layer1.server-health.xml` | ITRS monitoring definitions - read-only, replaced on update |
-| `gateway/acme/acme.layer1.server-health.xml` | Your site overrides - empty by default, never overwritten |
+| `gateway/acme/acme-config.layer1.server-health.xml` | Your site overrides - empty by default, never overwritten |
 
 The `itrs` file is extracted into a version directory and linked from the `includes` directory, so Gateways always reference the same path:
 
 ```text
 gateway/
 ├── includes/
-│   ├── itrs.layer1.server-health.xml -> vx.y.z/itrs.layer1.server-health.xml
-│   └── vx.y.z/itrs.layer1.server-health.xml
-└── acme/acme.layer1.server-health.xml
+│   ├── itrs.layer1.server-health.xml -> itrs-vx.y.z/itrs.layer1.server-health.xml
+│   └── itrs-vx.y.z/itrs.layer1.server-health.xml
+└── acme/acme-config.layer1.server-health.xml
 ```
 
 >[!NOTE]
@@ -32,15 +32,18 @@ New installations created with `geneos` set this up automatically. For existing 
 geneos includes extract --update
 ```
 
-Changed files in existing version directories are backed up. Existing site configuration files are never overwritten. To switch to another installed version use `geneos includes update --version vx.y.z`. See [`geneos includes`](../../../docs/geneos_includes.md).
+Changed files in existing version directories are backed up. Existing site configuration files are never overwritten. To switch to another installed version use `geneos includes update --version itrs-vx.y.z`. See [`geneos includes`](../../../docs/geneos_includes.md).
 
 ### Upgrading from an earlier include
 
 The former `itrs.level1.infrastructure.xml` and `itrs.level1.server-health.xml` includes and their matching site configurations have been renamed. Existing Gateway setups, site overrides and user profiles are not updated automatically.
 
 1. Back up your Gateway setups and site configuration. Run `geneos includes install` without `--update` to install the new files while keeping existing links.
+
 2. Copy or merge overrides from your old site configuration into the new `layer1.server-health.xml` site file, preserving any settings already there. Update references to the old `Level 1 - Infrastructure` or `Level 1 - Server Health` types, groups, environments and XPath targets in those overrides.
+
 3. Update Gateway include paths and any type, group and environment references in Gateway setups, customised profiles and SAN configurations to the new Server Health names.
+
 4. Once no Gateway setup references the old include link, run `geneos includes update`. The update refuses to remove an old link that is still in use.
 
 ## Usage
@@ -60,7 +63,7 @@ The former `itrs.level1.infrastructure.xml` and `itrs.level1.server-health.xml` 
        <include>
            <priority>500</priority>
            <required>true</required>
-           <location>../../acme/acme.layer1.server-health.xml</location>
+           <location>../../acme/acme-config.layer1.server-health.xml</location>
        </include>
    </includeGroup>
    ```

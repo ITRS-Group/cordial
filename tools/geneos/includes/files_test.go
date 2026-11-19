@@ -150,7 +150,7 @@ func TestExtractIncludesPreservesExistingConfig(t *testing.T) {
 			if err := os.MkdirAll(configDir, 0755); err != nil {
 				t.Fatal(err)
 			}
-			configPath := filepath.Join(configDir, "local.test.xml")
+			configPath := filepath.Join(configDir, "local-config.test.xml")
 			if symlink {
 				if err := os.Symlink("missing.xml", configPath); err != nil {
 					t.Fatal(err)

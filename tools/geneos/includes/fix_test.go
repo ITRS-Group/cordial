@@ -396,8 +396,8 @@ func TestFixMigratesUnchangedLegacyConfig(t *testing.T) {
 		"includes/config/config.changed.xml": "old",
 		"includes/config/config.nosite.xml":  "nosite",
 		"includes/config/nested/other.xml":   "nested",
-		"acme/acme.same.xml":                 "same",
-		"acme/acme.changed.xml":              "new",
+		"acme/acme-config.same.xml":          "same",
+		"acme/acme-config.changed.xml":       "new",
 		"acme/nested/other.xml":              "nested",
 	}
 	for name, contents := range files {
@@ -434,7 +434,7 @@ func TestFixMigratesUnchangedLegacyConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"../../acme/acme.same.xml",
+		"../../acme/acme-config.same.xml",
 		"../../acme/nested/other.xml",
 		"../../includes/config/config.changed.xml",
 		"../../includes/config/config.nosite.xml",
@@ -447,7 +447,7 @@ func TestFixMigratesUnchangedLegacyConfig(t *testing.T) {
 		t.Errorf("unchanged legacy reference not migrated:\n%s", data)
 	}
 	conf, err := os.ReadFile(h.PathTo("gateway", "gateways", "prod-a", "gateway.json"))
-	if err != nil || !strings.Contains(string(conf), "../../acme/acme.same.xml") {
+	if err != nil || !strings.Contains(string(conf), "../../acme/acme-config.same.xml") {
 		t.Errorf("instance config = %s, %v", conf, err)
 	}
 }

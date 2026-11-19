@@ -18,8 +18,11 @@ if [ ! -d "$SOURCE_DIR" ]; then
 fi
 
 VERSION_DIR=
-for candidate in "$SOURCE_DIR"/v*; do
+SEMVER='v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?'
+for candidate in "$SOURCE_DIR"/*; do
     [ -d "$candidate" ] || continue
+    name=${candidate##*/}
+    printf '%s\n' "$name" | grep -Eq "^([A-Za-z0-9][A-Za-z0-9._-]*-)?$SEMVER$" || continue
     if [ -n "$VERSION_DIR" ]; then
         printf '%s\n' "Expected one version directory in archive" >&2
         exit 1
@@ -28,6 +31,14 @@ for candidate in "$SOURCE_DIR"/v*; do
 done
 [ -n "$VERSION_DIR" ] || { printf '%s\n' "No version directory found" >&2; exit 1; }
 VERSION=${VERSION_DIR##*/}
+if printf '%s\n' "$VERSION" | grep -Eq "^$SEMVER$"; then
+    SOURCE=itrs
+else
+    SOURCE=$(printf '%s\n' "$VERSION" | sed -E "s/^(.*)-($SEMVER)$/\1/")
+fi
+[ "$SOURCE" != config ] || { printf '%s\n' "The source name config is reserved for templates" >&2; exit 1; }
+set -- "$VERSION_DIR"/"$SOURCE".*.xml
+[ -f "$1" ] || { printf 'No include files found for source %s\n' "$SOURCE" >&2; exit 1; }
 
 if [ -e "$INCLUDES_DIR/$VERSION" ] || [ -L "$INCLUDES_DIR/$VERSION" ]; then
     printf 'Version already installed: %s\n' "$INCLUDES_DIR/$VERSION" >&2
@@ -57,7 +68,7 @@ copy_old_config() (
             continue
         fi
         case "$name" in
-            config.*) name="local.${name#config.}" ;;
+            config.*) name="local-$name" ;;
         esac
         destination=$destination_dir/$name
         if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
@@ -74,7 +85,16 @@ if [ -d "$INCLUDES_DIR/config" ]; then
     copy_old_config "$INCLUDES_DIR/config" "$CONFIG_DIR"
 fi
 
-for source in "$VERSION_DIR"/itrs.*.xml; do
+for source in "$CONFIG_DIR"/local.*.xml; do
+    [ -e "$source" ] || [ -L "$source" ] || continue
+    name=${source##*/}
+    destination="$CONFIG_DIR/local-config.${name#local.}"
+    if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
+        cp -pLn "$source" "$destination"
+    fi
+done
+
+for source in "$VERSION_DIR"/"$SOURCE".*.xml; do
     [ -f "$source" ] || continue
     install -m 0444 "$source" "$INCLUDES_DIR/$VERSION/${source##*/}"
 done
@@ -82,13 +102,13 @@ done
 for source in "$SOURCE_DIR"/config/config.*.xml; do
     [ -f "$source" ] || continue
     name=${source##*/}
-    destination="$CONFIG_DIR/local.${name#config.}"
+    destination="$CONFIG_DIR/local-$name"
     if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
         install -m 0664 "$source" "$destination"
     fi
 done
 
-for source in "$INCLUDES_DIR/$VERSION"/itrs.*.xml; do
+for source in "$INCLUDES_DIR/$VERSION"/"$SOURCE".*.xml; do
     [ -f "$source" ] || continue
     name=${source##*/}
     link="$INCLUDES_DIR/$name"

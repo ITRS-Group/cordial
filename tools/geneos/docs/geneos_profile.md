@@ -22,16 +22,21 @@ Use the same option when you deploy or rebuild that profile. The installed profi
 
 The supplied configuration is [internal/profile/profiles.defaults.yaml](../../profile/profiles.defaults.yaml). Use it as an example. Put installation-specific changes in your selected profile file, not in the source file.
 
-Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}.layer1.server-health.xml` to `../../acme/acme.layer1.server-health.xml`.
+Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}-config.layer1.server-health.xml` to `../../acme/acme-config.layer1.server-health.xml`.
 
 > [!NOTE]
 > Please note the following when choosing and using a site name:
 >
 > - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+>
 > - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+>
 > - If no site name is set, the directory and prefix are `local`.
+>
 > - Only one site name is supported per installation.
+>
 > - Use the same site name on all Geneos servers for consistent paths.
+>
 > - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them, update literal legacy profile paths to use `${site}` if needed, and run `geneos includes install` to populate the new site directory.
 
 ## Use a Supplied Profile
@@ -96,6 +101,7 @@ Use `init` for a new installation. You need access to suitable release archives 
 Use this procedure on an existing Geneos host. The receiving Gateway must have the Types requested by the profile. For TLS, both sides must trust the certificate chain.
 
 1. Check the Gateway address and the Types in the `health-agent` definition.
+
 2. Deploy the profile with an issued certificate bundle. The bundle must contain the SAN's certificate, private key, and certificate chain:
 
    ```bash
@@ -138,6 +144,7 @@ Use a YAML list for component instances. A single mapping is also accepted, as s
          - name: application-gateway
            params:
              - gatewayname=Application Gateway
+
              - port=7100
        netprobe:
          - name: application-probe
@@ -323,8 +330,11 @@ is the same as:
 ```yaml
 params:
   - gatewayname=Application Gateway
+
   - licdhost=licence.example.com
+
   - licdport=7041
+
   - licdsecure=true
 ```
 
@@ -339,7 +349,9 @@ A TLS capable Gateway on the conventional insecure port 7039 is moved to the TLS
 The `insecure` option is saved with the profile. When the profile is applied again, for example by `geneos deploy` with the profile name or by `geneos rebuild profile`, the TLS state of each existing instance is compared with the saved option and changed to match, and the instance is then rebuilt so that the port conventions above follow:
 
 * If the option is not `insecure` and the instance is not TLS capable, the certificate and key kept from an earlier secure state are used again if they are still valid, otherwise a new instance certificate is created as `geneos add` does. If a certificate bundle is given in the profile it is imported first and used. If no signing certificate is available the update fails with an error, rather than leaving the instance insecure; run `geneos tls init` or use `--insecure`.
+
 * If the option is `insecure` and the instance has TLS parameters, they are removed from the instance configuration only. The certificate and key files are never deleted. A certificate bundle given in the profile takes precedence over `insecure`, as it does when an instance is created.
+
 * If the state already matches, or the profile has no saved `insecure` option, nothing is changed.
 
 A Web Dashboard server is only started with HTTPS if its keystore exists, so when its TLS is removed the keystore is set aside by renaming it with a `.disabled` suffix, and it is built again when TLS is enabled. The keystore and truststore of an `sso-agent` are not changed, because it always has a keystore for its signing key and its use of TLS is set in `conf/sso-agent.conf`. Instances are reported as `updated` and an audit event is recorded.
@@ -373,6 +385,7 @@ san:
         - Layer 2 - Application Baseline
       attributes:
         - APPLICATION=Geneos
+
         - CATEGORY=Application
       variables:
         - name: application
@@ -420,7 +433,9 @@ san:
           - Layer 2 - Geneos Gateway
         attributes:
           - ${option:attribute}
+
           - COMPONENT=Gateway
+
           - GATEWAY=${config:name}
         variables:
           - name: gatewayName
@@ -432,8 +447,11 @@ san:
 ```
 
 1. Install the Gateway instances to monitor before you apply this profile.
+
 2. Deploy the profile with `--gateway HOST:PORT` and any required `--attribute` options.
+
 3. Inspect the SAN setup file. Confirm the selected names, Types, and file paths.
+
 4. Start or restart the named profile and check the receiving Gateway.
 
 `for-each` examines installed instances when the profile is applied. It does not detect later installation changes automatically.
@@ -466,6 +484,7 @@ Supply repeated `--gateway HOST:PORT` options at deployment. The generated confi
 A rebuild reads the selected YAML definition again and reuses the options saved with the installed profile instance. It applies the definition to its component instances. It does not download software releases.
 
 1. Edit the profile in the same file used for deployment.
+
 2. Apply the definition again:
 
    ```bash
@@ -473,6 +492,7 @@ A rebuild reads the selected YAML definition again and reuses the options saved 
    ```
 
 3. Check the affected instances with `geneos show`. For a SAN, check the generated managed entities.
+
 4. If a Gateway's generated files must change, rebuild that Gateway explicitly:
 
    ```bash
@@ -521,10 +541,15 @@ Thus, an omitted list can remove existing settings. Conversely, removing an arbi
 Current implementation limits:
 
 - Use profile application on the local host. Although deployment accepts host selection, the application handlers and SAN `for-each` processing use `geneos.LOCAL`. Do not rely on remote profile deployment to configure the selected host correctly.
+
 - Component entries are processed without a defined dependency order. Install components before a SAN profile that discovers them, then rebuild that profile after installation changes.
+
 - `deploy --signing-bundle` is used when it initialises a local installation. It is not passed through to profile deployment in an existing installation. Use `--certs-bundle` for issued instance certificates there.
+
 - Application is not transactional. An error can leave some instances updated and others unchanged. Check the result before retrying.
+
 - Removing an instance from the YAML does not delete the installed instance. Renaming an entry can create a new instance and leave the old one in place.
+
 - [`geneos profile extract`](geneos_profile_extract.md) and its `update` alias write the embedded defaults to the standard user profiles file. If that file differs, it is backed up as `profiles-YYYYMMDDHHMMSS.yaml` before replacement; if it already matches, no file change is made. A custom file selected with `--profiles` is not overwritten.
 
 ## Usage

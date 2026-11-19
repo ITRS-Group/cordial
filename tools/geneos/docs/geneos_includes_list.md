@@ -4,7 +4,7 @@ List include files found in the selected Geneos installation and include referen
 
 The include view reports copies, Gateway usage, status flags, modification time, size, and location. Shared and versioned paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files, whose locations are shown exactly as configured in the Gateway setup. The main Gateway setup file is an exception: its local path is shown relative to that Gateway's instance directory in both the include and Gateway views.
 
-The version view lists the current include links and available semantic-version directories. Use `--all` to list each file inside those directories.
+The version view lists the current include links and available source-prefixed semantic-version directories, such as `itrs-v1.31.0` and `acme-ops-v2.0.0-rc.1`, as well as legacy unprefixed versions. The prefix identifies the include **source**. Version columns retain the full directory name, including the source, wherever shown. Use `--all` to list each file inside those directories. In long and machine-readable version views, `TargetVersion` (`targetVersion`) identifies each current link's target version separately from the `Version` row label.
 
 The Gateway view lists includes configured for each Gateway, ordered by priority. The `File` field contains only the include file's basename; nested group names do not change it. Gateway-local includes are omitted unless `--all` is set.
 
@@ -24,12 +24,19 @@ Machine-readable formats include `status`, `shared`, `gatewayLocal`, `remote`, `
 Flags identify include properties:
 
 * `D` - Disabled in the Gateway setup
+
 * `G` - Gateway-local include
+
 * `o` - Optional include
+
 * `R` - Read-only file
+
 * `S` - Shared include
+
 * `U` - HTTP or HTTPS URL include
+
 * `V` - Versioned include
+
 * `X` - Local file is missing
 
 Remote locations are queried with HTTP HEAD requests for modification time and size unless `--no-remote` is set. Failures to retrieve remote metadata do not prevent listing the configured location.

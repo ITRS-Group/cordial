@@ -1,13 +1,16 @@
 # Layer 3 Geneos Configuration Example
 
 `config.layer3.geneos.xml` contains an example managed-entity hierarchy for the types defined by `itrs.layer3.geneos.xml`. It is a configuration template, not a live monitoring definition.
-For the site name `acme`, the installed file is `gateway/acme/acme.layer3.geneos.xml`; if the site name is unset, it is `gateway/local/local.layer3.geneos.xml`.
+For the site name `acme`, the installed file is `gateway/acme/acme-config.layer3.geneos.xml`; if the site name is unset, it is `gateway/local/local-config.layer3.geneos.xml`.
 
 ## Example Hierarchy
 
 - In the Gateway Setup Editor (GSE), the `Layer 3 - Geneos` managed-entity group sets the `APPLICATION`, `CATEGORY`, and `COMPONENT` attributes and adds the `Layer 3 - Geneos Instances` type with the `Layer 3 - Geneos Overrides` environment.
+
 - The included managed entity named `example` is disabled and points to the `localhost` probe as a placeholder. It also shows the five per-entity variables required when component monitoring types are assigned: `instanceName`, `instanceType`, `instanceExecPath`, `logFilePath`, and `consoleLogFilePath`.
+
 - The nested `With Diagnostic Views` group adds `Layer 3 - Geneos Diagnostics`, also with the shared overrides environment.
+
 - After the managed entities, the file defines empty copies of `Layer 3 - Geneos Overrides` and `Layer 3 - Geneos Load Overrides` under their corresponding environment groups. Add site-specific values to these copies in the GSE.
 
 ## Usage

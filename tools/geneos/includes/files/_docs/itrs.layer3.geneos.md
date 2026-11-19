@@ -1,7 +1,7 @@
 # ITRS Layer 3 Geneos Documentation
 
 `itrs.layer3.geneos.xml` defines reusable Geneos instance, component, and Gateway-load types and samplers, component process/log includes, commands, alert rules, and a data export set. It contains no managed-entity hierarchy; the matching `config.layer3.geneos.xml` provides an example configuration.
-For the site name `acme`, the installed configuration template is `gateway/acme/acme.layer3.geneos.xml`; if the site name is unset, the directory and prefix are `local`.
+For the site name `acme`, the installed configuration template is `gateway/acme/acme-config.layer3.geneos.xml`; if the site name is unset, the directory and prefix are `local`.
 
 Treat this functional include as read-only so it can be upgraded from later releases without losing local changes. Keep managed-entity setup and site-specific overrides in the matching `config.layer3.geneos.xml` or your Gateway's local configuration.
 
@@ -130,10 +130,15 @@ Use the corresponding `Layer 3 - Geneos Gateway Load XPaths` type when XPath sta
 ## Operational Behavior
 
 - Instance samplers call the local `geneos` command by default. `geneosExecPath`, `geneosExecConfigPath`, and `geneosExecHosts` control the assembled command invocation. Inventory samplers normally run every five minutes; process status normally runs every 20 seconds.
+
 - Certificate checks run daily and rules warn on invalid certificates, certificates expiring within 30 days, and critically on those expiring within 7 days.
+
 - Rules also flag old installed releases, disabled instances, non-TLS instances, version mismatches, and increasing open-file/socket counts. These severities are rule behavior, not environment-variable settings.
+
 - Component Logs uses FKM for the component log and optional console log. The Processes sampler matches the configured process descriptor; a missing process is critical and multiple matches are warning-level.
+
 - Gateway-load history rules calculate rolling CPU and database update columns from successive samples. Gateway-load views require Gateway statistics collection to be enabled and `statsFilePath` to point to the resulting file.
+
 - The include provides `Restart NetProbe`, `View Configuration for Dataview`, and `View Gateway Logfile` commands, plus a `Layer 3 - Geneos` exported data set.
 
 ## Review Notes

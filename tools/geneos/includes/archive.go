@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -21,8 +20,6 @@ const (
 	maxIncludeArchiveSize = 256 << 20 // total size of all files in an archive
 	maxArchiveTrailer     = 1 << 20   // data allowed after the last tar entry
 )
-
-var includeVersionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$`)
 
 func stageIncludeArchive(source io.Reader, staging string) (string, error) {
 	compressed, err := gzip.NewReader(source)
@@ -80,9 +77,10 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 			return "", fmt.Errorf("include archive entry %q must be inside a geneos-includes-<version> directory", header.Name)
 		}
 		parts = parts[1:]
-		isVersion := includeVersionPattern.MatchString(parts[0])
+		_, contentsVersion, versionErr := parseIncludeVersion(parts[0])
+		isVersion := versionErr == nil
 		if isVersion {
-			if parts[0] != archiveRootVersion {
+			if contentsVersion != archiveRootVersion {
 				return "", fmt.Errorf("include archive root version %q does not match contents version %q", archiveRootVersion, parts[0])
 			}
 			if version != "" && version != parts[0] {
@@ -90,7 +88,7 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 			}
 			version = parts[0]
 		} else if parts[0] != "config" && parts[0] != "scripts" && parts[0] != "docs" {
-			return "", fmt.Errorf("invalid include archive directory %q: expected a v-prefixed semantic version, config, scripts, or docs", parts[0])
+			return "", fmt.Errorf("invalid include archive directory %q: expected <source>-v<version>, config, scripts, or docs", parts[0])
 		}
 		if header.Typeflag == tar.TypeDir && len(parts) == 1 {
 			continue
@@ -100,7 +98,11 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 		}
 		pattern := path.Base(ConfigPattern)
 		if isVersion {
-			pattern = path.Base(IncludePattern)
+			includeGlob, err := includePattern(parts[0])
+			if err != nil {
+				return "", err
+			}
+			pattern = path.Base(includeGlob)
 		} else if parts[0] == "scripts" {
 			pattern = "install-includes.sh"
 		} else if parts[0] == "docs" {

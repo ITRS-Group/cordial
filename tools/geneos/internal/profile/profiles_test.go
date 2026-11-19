@@ -682,7 +682,7 @@ func TestApplyGatewayProfileExpandsSiteIncludes(t *testing.T) {
     gateway:
       name: site-test-gateway
       includes:
-        500: ../../${site}/${site}.layer1.server-health.xml
+        500: ../../${site}/${site}-config.layer1.server-health.xml
 `), "yaml"))
 	profile.SetExpandOptions(geneos.LOCAL, pf, nil, nil)
 	if err := profile.Apply(geneos.LOCAL, pf, "site-test", false); err != nil {
@@ -697,7 +697,7 @@ func TestApplyGatewayProfileExpandsSiteIncludes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := config.Get[string](saved, "includes.500"); got != "../../Acme_Site/Acme_Site.layer1.server-health.xml" {
+	if got := config.Get[string](saved, "includes.500"); got != "../../Acme_Site/Acme_Site-config.layer1.server-health.xml" {
 		t.Errorf("applied include = %q", got)
 	}
 }
@@ -731,21 +731,21 @@ func TestEmbeddedServerHealthProfiles(t *testing.T) {
 					if got := strings.TrimSpace(parts[1]); got != "Layer 2 - Application Baseline" {
 						t.Errorf("include group = %q, want Layer 2 - Application Baseline", got)
 					}
-				case "../../${site}/${site}.layer2.programs-and-logs.xml":
+				case "../../${site}/${site}-config.layer2.programs-and-logs.xml":
 					coreSite = true
 				case "../../includes/itrs.layer1.server-health.xml":
 					functional = true
 					if got := strings.TrimSpace(parts[1]); got != "Layer 1 - Server Health" {
 						t.Errorf("include group = %q, want Layer 1 - Server Health", got)
 					}
-				case "../../${site}/${site}.layer1.server-health.xml":
+				case "../../${site}/${site}-config.layer1.server-health.xml":
 					site = true
 				case "../../includes/itrs.layer3.geneos.xml":
 					appFunctional = true
 					if got := strings.TrimSpace(parts[1]); got != "Layer 3 - Applications" {
 						t.Errorf("include group = %q, want Layer 3 - Applications", got)
 					}
-				case "../../${site}/${site}.layer3.geneos.xml":
+				case "../../${site}/${site}-config.layer3.geneos.xml":
 					appSite = true
 				}
 			}

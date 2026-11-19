@@ -34,6 +34,82 @@ func TestIncludesListRejectsInvalidFormat(t *testing.T) {
 	}
 }
 
+func TestIncludesListSourceVersions(t *testing.T) {
+	h := newTestGatewayHost(t)
+	parent := h.PathTo("gateway", "includes")
+	versions := []string{"itrs-v1.2.3", "acme-ops-v1.2.3-rc.1+build.7", "v1.0.0"}
+	var locations strings.Builder
+	for _, version := range versions {
+		directory := filepath.Join(parent, version)
+		if err := os.MkdirAll(directory, 0755); err != nil {
+			t.Fatal(err)
+		}
+		source, _, err := parseIncludeVersion(version)
+		if err != nil {
+			t.Fatal(err)
+		}
+		name := source + "." + version + ".xml"
+		if err := os.WriteFile(filepath.Join(directory, name), nil, 0444); err != nil {
+			t.Fatal(err)
+		}
+		target := filepath.Join(version, name)
+		if version == versions[0] {
+			target = filepath.Join(parent, target)
+		}
+		if err := os.Symlink(target, filepath.Join(parent, name)); err != nil {
+			t.Fatal(err)
+		}
+		locations.WriteString("<include><location>../../includes/" + name + "</location></include>")
+	}
+	writeTestGatewaySetup(t, h, "<gateway><includes>"+locations.String()+"</includes></gateway>")
+	oldGateway, oldVersion, oldInclude := includesListCmdByGateway, includesListCmdByVersion, includesListCmdByInclude
+	oldFormat, oldAll := includesListCmdFormat, includesListCmdAll
+	includesListCmdByGateway, includesListCmdByInclude = false, false
+	includesListCmdFormat, includesListCmdAll = "json", true
+	t.Cleanup(func() {
+		includesListCmdByGateway, includesListCmdByVersion, includesListCmdByInclude = oldGateway, oldVersion, oldInclude
+		includesListCmdFormat, includesListCmdAll = oldFormat, oldAll
+	})
+	for _, view := range []string{"include", "version", "gateway"} {
+		t.Run(view, func(t *testing.T) {
+			includesListCmdByVersion = view == "version"
+			includesListCmdByInclude = view == "include"
+			includesListCmdByGateway = view == "gateway"
+			output, err := os.CreateTemp(t.TempDir(), "includes-*.json")
+			if err != nil {
+				t.Fatal(err)
+			}
+			previous := os.Stdout
+			os.Stdout = output
+			t.Cleanup(func() {
+				os.Stdout = previous
+				output.Close()
+			})
+			if err := listIncludes(h); err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(output.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+			var rows []map[string]any
+			if err := json.Unmarshal(data, &rows); err != nil {
+				t.Fatalf("invalid JSON: %s: %v", data, err)
+			}
+			for _, version := range versions {
+				if !slices.ContainsFunc(rows, func(row map[string]any) bool { return row["version"] == version }) {
+					t.Errorf("full version %q missing from version column: %s", version, data)
+				}
+				if view == "version" && !slices.ContainsFunc(rows, func(row map[string]any) bool {
+					return row["version"] == version && row["files"] == float64(1)
+				}) {
+					t.Errorf("directory row lacks version %q: %s", version, data)
+				}
+			}
+		})
+	}
+}
+
 func TestIncludesListFormatValidation(t *testing.T) {
 	for _, format := range []string{"column", "csv", "json", "pretty", "table", "toolkit"} {
 		t.Run(format, func(t *testing.T) {
@@ -515,10 +591,10 @@ func TestIncludeListColumnHeadings(t *testing.T) {
 	}{
 		{"include machine", []string{"csv", "toolkit"}, includeColumnsMachine, []string{"file", "copies", "gateways", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "version", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
 		{"gateway machine", []string{"csv", "toolkit"}, gatewayColumnsMachine, []string{"ID", "gateway", "file", "priority", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "version", "reload", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
-		{"version machine", []string{"csv", "toolkit"}, versionColumnsLong, []string{"version", "files", "version", "perms", "owner", "lastModified", "size", "path"}},
+		{"version machine", []string{"csv", "toolkit"}, versionColumnsLong, []string{"version", "files", "targetVersion", "perms", "owner", "lastModified", "size", "path"}},
 		{"include display", []string{"column", "table"}, includeColumnsLong, []string{"File", "Copies", "Gateways", "Flags", "Version", "Perms", "Owner", "LastModified", "Size", "Latency", "CertValid", "Location"}},
 		{"gateway display", []string{"column", "table"}, gatewayColumnsLong, []string{"Gateway", "File", "Priority", "Flags", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "Latency", "CertValid", "Location"}},
-		{"version display", []string{"column", "table"}, versionColumnsLong, []string{"Version", "Files", "Version", "Perms", "Owner", "LastModified", "Size", "Path"}},
+		{"version display", []string{"column", "table"}, versionColumnsLong, []string{"Version", "Files", "TargetVersion", "Perms", "Owner", "LastModified", "Size", "Path"}},
 	}
 	for _, test := range tests {
 		for _, format := range test.formats {

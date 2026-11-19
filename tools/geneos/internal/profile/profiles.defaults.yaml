@@ -106,7 +106,7 @@ profiles:
         500: >
           ITRS Geneos Best Practice |
           Configuration |
-          ../../${site}/${site}.layer1.server-health.xml
+          ../../${site}/${site}-config.layer1.server-health.xml
         1010: >
           ITRS Geneos Best Practice |
           Layer 2 - Application Baseline |
@@ -114,7 +114,7 @@ profiles:
         510: >
           ITRS Geneos Best Practice |
           Configuration |
-          ../../${site}/${site}.layer2.programs-and-logs.xml
+          ../../${site}/${site}-config.layer2.programs-and-logs.xml
     netprobe:
       - name: ${option:minimal?"minimal:":""}localhost
         params:
@@ -352,7 +352,7 @@ profiles:
           500: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../${site}/${site}.layer1.server-health.xml
+            ../../${site}/${site}-config.layer1.server-health.xml
 
           # Layer 2 - Application Baseline includes for the Health Gateway
           1010: >
@@ -362,7 +362,7 @@ profiles:
           510: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../${site}/${site}.layer2.programs-and-logs.xml
+            ../../${site}/${site}-config.layer2.programs-and-logs.xml
 
           # Layer 3 - Applications includes for the Health Gateway
           1020: >
@@ -372,7 +372,7 @@ profiles:
           520: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../${site}/${site}.layer3.geneos.xml
+            ../../${site}/${site}-config.layer3.geneos.xml
             
         variables:
           - type: string

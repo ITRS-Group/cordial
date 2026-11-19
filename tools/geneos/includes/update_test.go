@@ -3,6 +3,7 @@ package includes
 import (
 	"archive/tar"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -177,6 +178,133 @@ func TestUpdateRejectsVersionPathTraversal(t *testing.T) {
 	}
 	if _, err := os.Lstat(h.PathTo("gateway", "includes", "outside.xml")); !os.IsNotExist(err) {
 		t.Fatalf("Update() created an include link outside the version directory, stat error = %v", err)
+	}
+}
+
+func TestParseIncludeVersion(t *testing.T) {
+	for _, test := range []struct {
+		name, source, version string
+	}{
+		{"itrs-v1.2.3", "itrs", "v1.2.3"},
+		{"acme-ops-v1.2.3-rc.1+build.7", "acme-ops", "v1.2.3-rc.1+build.7"},
+		{"acme-v1.2.3-rc-vendor", "acme", "v1.2.3-rc-vendor"},
+		{"v1.2.3", "itrs", "v1.2.3"},
+		{"1.2.3", "itrs", "1.2.3"},
+		{"../itrs-v1.2.3", "", ""},
+		{"acme/v1.2.3", "", ""},
+		{"-v1.2.3", "", ""},
+		{"acme-1.2.3", "", ""},
+		{"acme-v1.2", "", ""},
+		{"acme-v01.2.3", "", ""},
+		{"acme-v1.2.3-01", "", ""},
+		{"acme-v1.2.3+build/7", "", ""},
+		{"config-v1.2.3", "", ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			source, version, err := parseIncludeVersion(test.name)
+			if (err != nil) != (test.source == "") || source != test.source || version != test.version {
+				t.Fatalf("parseIncludeVersion(%q) = %q, %q, %v; want %q, %q", test.name, source, version, err, test.source, test.version)
+			}
+		})
+	}
+}
+
+func TestUpdateKeepsOtherSources(t *testing.T) {
+	for _, legacy := range []bool{false, true} {
+		t.Run(fmt.Sprint(legacy), func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			parent := h.PathTo("gateway", "includes")
+			old := "itrs-v1.0.0"
+			if legacy {
+				old = "v1.0.0"
+			}
+			for version, name := range map[string]string{
+				old:           "itrs.obsolete.xml",
+				"itrs-v2.0.0": "itrs.new.xml",
+				"acme-v1.0.0": "acme.used.xml",
+			} {
+				directory := filepath.Join(parent, version)
+				if err := os.MkdirAll(directory, 0755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(directory, name), nil, 0444); err != nil {
+					t.Fatal(err)
+				}
+				if version != "itrs-v2.0.0" {
+					if err := os.Symlink(filepath.Join(version, name), filepath.Join(parent, name)); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			writeTestGatewaySetup(t, h, `<gateway><includes><include><location>../../includes/acme.used.xml</location></include></includes></gateway>`)
+			if err := Update(h, "itrs-v2.0.0", true); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Lstat(filepath.Join(parent, "itrs.obsolete.xml")); !os.IsNotExist(err) {
+				t.Fatalf("obsolete ITRS link retained: %v", err)
+			}
+			if target, err := os.Readlink(filepath.Join(parent, "acme.used.xml")); err != nil || target != "acme-v1.0.0/acme.used.xml" {
+				t.Fatalf("other source link = %q, %v", target, err)
+			}
+			if err := Delete(h, "itrs-*"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(filepath.Join(parent, "acme-v1.0.0", "acme.used.xml")); err != nil {
+				t.Fatalf("source-specific deletion affected another source: %v", err)
+			}
+		})
+	}
+}
+
+func TestUpdateRejectsOtherSourceLinkCollision(t *testing.T) {
+	for _, chain := range []bool{false, true} {
+		t.Run(fmt.Sprint(chain), func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			parent := h.PathTo("gateway", "includes")
+			for _, version := range []string{"itrs-v2.0.0", "acme-v1.0.0"} {
+				directory := filepath.Join(parent, version)
+				if err := os.MkdirAll(directory, 0755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(directory, "shared.xml"), nil, 0444); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(filepath.Join(parent, "itrs-v2.0.0", "aaa-new.xml"), nil, 0444); err != nil {
+				t.Fatal(err)
+			}
+			target := "acme-v1.0.0/shared.xml"
+			if chain {
+				if err := os.Symlink(target, filepath.Join(parent, "alias.xml")); err != nil {
+					t.Fatal(err)
+				}
+				target = "alias.xml"
+			}
+			if err := os.Symlink(target, filepath.Join(parent, "shared.xml")); err != nil {
+				t.Fatal(err)
+			}
+			err := Update(h, "itrs-v2.0.0", true)
+			if err == nil || !strings.Contains(err.Error(), `belongs to source "acme"`) {
+				t.Fatalf("collision error = %v", err)
+			}
+			if got, err := os.Readlink(filepath.Join(parent, "shared.xml")); err != nil || got != target {
+				t.Fatalf("collision replaced link = %q, %v", got, err)
+			}
+			if _, err := os.Lstat(filepath.Join(parent, "aaa-new.xml")); !os.IsNotExist(err) {
+				t.Fatalf("collision preflight created new link: %v", err)
+			}
+		})
+	}
+}
+
+func TestUpdateDefaultUsesSourceVersion(t *testing.T) {
+	h := newTestGatewayHost(t)
+	if err := Update(h, "", true); err != nil {
+		t.Fatal(err)
+	}
+	link := h.PathTo("gateway", "includes", "itrs.layer0.foundation.xml")
+	if target, err := os.Readlink(link); err != nil || target != "itrs-"+cordial.VERSION+"/itrs.layer0.foundation.xml" {
+		t.Fatalf("default version link = %q, %v", target, err)
 	}
 }
 

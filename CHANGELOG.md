@@ -13,7 +13,7 @@
 
 * **Geneos management:** Improved profiles, rebuilds, TLS, package installation and Active Dashboard editing.
 
-* **Gateway includes (preview):** Independently versioned includes, site-specific configuration, and new commands to install, repair and prune them.
+* **Gateway includes (preview):** Source-aware versioned includes, site-specific configuration, and new commands to install, repair and prune them.
 
 * **Incident integrations:** More reliable ServiceNow and ServiceDesk Plus workflows, with stricter authentication, correlation and error handling.
 
@@ -27,7 +27,7 @@ See [highlights](HIGHLIGHTS.md#v1310-in-development) for more context and [updat
 
 ## Version v1.31.0 New Features
 
-* **`geneos includes` (preview):** Install versioned includes independently of the program, with site-specific configuration and a separate release archive. New `install`, `delete`/`remove` and `fix` commands complement improved listing and updates; `extract` is now an alias for `install`.
+* **`geneos includes` (preview):** Install versioned includes independently of the program, with separate sources, site-specific configuration and a separate release archive. New `install`, `delete`/`remove` and `fix` commands complement improved listing, updates and file-action auditing; `extract` is now an alias for `install`.
 
 * **`geneos` configuration and profiles:** Improved saved profile options, secure-value handling and member rebuild/reload reporting. `set` and `unset` can explicitly rebuild and reload after changes. TLS import and inspection handle more certificate sources, package installation accepts multiple archive sources, and Active Dashboard tools gain XPath/URL inspection, URL editing and an `adb edit` alias.
 

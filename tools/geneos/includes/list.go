@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -142,7 +141,7 @@ type gatewayInclude struct {
 }
 
 var versionColumns = []string{"Version", "Files", "Modified", "Size", "Path"}
-var versionColumnsLong = []string{"Version", "Files", "Version", "Perms", "Owner", "LastModified", "Size", "Path"}
+var versionColumnsLong = []string{"Version", "Files", "TargetVersion", "Perms", "Owner", "LastModified", "Size", "Path"}
 
 var includeColumns = []string{"File", "Copies", "Gateways", "Flags", "LastModified", "Size", "Location"}
 var includeColumnsLong = []string{"File", "Copies", "Gateways", "Flags", "Version", "Perms", "Owner", "LastModified", "Size", "Latency", "certValid", "Location"}
@@ -1062,7 +1061,7 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 				// Check if the directory name matches a semantic
 				// version pattern, and save. do not descend into
 				// directories, so return skipdir
-				if _, err := version.NewVersion(ent.Name()); err == nil {
+				if _, _, err := parseIncludeVersion(ent.Name()); err == nil {
 					versions = append(versions, ent)
 				}
 				return fs.SkipDir
@@ -1077,6 +1076,9 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 				}
 
 				v := h.Dir(target)
+				if _, _, err := parseIncludeVersion(h.Base(v)); err == nil {
+					v = h.Base(v)
+				}
 				fi, err := h.Stat(p)
 				status := includeStatusFromStatError(err)
 				if err != nil && status != includeStatusNotFound && status != includeStatusPermissionDenied {

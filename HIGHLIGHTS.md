@@ -16,7 +16,7 @@ New features and notable capabilities, grouped by version, newest first. Version
 
 * **Geneos management:** Profile options persist correctly, secrets are encoded before saving, and rebuilds show member actions. `set` and `unset` can rebuild and reload in one operation. TLS import and inspection support more certificate sources, package installation handles multiple archives, and `adb info`, `clean` and the new `edit` alias improve XPath and URL inspection and editing. Gateway XML updates better preserve existing content.
 
-* **Gateway includes (preview):** Manage includes and templates independently of the `geneos` version, with site-specific configuration and a separate versioned archive. New `geneos includes install`, `delete`/`remove` and `fix` commands install releases, prune unused versions and repair references. Existing setups using the old `config` includes can move to the site layout with `fix`. This remains a preview.
+* **Gateway includes (preview):** Manage includes and templates independently of the `geneos` version, with source-prefixed versions, site-specific configuration and a separate archive. Different sources can coexist without one source's updates pruning another's links. New `geneos includes install`, `delete`/`remove` and `fix` commands install releases, prune unused versions and repair references. Existing setups using the old configuration naming can move to the site layout with `fix`. This remains a preview.
 
 * **Incident integrations:** ServiceNow and ServiceDesk Plus handling now requires authentication and correlation, reports failures to clients, and avoids duplicate submissions after an incident is accepted. Request data stays literal, and configuration reloads refresh connection credentials.
 
