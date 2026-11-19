@@ -12,12 +12,12 @@ Release archives are named `geneos-includes-v<version>.tar.gz` and have a single
 | --- | --- |
 | `itrs.layer0.foundation.xml` | Gateway information, license/severity views, and configuration validation tools. |
 | `itrs.layer1.server-health.xml` | Server health monitoring for CPU, disk, hardware, and network interfaces. |
-| `itrs.layer2.programs-and-logs.xml` | Shared `Logs`, `Processes`, and Windows Services samplers for core technologies. |
+| `itrs.layer2.programs-and-logs.xml` | Shared `Logs`, `Processes`, and Windows Services samplers for the Application Baseline. |
 | `itrs.layer3.geneos.xml` | Geneos instance, component, and Gateway-load monitoring types, samplers, rules, and commands. |
 | `config.layer0.authentication.xml` | Authentication roles and policies plus example local users/groups; review and replace example identities before use. |
 | `config.layer0.foundation.xml` | Empty Gateway setup template for local foundation settings. |
 | `config.layer1.server-health.xml` | Gateway setup template for server health configuration and overrides. |
-| `config.layer2.programs-and-logs.xml` | Gateway setup template for Layer 2 Core Technologies configuration. |
+| `config.layer2.programs-and-logs.xml` | Gateway setup template for Layer 2 Application Baseline configuration. |
 | `config.layer3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Layer 3 Geneos. |
 | `config.layer4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.layer4.analytics.xml` functional include in this set. |
 

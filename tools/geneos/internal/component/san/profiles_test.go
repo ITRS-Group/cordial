@@ -86,7 +86,7 @@ func TestEmbeddedHealthManagedEntityCommon(t *testing.T) {
 		if !contains(entity.Attributes, "APPLICATION=Geneos") || !contains(entity.Attributes, "CATEGORY=Health") || !contains(entity.Attributes, "${option:attribute}") {
 			t.Errorf("entity %q did not inherit common attributes: %v", entity.ForEach, entity.Attributes)
 		}
-		if !contains(entity.Types, "Layer 2 - Core Technologies") {
+		if !contains(entity.Types, "Layer 2 - Application Baseline") {
 			t.Errorf("entity %q did not inherit the common type: %v", entity.ForEach, entity.Types)
 		}
 		for _, name := range []string{"instanceName", "instanceType", "instanceExecPath", "logFilePath", "consoleLogFilePath"} {

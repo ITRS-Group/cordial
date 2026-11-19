@@ -7,11 +7,11 @@ Treat this functional include as read-only so it can be upgraded from later rele
 
 ## Dependencies and Installation
 
-The instance, diagnostics, and Gateway-load types are defined here and do not depend on the Layer 0 Geneos types or the `Layer 2 - Core Technologies` type. The `Layer 3 - Geneos Components` types do require the `Layer 2 - Core Technologies` type because their sampler includes extend its `Logs` and `Processes` samplers.
+The instance, diagnostics, and Gateway-load types are defined here and do not depend on the Layer 0 Geneos types or the `Layer 2 - Application Baseline` type. The `Layer 3 - Geneos Components` types do require the `Layer 2 - Application Baseline` type because their sampler includes extend its `Logs` and `Processes` samplers.
 
-For component monitoring, include `itrs.layer2.programs-and-logs.xml` and assign both `Layer 2 - Core Technologies` and the relevant `Layer 3 - Geneos Components` type to the managed entity. `Layer 3 - Geneos Component Logs` adds the component log files to `Logs`; `Layer 3 - Geneos Component Process` adds the component process descriptor to `Processes`.
+For component monitoring, include `itrs.layer2.programs-and-logs.xml` and assign both `Layer 2 - Application Baseline` and the relevant `Layer 3 - Geneos Components` type to the managed entity. `Layer 3 - Geneos Component Logs` adds the component log files to `Logs`; `Layer 3 - Geneos Component Process` adds the component process descriptor to `Processes`.
 
-Use `config.layer3.geneos.xml` as a template for a managed-entity hierarchy. Its `Layer 3 - Geneos` group adds `Layer 3 - Geneos Instances`; entities in the nested `With Diagnostic Views` group also receive `Layer 3 - Geneos Diagnostics`. The example managed entity is disabled. Adapt the hierarchy and connect real entities to the appropriate Netprobe in your Gateway configuration. For component monitoring, add the `Layer 2 - Core Technologies` type and the relevant Layer 3 component type to the entity; assign Gateway-load types separately where needed.
+Use `config.layer3.geneos.xml` as a template for a managed-entity hierarchy. Its `Layer 3 - Geneos` group adds `Layer 3 - Geneos Instances`; entities in the nested `With Diagnostic Views` group also receive `Layer 3 - Geneos Diagnostics`. The example managed entity is disabled. Adapt the hierarchy and connect real entities to the appropriate Netprobe in your Gateway configuration. For component monitoring, add the `Layer 2 - Application Baseline` type and the relevant Layer 3 component type to the entity; assign Gateway-load types separately where needed.
 
 ## Type Entrypoints
 

@@ -2,17 +2,17 @@
 <!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-15 09:17:32 by PeterGalbavy on ITRSLP372-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
 	<managedEntities>
-		<managedEntityGroup name="Layer 2 - Core Technologies">
+		<managedEntityGroup name="Layer 2 - Application Baseline">
 			<attribute name="CATEGORY">Application</attribute>
 			<attribute name="COMPONENT">Baseline</attribute>
 		</managedEntityGroup>
 	</managedEntities>
 	<types>
-		<typeGroup name="Layer 2 - Core Technologies">
-			<type name="Layer 2 - Core Technologies">
-				<environment ref="Layer 2 - Core Technologies Defaults"/>
+		<typeGroup name="Layer 2 - Application Baseline">
+			<type name="Layer 2 - Application Baseline">
+				<environment ref="Layer 2 - Application Baseline Defaults"/>
 				<var name="SAMPLER_GROUP">
-					<string>Core Technologies</string>
+					<string>Application Baseline</string>
 				</var>
 				<sampler ref="Logs"/>
 				<sampler ref="Processes"/>
@@ -21,7 +21,7 @@
 		</typeGroup>
 	</types>
 	<samplers>
-		<samplerGroup name="Layer 2 - Core Technologies">
+		<samplerGroup name="Layer 2 - Application Baseline">
 			<sampler name="Logs">
 				<var-group>
 					<var ref="SAMPLER_GROUP"/>
@@ -87,10 +87,10 @@
 		</samplerGroup>
 	</samplers>
 	<rules>
-		<ruleGroup name="Layer 2 - Core Technologies"/>
+		<ruleGroup name="Layer 2 - Application Baseline"/>
 	</rules>
 	<activeTimes>
-		<activeTimeGroup name="Layer 2 - Core Technologies">
+		<activeTimeGroup name="Layer 2 - Application Baseline">
 			<activeTime name="Application - Always">
 				<scheduledPeriod>
 					<days>
@@ -107,8 +107,8 @@
 		</activeTimeGroup>
 	</activeTimes>
 	<environments>
-		<environmentGroup name="Layer 2 - Core Technologies">
-			<environment name="Layer 2 - Core Technologies Defaults">
+		<environmentGroup name="Layer 2 - Application Baseline">
+			<environment name="Layer 2 - Application Baseline Defaults">
 				<var name="LOGS_ACTIVE">
 					<activeTime>
 						<activeTime ref="Application - Always"/>
@@ -120,13 +120,13 @@
 					</activeTime>
 				</var>
 			</environment>
-			<environment name="Layer 2 - Core Technologies Overrides"/>
+			<environment name="Layer 2 - Application Baseline Overrides"/>
 		</environmentGroup>
 	</environments>
 	<exportedData>
-		<dataSet name="Layer 2 - Core Technologies">
+		<dataSet name="Layer 2 - Application Baseline">
 			<paths>
-				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Core Technologies&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Application Baseline&quot;)]</path>
 			</paths>
 		</dataSet>
 	</exportedData>

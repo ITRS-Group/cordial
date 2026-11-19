@@ -109,7 +109,7 @@ profiles:
           ../../${site}/${site}.layer1.server-health.xml
         1010: >
           ITRS Geneos Best Practice |
-          Layer 2 - Core Technologies |
+          Layer 2 - Application Baseline |
           ../../includes/itrs.layer2.programs-and-logs.xml
         510: >
           ITRS Geneos Best Practice |
@@ -182,7 +182,7 @@ profiles:
           - CATEGORY=Health
           - ${option:attribute}
         types:
-          - Layer 2 - Core Technologies
+          - Layer 2 - Application Baseline
         variables:
           - type: string
             name: instanceName
@@ -354,10 +354,10 @@ profiles:
             Configuration |
             ../../${site}/${site}.layer1.server-health.xml
 
-          # Layer 2 - Core Technologies includes for the Health Gateway
+          # Layer 2 - Application Baseline includes for the Health Gateway
           1010: >
             ITRS Geneos Best Practice |
-            Layer 2 - Core Technologies |
+            Layer 2 - Application Baseline |
             ../../includes/itrs.layer2.programs-and-logs.xml
           510: >
             ITRS Geneos Best Practice |

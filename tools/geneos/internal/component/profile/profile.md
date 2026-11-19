@@ -362,7 +362,7 @@ san:
   - name: ${hostname}-application-san
     managed-entities-common:
       types:
-        - Layer 2 - Core Technologies
+        - Layer 2 - Application Baseline
       attributes:
         - APPLICATION=Geneos
         - CATEGORY=Application

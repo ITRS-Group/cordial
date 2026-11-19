@@ -655,8 +655,8 @@ func TestEmbeddedServerHealthProfiles(t *testing.T) {
 				switch strings.TrimSpace(parts[2]) {
 				case "../../includes/itrs.layer2.programs-and-logs.xml":
 					coreFunctional = true
-					if got := strings.TrimSpace(parts[1]); got != "Layer 2 - Core Technologies" {
-						t.Errorf("include group = %q, want Layer 2 - Core Technologies", got)
+					if got := strings.TrimSpace(parts[1]); got != "Layer 2 - Application Baseline" {
+						t.Errorf("include group = %q, want Layer 2 - Application Baseline", got)
 					}
 				case "../../${site}/${site}.layer2.programs-and-logs.xml":
 					coreSite = true

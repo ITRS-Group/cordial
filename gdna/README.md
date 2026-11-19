@@ -40,7 +40,7 @@ Monitoring Coverage is determined by which plugins are running on a _**server**_
 
   * Layer 0 - Foundation
   * Layer 1 - Infrastructure
-  * Layer 2 - Core Technologies
+  * Layer 2 - Application Baseline
   * Layer 3 - Applications
   * Layer 4 - End-to-End
   * Layer 5 - Business Activity
@@ -86,7 +86,7 @@ The first dashboard, Monitoring Coverage, gives an overview of all your Geneos G
 
 * Layer 1 - Core compute infrastructure monitoring; The plugin names can be seen in the left had part of the Plugin Utilization area above. (There are also optional Layer 1 plugins, which can be seen in the second dashboard below)
 
-* Layer 2 - Core Technologies. The plugin names can be seen in the middle part of the Plugin Utilization area above
+* Layer 2 - Application Baseline. The plugin names can be seen in the middle part of the Plugin Utilization area above
 
 * Layer 3 - Applications: application-specific plugins.
 
