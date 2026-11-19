@@ -746,7 +746,7 @@ func includeSizeString(include includeFile) string {
 		}
 		return ""
 	}
-	if includesListCmdFormat == "column" {
+	if !includesListJSON() {
 		return humanize.Bytes(uint64(*include.Size))
 	}
 	return fmt.Sprintf("%d", *include.Size)
@@ -861,7 +861,7 @@ func gatewayIncludeMachineRow(gateway string, include gatewayInclude) []string {
 	if include.Gateway != nil {
 		name = include.Gateway.Host().Base(include.Location)
 	}
-	id := gateway + ":" + name
+	id := fmt.Sprintf("%s:%d", gateway, include.Priority)
 	modified := ""
 	if !include.ModTime.IsZero() {
 		modified = include.ModTime.Format(time.RFC3339)

@@ -635,19 +635,23 @@ func TestIncludeListColumnHeadings(t *testing.T) {
 	}
 }
 
-func TestMachineGatewayFlags(t *testing.T) {
+func TestMachineGatewayIDAndFlags(t *testing.T) {
 	required := false
 	row := gatewayIncludeMachineRow("gw", gatewayInclude{
-		Status: includeStatusOK, Shared: true,
+		includeFile: includeFile{Status: includeStatusOK, Shared: true},
+		Priority: 3,
 		Required: &required,
 		Disabled: true,
+		Location: "example.xml",
 	})
 	if len(row) != len(gatewayColumnsMachine) {
 		t.Fatalf("machine gateway row has %d columns, want %d", len(row), len(gatewayColumnsMachine))
 	}
 	for index, want := range map[int]string{
-		0:  "gw:.",
+		0:  "gw:3",
 		1:  "gw",
+		2:  "example.xml",
+		3:  "3",
 		4:  includeStatusOK,
 		5:  "Y",
 		6:  "N",
@@ -831,6 +835,21 @@ func TestJSONRowsKeepSizeAsBytesWithColumnFormat(t *testing.T) {
 	}
 	if got := includeJSONValue("Size", "-"); got != int64(-1) {
 		t.Errorf("not-applicable JSON size value = %#v, want int64(-1)", got)
+	}
+}
+
+func TestNonJSONFormatsHumanizeSizes(t *testing.T) {
+	oldFormat := includesListCmdFormat
+	t.Cleanup(func() { includesListCmdFormat = oldFormat })
+
+	for _, format := range []string{"column", "table", "csv", "toolkit"} {
+		t.Run(format, func(t *testing.T) {
+			includesListCmdFormat = format
+			row := includeFileRow("file.xml", "1", 0, includeFile{Size: new(int64(1536))}, "/shared/file.xml", false)
+			if row[5] != "1.5 kB" {
+				t.Errorf("size = %q, want human-readable 1.5 kB", row[5])
+			}
+		})
 	}
 }
 
