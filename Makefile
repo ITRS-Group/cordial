@@ -4,6 +4,9 @@ CREDENTIALS = ${HOME}/.config/geneos/credentials.json
 NAMESPACE = docker.itrsgroup.com
 SHA256SUM = sha256sum
 CROSS_TARGETS = linux/amd64 linux/arm64 windows/amd64 darwin/arm64
+GENERATED_DOC_DIRS = tools/geneos/docs gdna/docs tools/dv2email/docs tools/ims-gateway/docs \
+	tools/gateway-reporter/docs tools/san-config/docs \
+	integrations/servicenow/docs integrations/servicenow2/docs integrations/pagerduty/docs
 export DOCKER_BUILDKIT = 1
 
 .PHONY: all release base test-images clean build docs gdna includes check-version check-cross check-examples
@@ -34,7 +37,8 @@ test-images: release
 	docker build --tag cordial/ubi9 --tag cordial/ubi9:$(VERSION) --target cordial-run-ubi9 .
 	docker build --tag cordial/ubi10 --tag cordial/ubi10:$(VERSION) --target cordial-run-ubi10 .
 
-release: check-version base docs
+release: check-version docs
+	$(MAKE) base
 	mkdir -p release-$(VERSION)/
 	-docker rm cordial-build-$(VERSION)
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
@@ -77,9 +81,18 @@ gdna:
 	docker image tag gdna $(NAMESPACE)/gdna:release
 
 docs:
+	@set -e; for dir in $(GENERATED_DOC_DIRS); do \
+		if [ ! -f "$$dir/_DO_NOT_EDIT" ] || [ -L "$$dir/_DO_NOT_EDIT" ]; then \
+			echo "Refusing to clean generated docs: $$dir/_DO_NOT_EDIT must be a regular file" >&2; \
+			exit 1; \
+		fi; \
+	done; \
+	for dir in $(GENERATED_DOC_DIRS); do \
+		find "$$dir" -type f -name '*.md' -delete; \
+	done
 	cd tools/geneos/utils/docs && go build && ./docs
-	docker build --tag cordial-docs:$(VERSION) --target cordial-docs .
 	cd utils/docs && go build && ./docs
+	docker build --tag cordial-docs:$(VERSION) --target cordial-docs .
 
 clean:
 	-docker rm cordial-build-$(VERSION) cordial-docs-$(VERSION) geneos-includes-$(VERSION)
