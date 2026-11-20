@@ -68,7 +68,7 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 			}
 			archiveRoot = parts[0]
 			archiveRootVersion = strings.TrimPrefix(archiveRoot, "geneos-includes-")
-			if !includeVersionPattern.MatchString(archiveRootVersion) {
+			if !includeVersionPattern.MatchString(archiveRootVersion) && !validCalendarVersion(archiveRootVersion) {
 				return "", fmt.Errorf("invalid include archive root %q: expected geneos-includes-<version>", archiveRoot)
 			}
 			continue

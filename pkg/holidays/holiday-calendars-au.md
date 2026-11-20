@@ -135,6 +135,11 @@ Centre: Darwin, Northern Territory.
 
 Recorded source format: Secondary HTML calendar; official page inaccessible. Source confidence: Low; verify Darwin-specific dates.
 
+**Disabled by default:** To use this calendar, copy the active time into your
+own writable Gateway setup or site include. Check that it is suitable for your
+use, edit the dates manually if required, and enable only the reviewed local
+copy, not the distributed calendar.
+
 Timezone: `Australia/Darwin`. Official source: [Northern Territory Government](https://nt.gov.au/nt-public-holidays).
 The official page was inaccessible during collection; dates below use
 the [published NT calendar mirror](https://publicholidays.com.au/northern-territory/).
@@ -299,6 +304,11 @@ Centre: Hobart, Tasmania.
 
 Recorded source format: Official HTML legislation and secondary dated table; official dated calendar inaccessible. Source confidence: Low; regional, restricted and observance rules.
 
+**Disabled by default:** To use this calendar, copy the active time into your
+own writable Gateway setup or site include. Check that it is suitable for your
+use, edit the dates manually if required, and enable only the reviewed local
+copy, not the distributed calendar.
+
 Timezone: `Australia/Hobart`. Sources: [Tasmanian Statutory Holidays Act](https://www.legislation.tas.gov.au/view/whole/html/inforce/current/act-2000-096)
 and [published Tasmanian calendar](https://publicholidays.com.au/tasmania/).
 The [WorkSafe Tasmania calendar](https://worksafe.tas.gov.au/topics/laws-and-compliance/public-holidays)
@@ -343,6 +353,11 @@ are replaced by weekday observances when they fall on a weekend.
 Centre: Melbourne, Victoria.
 
 Recorded source format: Secondary HTML calendar; official pages inaccessible. Source confidence: Low; unverified AFL dates excluded.
+
+**Disabled by default:** To use this calendar, copy the active time into your
+own writable Gateway setup or site include. Check that it is suitable for your
+use, edit the dates manually if required, and enable only the reviewed local
+copy, not the distributed calendar.
 
 Timezone: `Australia/Melbourne`. Official sources: [Business Victoria 2026](https://business.vic.gov.au/business-information/public-holidays/victorian-public-holidays-2026)
 and [Business Victoria 2027](https://business.vic.gov.au/business-information/public-holidays/victorian-public-holidays-2027).

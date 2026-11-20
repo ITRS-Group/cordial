@@ -19,10 +19,26 @@ fi
 
 VERSION_DIR=
 SEMVER='v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?'
+CALVER='v[0-9]{4}\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01])'
+valid_calendar_version() {
+    printf '%s\n' "$1" | grep -Eq "^$CALVER$" || return 1
+    printf '%s\n' "$1" | awk -F. '{
+        year = substr($1, 2) + 0
+        month = $2 + 0
+        day = $3 + 0
+        days = 31
+        if (month == 4 || month == 6 || month == 9 || month == 11) days = 30
+        if (month == 2) days = 28 + (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))
+        exit (year < 1 || day > days)
+    }'
+}
 for candidate in "$SOURCE_DIR"/*; do
     [ -d "$candidate" ] || continue
     name=${candidate##*/}
-    printf '%s\n' "$name" | grep -Eq "^([A-Za-z0-9][A-Za-z0-9._-]*-)?$SEMVER$" || continue
+    case "$name" in
+        holidays-v????.*) valid_calendar_version "${name#holidays-}" || continue ;;
+        *) printf '%s\n' "$name" | grep -Eq "^([A-Za-z0-9][A-Za-z0-9._-]*-)?$SEMVER$" || continue ;;
+    esac
     if [ -n "$VERSION_DIR" ]; then
         printf '%s\n' "Expected one version directory in archive" >&2
         exit 1
@@ -31,7 +47,9 @@ for candidate in "$SOURCE_DIR"/*; do
 done
 [ -n "$VERSION_DIR" ] || { printf '%s\n' "No version directory found" >&2; exit 1; }
 VERSION=${VERSION_DIR##*/}
-if printf '%s\n' "$VERSION" | grep -Eq "^$SEMVER$"; then
+if valid_calendar_version "${VERSION#holidays-}" && [ "${VERSION#holidays-}" != "$VERSION" ]; then
+    SOURCE=holidays
+elif printf '%s\n' "$VERSION" | grep -Eq "^$SEMVER$"; then
     SOURCE=itrs
 else
     SOURCE=$(printf '%s\n' "$VERSION" | sed -E "s/^(.*)-($SEMVER)$/\1/")

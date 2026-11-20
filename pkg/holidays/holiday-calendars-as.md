@@ -144,6 +144,11 @@ Centre: Jakarta, Indonesia.
 
 Recorded source format: Official 2026 HTML announcement; 2027 decree link and secondary dated table. Source confidence: Medium for 2026, Low for 2027; not an IDX calendar.
 
+**Disabled by default:** This calendar contains Low-confidence dates. To use it,
+copy the active time into your own writable Gateway setup or site include.
+Check that it is suitable for your use, edit the dates manually if required,
+and enable only the reviewed local copy, not the distributed calendar.
+
 National public holidays only; excludes collective leave and trading closures.
 
 **Annually recurring**
@@ -190,6 +195,11 @@ National public holidays only; excludes collective leave and trading closures.
 Centre: Jakarta, Indonesia.
 
 Recorded source format: Official 2026 HTML announcement; 2027 decree link and secondary dated table. Source confidence: Medium for 2026, Low for 2027; collective leave is distinct.
+
+**Disabled by default:** This calendar contains Low-confidence dates. To use it,
+copy the active time into your own writable Gateway setup or site include.
+Check that it is suitable for your use, edit the dates manually if required,
+and enable only the reviewed local copy, not the distributed calendar.
 
 Collective leave (*cuti bersama*) is opt-in. Reference this calendar in
 addition to `Holidays - ID - Public` only if these leave days apply to your
@@ -358,6 +368,11 @@ Centre: Kuala Lumpur, Malaysia.
 
 Recorded source format: Secondary HTML table; linked official PDF unavailable. Source confidence: Low; estimated 2027 dates excluded.
 
+**Disabled by default:** To use this calendar, copy the active time into your
+own writable Gateway setup or site include. Check that it is suitable for your
+use, edit the dates manually if required, and enable only the reviewed local
+copy, not the distributed calendar.
+
 Timezone: `Asia/Kuala_Lumpur`. Covers federal and Federal Territory public
 holidays applicable in Kuala Lumpur, not Selangor or other Malaysian states.
 The [Cabinet Division's 2026 schedule](https://www.kabinet.gov.my/storage/2025/08/HKA-2026.pdf)
@@ -411,6 +426,11 @@ included: a full-year cash-market closure list could not be verified.
 Centre: Manila, Philippines.
 
 Recorded source format: LawPhil HTML reproductions of proclamations and legislation. Source confidence: Low; working-day exceptions and separate Eid proclamations.
+
+**Disabled by default:** To use this calendar, copy the active time into your
+own writable Gateway setup or site include. Check that it is suitable for your
+use, edit the dates manually if required, and enable only the reviewed local
+copy, not the distributed calendar.
 
 Timezone: `Asia/Manila`. Covers nationwide regular holidays and special
 non-working days, not Manila city-only proclamations or PSE closures.
@@ -520,6 +540,11 @@ Includes the published Monday observances for a Sunday rest day.
 Centre: Seoul, South Korea.
 
 Recorded source format: Official HTML regulation and secondary dated calendar. Source confidence: Low; movable holidays and substitute rules.
+
+**Disabled by default:** To use this calendar, copy the active time into your
+own writable Gateway setup or site include. Check that it is suitable for your
+use, edit the dates manually if required, and enable only the reviewed local
+copy, not the distributed calendar.
 
 Timezone: `Asia/Seoul`. Sources: [Korean government public holiday regulation](https://www.law.go.kr/법령/관공서의공휴일에관한규정)
 and [dated 2026 calendar](https://www.timeanddate.com/holidays/south-korea/2026).

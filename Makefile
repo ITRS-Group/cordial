@@ -1,4 +1,6 @@
 VERSION = $(strip $(file < VERSION))
+INCLUDES_VERSION = $(strip $(file < pkg/includes/VERSION))
+HOLIDAYS_VERSION = $(strip $(file < pkg/holidays/VERSION))
 KEYFILE = ${HOME}/.config/geneos/keyfile.aes
 CREDENTIALS = ${HOME}/.config/geneos/credentials.json
 NAMESPACE = docker.itrsgroup.com
@@ -43,8 +45,8 @@ release: check-version docs
 	-docker rm cordial-build-$(VERSION)
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz release-$(VERSION)/
-	docker cp cordial-build-$(VERSION):/geneos-includes-$(VERSION).tar.gz release-$(VERSION)/
-	docker cp cordial-build-$(VERSION):/geneos-holidays-include-$(VERSION).tar.gz release-$(VERSION)/
+	docker cp cordial-build-$(VERSION):/geneos-includes-$(INCLUDES_VERSION).tar.gz release-$(VERSION)/
+	docker cp cordial-build-$(VERSION):/geneos-holiday-includes-$(HOLIDAYS_VERSION).tar.gz release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/. release-$(VERSION)/
 	-docker rm cordial-docs-$(VERSION)
@@ -61,23 +63,23 @@ release: check-version docs
 	for file in release-$(VERSION)/docs/gdna/*.md release-$(VERSION)/docs/gdna/*.pdf; do \
 		case "$${file##*/}" in gdna-[a-z]*.md|gdna-[a-z]*.pdf) ;; *) rm -f "$$file" ;; esac; \
 	done
-	cd release-$(VERSION) && $(SHA256SUM) cordial-$(VERSION).tar.gz geneos-includes-$(VERSION).tar.gz geneos-holidays-include-$(VERSION).tar.gz > SHA256SUMS
+	cd release-$(VERSION) && $(SHA256SUM) cordial-$(VERSION).tar.gz geneos-includes-$(INCLUDES_VERSION).tar.gz geneos-holiday-includes-$(HOLIDAYS_VERSION).tar.gz > SHA256SUMS
 
 includes:
-	docker build --tag geneos-includes:$(VERSION) --target geneos-includes .
+	docker build --tag geneos-includes:$(INCLUDES_VERSION) --target geneos-includes .
 	mkdir -p release-$(VERSION)/
-	-docker rm geneos-includes-$(VERSION)
-	docker create --name geneos-includes-$(VERSION) geneos-includes:$(VERSION)
-	docker cp geneos-includes-$(VERSION):/geneos-includes-$(VERSION).tar.gz release-$(VERSION)/
-	docker rm geneos-includes-$(VERSION)
+	-docker rm geneos-includes-$(INCLUDES_VERSION)
+	docker create --name geneos-includes-$(INCLUDES_VERSION) geneos-includes:$(INCLUDES_VERSION)
+	docker cp geneos-includes-$(INCLUDES_VERSION):/geneos-includes-$(INCLUDES_VERSION).tar.gz release-$(VERSION)/
+	docker rm geneos-includes-$(INCLUDES_VERSION)
 
 holidays:
-	docker build --tag geneos-holidays-include:$(VERSION) --target geneos-holidays-include .
+	docker build --tag geneos-holidays-include:$(HOLIDAYS_VERSION) --target geneos-holidays-include .
 	mkdir -p release-$(VERSION)/
-	-docker rm geneos-holidays-include-$(VERSION)
-	docker create --name geneos-holidays-include-$(VERSION) geneos-holidays-include:$(VERSION)
-	docker cp geneos-holidays-include-$(VERSION):/geneos-holidays-include-$(VERSION).tar.gz release-$(VERSION)/
-	docker rm geneos-holidays-include-$(VERSION)
+	-docker rm geneos-holidays-include-$(HOLIDAYS_VERSION)
+	docker create --name geneos-holidays-include-$(HOLIDAYS_VERSION) geneos-holidays-include:$(HOLIDAYS_VERSION)
+	docker cp geneos-holidays-include-$(HOLIDAYS_VERSION):/geneos-holiday-includes-$(HOLIDAYS_VERSION).tar.gz release-$(VERSION)/
+	docker rm geneos-holidays-include-$(HOLIDAYS_VERSION)
 
 build: check-version
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
@@ -104,5 +106,5 @@ docs:
 	docker build --tag cordial-docs:$(VERSION) --target cordial-docs .
 
 clean:
-	-docker rm cordial-build-$(VERSION) cordial-docs-$(VERSION) geneos-includes-$(VERSION) geneos-holidays-include-$(VERSION)
-	-docker image rm cordial-build:$(VERSION) cordial-docs:$(VERSION) geneos-includes:$(VERSION) geneos-holidays-include:$(VERSION)
+	-docker rm cordial-build-$(VERSION) cordial-docs-$(VERSION) geneos-includes-$(INCLUDES_VERSION) geneos-holidays-include-$(HOLIDAYS_VERSION)
+	-docker image rm cordial-build:$(VERSION) cordial-docs:$(VERSION) geneos-includes:$(INCLUDES_VERSION) geneos-holidays-include:$(HOLIDAYS_VERSION)

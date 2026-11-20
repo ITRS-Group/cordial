@@ -85,6 +85,45 @@ func TestInstallPrefixSelection(t *testing.T) {
 	}
 }
 
+func TestInstallCalendarVersionArchives(t *testing.T) {
+	for _, test := range []struct {
+		version string
+		valid   bool
+	}{
+		{"v2026.01.02", true},
+		{"v2024.02.29", true},
+		{"v2026.02.29", false},
+		{"v2026.11.31", false},
+		{"v2026.13.20", false},
+	} {
+		t.Run(test.version, func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			wrapper := "geneos-includes-" + test.version + "/"
+			version := "holidays-" + test.version
+			archive := writeTestIncludeArchive(t,
+				includeArchiveEntry{name: wrapper, kind: tar.TypeDir},
+				includeArchiveEntry{name: wrapper + version + "/holidays.test.xml", contents: "<gateway/>"},
+			)
+			err := Install(h, archive, true, false)
+			if !test.valid {
+				if err == nil {
+					t.Fatal("invalid calendar date archive installed successfully")
+				}
+				if _, err := os.Lstat(h.PathTo("gateway", "includes")); !os.IsNotExist(err) {
+					t.Fatalf("rejected calendar archive changed destination: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if target, err := os.Readlink(h.PathTo("gateway", "includes", "holidays.test.xml")); err != nil || target != version+"/holidays.test.xml" {
+				t.Fatalf("calendar archive link = %q, %v", target, err)
+			}
+		})
+	}
+}
+
 func TestInstallReportsActions(t *testing.T) {
 	capture := func(t *testing.T, run func() error) string {
 		t.Helper()
@@ -305,8 +344,8 @@ func TestInstallOptionalHolidayCorpus(t *testing.T) {
 			t.Fatalf("initialization installed optional calendar %q", entry.Name())
 		}
 	}
-	const version = "holidays-v1.2.3"
-	const wrapper = "geneos-includes-v1.2.3/"
+	version := "holidays-" + holidaycontent.VERSION
+	wrapper := "geneos-includes-" + holidaycontent.VERSION + "/"
 	files, err := fs.Glob(holidaycontent.Files, "files/holidays.*.xml")
 	if err != nil || len(files) == 0 {
 		t.Fatalf("holiday corpus: %v, %v", files, err)
@@ -327,7 +366,7 @@ func TestInstallOptionalHolidayCorpus(t *testing.T) {
 		})
 	}
 	archive := writeTestIncludeArchive(t, archiveEntries...)
-	publishedName := filepath.Join(filepath.Dir(archive), "geneos-holidays-include-v1.2.3.tar.gz")
+	publishedName := filepath.Join(filepath.Dir(archive), "geneos-holiday-includes-"+holidaycontent.VERSION+".tar.gz")
 	if err := os.Rename(archive, publishedName); err != nil {
 		t.Fatal(err)
 	}
@@ -738,7 +777,7 @@ func TestStandaloneHolidayInstallerPreservesExistingFiles(t *testing.T) {
 		t.Skip("standalone installer requires Unix shell tools")
 	}
 	root, archive := t.TempDir(), t.TempDir()
-	const version = "holidays-v1.2.3"
+	const version = "holidays-v2026.01.02"
 	parent := filepath.Join(root, "gateway", "includes")
 	for _, directory := range []string{
 		filepath.Join(archive, version),
@@ -808,6 +847,28 @@ func TestStandaloneHolidayInstallerPreservesExistingFiles(t *testing.T) {
 	}
 	if output, err := run(); err == nil || !strings.Contains(string(output), "Version already installed") {
 		t.Fatalf("reinstallation should refuse the existing version: %v\n%s", err, output)
+	}
+}
+
+func TestStandaloneInstallerRejectsInvalidCalendarDate(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("standalone installer requires Unix shell tools")
+	}
+	root, archive := t.TempDir(), t.TempDir()
+	directory := filepath.Join(archive, "holidays-v2026.02.29")
+	if err := os.MkdirAll(directory, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "holidays.test.xml"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", root)
+	command.Env = append(os.Environ(), "INCLUDES_SOURCE="+archive)
+	if output, err := command.CombinedOutput(); err == nil {
+		t.Fatalf("invalid calendar date accepted: %s", output)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "gateway")); !os.IsNotExist(err) {
+		t.Fatalf("invalid calendar date changed destination: %v", err)
 	}
 }
 

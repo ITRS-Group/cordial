@@ -15,7 +15,7 @@ Links originating elsewhere are not removed: those are manually managed by the u
 ```shell
 geneos includes delete
 geneos includes delete 'itrs-v1.30.*'
-geneos includes delete --prefix holidays 'holidays-v1.30.*'
+geneos includes delete --prefix holidays 'holidays-v2026.01.*'
 geneos includes delete --prefix '*' 'itrs-v1.29.*' 'acme-v1.30.*'
 geneos includes delete --version 'itrs-v1.31.0-rc.*'
 geneos includes remove -V 'v1.29.*' # legacy directories

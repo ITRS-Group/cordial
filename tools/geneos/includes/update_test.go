@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	"github.com/itrs-group/cordial"
+	holidaycontent "github.com/itrs-group/cordial/pkg/holidays"
 	"github.com/itrs-group/cordial/pkg/host"
+	includecontent "github.com/itrs-group/cordial/pkg/includes"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
@@ -187,6 +189,15 @@ func TestParseIncludeVersion(t *testing.T) {
 		name, source, version string
 	}{
 		{"itrs-v1.2.3", "itrs", "v1.2.3"},
+		{"holidays-v2026.01.02", "holidays", "v2026.01.02"},
+		{"holidays-v2024.02.29", "holidays", "v2024.02.29"},
+		{"holidays-v2026.02.29", "", ""},
+		{"holidays-v2026.11.31", "", ""},
+		{"holidays-v2026.13.20", "", ""},
+		{"holidays-v2026.1.02", "", ""},
+		{"holidays-v2026.01.2", "", ""},
+		{"holidays-v0000.01.01", "", ""},
+		{"itrs-v2026.01.02", "", ""},
 		{"acme-ops-v1.2.3-rc.1+build.7", "acme-ops", "v1.2.3-rc.1+build.7"},
 		{"acme-v1.2.3-rc-vendor", "acme", "v1.2.3-rc-vendor"},
 		{"v1.2.3", "itrs", "v1.2.3"},
@@ -304,7 +315,7 @@ func TestUpdateDefaultUsesSourceVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	link := h.PathTo("gateway", "includes", "itrs.layer0.foundation.xml")
-	if target, err := os.Readlink(link); err != nil || target != "itrs-"+cordial.VERSION+"/itrs.layer0.foundation.xml" {
+	if target, err := os.Readlink(link); err != nil || target != "itrs-"+includecontent.VERSION+"/itrs.layer0.foundation.xml" {
 		t.Fatalf("default version link = %q, %v", target, err)
 	}
 }
@@ -317,7 +328,8 @@ func TestUpdatePrefixSelection(t *testing.T) {
 		name, prefix, version, want string
 	}{
 		{"default", "", "", embeddedIncludeVersion()},
-		{"holiday-release", "holidays", "", "holidays-" + cordial.VERSION},
+		{"holiday-latest", "holidays", "", "holidays-" + holidaycontent.VERSION},
+		{"holiday-calendar", "holidays", "v2026.01.02", "holidays-v2026.01.02"},
 		{"holiday-version", "holidays", "v2.0.0", "holidays-v2.0.0"},
 		{"holiday-unprefixed-version", "holidays", "2.0.0", "holidays-v2.0.0"},
 		{"itrs-version", "itrs", "v2.0.0", "itrs-v2.0.0"},
@@ -332,7 +344,7 @@ func TestUpdatePrefixSelection(t *testing.T) {
 			h := newTestGatewayHost(t)
 			writeTestGatewaySetup(t, h, "<gateway/>")
 			parent := h.PathTo("gateway", "includes")
-			versions := []string{embeddedIncludeVersion(), "holidays-" + cordial.VERSION, "itrs-v2.0.0", "holidays-v2.0.0", "v2.0.0"}
+			versions := []string{embeddedIncludeVersion(), "holidays-" + holidaycontent.VERSION, "holidays-v2026.01.02", "itrs-v2.0.0", "holidays-v2.0.0", "v2.0.0"}
 			for _, version := range versions {
 				if err := os.MkdirAll(filepath.Join(parent, version), 0755); err != nil {
 					t.Fatal(err)
@@ -380,6 +392,27 @@ func TestUpdatePrefixSelection(t *testing.T) {
 				t.Fatalf("selected link = %q, %v; want version %s", target, err, test.want)
 			}
 		})
+	}
+}
+
+func TestLatestIncludeVersionUsesSourceVersionOrder(t *testing.T) {
+	h := newTestGatewayHost(t)
+	parent := h.PathTo("gateway", "includes")
+	for _, name := range []string{
+		"holidays-v2026.01.02", "holidays-v2026.11.20", "holidays-v2026.11.31",
+		"acme-v1.9.0", "acme-v1.10.0", "acme-v1.10.0-rc.1",
+	} {
+		if err := os.MkdirAll(filepath.Join(parent, name), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for prefix, want := range map[string]string{"holidays": "holidays-v2026.11.20", "acme": "acme-v1.10.0"} {
+		if got, err := latestIncludeVersion(h, prefix); err != nil || got != want {
+			t.Errorf("latest %s = %q, %v; want %s", prefix, got, err, want)
+		}
+	}
+	if _, err := latestIncludeVersion(h, "missing"); err == nil {
+		t.Fatal("missing source did not return an error")
 	}
 }
 

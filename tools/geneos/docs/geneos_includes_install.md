@@ -4,19 +4,23 @@ Install include files embedded in the `geneos` executable or from a local `.tar.
 
 `--prefix` defaults to `itrs` for embedded installation. Archives identify their own source when the flag is omitted, preserving existing archive installation commands. Supply `--prefix holidays` to require a holiday archive; a mismatched source fails before any destination files or links change. Only ITRS includes are embedded, so selecting another prefix without an archive is an error. The flag selects or checks the source; it does not rename files or download archives.
 
-The archive must contain a single top-level directory named `geneos-includes-<version>` (for example `geneos-includes-v1.31.0`). Inside it, one directory named `<source>-<version>` (for example `itrs-v1.31.0` or `acme-ops-v1.31.0-rc.1`) contains `<source>.*.xml` functional include files. The prefix identifies the include **source**, independently of the deployment's site. Source names use letters, digits, dots, underscores or hyphens and begin with a letter or digit. The suffix is a `v`-prefixed semantic version, including optional prerelease and build metadata. Legacy unprefixed version directories remain supported as the `itrs` source.
+The archive must contain a single top-level directory named `geneos-includes-<version>` (for example `geneos-includes-v1.0.0`). Inside it, one directory named `<source>-<version>` (for example `itrs-v1.0.0` or `acme-ops-v1.31.0-rc.1`) contains `<source>.*.xml` functional include files. The prefix identifies the include **source**, independently of the deployment's site. Source names use letters, digits, dots, underscores or hyphens and begin with a letter or digit. The suffix is a `v`-prefixed semantic version, including optional prerelease and build metadata, or a holiday source-fetch date `vYYYY.MM.DD`. Legacy unprefixed version directories remain supported as the `itrs` source.
 
 Unversioned `config.*.xml` templates belong in a separate `config/` directory; `config` is reserved and cannot be a functional include source. The standalone `scripts/install-includes.sh` and `docs/` Markdown/PDF documentation may also be included. The wrapper's version must match the semantic-version suffix of the contents directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins. Installation strips only the wrapper, preserving the full source-prefixed directory name.
 
-Managed includes are installed under `gateway/includes/<source>-<version>`, including when that directory already exists. Embedded includes use the `itrs` source. Changed files are backed up to timestamped `.bak` files; unchanged files are left in place.
+Managed includes are installed under `gateway/includes/<source>-<version>`, including when that directory already exists. Embedded includes use the `itrs` source and the independent standard corpus version from `pkg/includes/VERSION`, initially `v1.0.0`, not the Cordial executable version. Changed files are backed up to timestamped `.bak` files; unchanged files are left in place.
 
-The optional `geneos-holidays-include-v<version>.tar.gz` archive uses the same
+The optional `geneos-holiday-includes-vYYYY.MM.DD.tar.gz` archive uses the same
 `geneos-includes-<version>` wrapper, with `holidays-<version>/holidays.*.xml`
 contents and separate holiday documentation. Install it explicitly with
 `geneos include install ARCHIVE`; holidays are not embedded in the executable
 or installed by initialization. Use `includes update --prefix holidays` for
-the running release version, or add `--version v<version>` for another
+the newest installed snapshot, or add `--version vYYYY.MM.DD` for another
 installed holiday version.
+
+Holiday versions are independent of Cordial and standard includes and record
+the source-fetch date from `pkg/holidays/VERSION`. The current snapshot is
+`v2026.11.20`; zero-padded month/day values and leap-year validity are checked.
 
 Both standard and holiday archives include `scripts/install-includes.sh` for
 installation without `geneos`. It creates a new source-version directory and
@@ -53,10 +57,10 @@ With `--update`, a preflight checks obsolete links against gateway setups before
 ```shell
 geneos includes install
 geneos includes install --update
-geneos includes install geneos-includes-v1.31.0.tar.gz
-geneos includes install --update geneos-includes-v1.31.0.tar.gz
-geneos include install geneos-holidays-include-v1.31.0.tar.gz
-geneos include install --prefix holidays --update geneos-holidays-include-v1.31.0.tar.gz
+geneos includes install geneos-includes-v1.0.0.tar.gz
+geneos includes install --update geneos-includes-v1.0.0.tar.gz
+geneos include install geneos-holiday-includes-v2026.11.20.tar.gz
+geneos include install --prefix holidays --update geneos-holiday-includes-v2026.11.20.tar.gz
 ```
 
 The archive is read locally; the global `--host` (`-H`) option selects the installation destination. Completed filesystem operations are not rolled back if a later operation fails.

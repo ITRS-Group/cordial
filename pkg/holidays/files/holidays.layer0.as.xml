@@ -116,12 +116,17 @@ Sunday recurrence. -->
                 <!-- Indonesia calendars, sorted with public holidays before collective leave and exchanges.
 Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
 Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
-				<activeTime name="Holidays - ID - Public">
+				<activeTime name="Holidays - ID - Public" disabled="true">
                     <!-- Gathered: 2026-11-20
 
 Confidence: Medium for the official 2026 HTML announcement; Low for the
 2027 secondary HTML date table alongside the linked decree. Distinguish
 public holidays from collective leave; unverified IDX dates are excluded.
+
+Disabled by default because this calendar contains Low-confidence source data.
+To use it, copy this active time to your own writable Gateway setup or site
+include. Verify that it is suitable for your use, edit dates manually if needed,
+and enable only the reviewed local copy; keep this distributed calendar disabled.
 
 Sources:
 - https://www.kemenkopmk.go.id/pemerintah-tetapkan-17-hari-libur-nasional-dan-8-hari-cuti-bersama-tahun-2026 (Kemenko PMK 2026 announcement)
@@ -168,12 +173,17 @@ National public holidays only; excludes collective leave and trading closures. -
 					<scheduledPeriod><date>26/12/2027</date><override>true</override></scheduledPeriod>
 					<timezone><Asia>Jakarta</Asia></timezone>
 				</activeTime>
-				<activeTime name="Holidays - ID - Collective Leave">
+				<activeTime name="Holidays - ID - Collective Leave" disabled="true">
                     <!-- Gathered: 2026-11-20
 
 Confidence: Medium for the official 2026 HTML announcement; Low for the
 2027 secondary HTML date table alongside the linked decree. Collective
 leave is separate from public holidays and trading closures.
+
+Disabled by default because this calendar contains Low-confidence source data.
+To use it, copy this active time to your own writable Gateway setup or site
+include. Verify that it is suitable for your use, edit dates manually if needed,
+and enable only the reviewed local copy; keep this distributed calendar disabled.
 
 Sources:
 - https://www.kemenkopmk.go.id/pemerintah-tetapkan-17-hari-libur-nasional-dan-8-hari-cuti-bersama-tahun-2026 (Kemenko PMK 2026 announcement)
@@ -343,11 +353,16 @@ monitored. -->
                 <!-- Malaysia calendars, sorted with public holidays before collective leave and exchanges.
 Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
 Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
-				<activeTime name="Holidays - MY Kuala Lumpur - Public">
+				<activeTime name="Holidays - MY Kuala Lumpur - Public" disabled="true">
                     <!-- Gathered: 2026-11-20
 
 Confidence: Low - secondary HTML date listing; the linked official PDF
 was unavailable and was not parsed. Estimated 2027 dates are excluded.
+
+Disabled by default because this calendar contains Low-confidence source data.
+To use it, copy this active time to your own writable Gateway setup or site
+include. Verify that it is suitable for your use, edit dates manually if needed,
+and enable only the reviewed local copy; keep this distributed calendar disabled.
 
 Sources:
 - https://www.kabinet.gov.my/storage/2025/08/HKA-2026.pdf (Cabinet Division's 2026 schedule)
@@ -396,12 +411,17 @@ list could not be verified. -->
                 <!-- Philippines calendars, sorted with public holidays before collective leave and exchanges.
 Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
 Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
-				<activeTime name="Holidays - PH - Public">
+				<activeTime name="Holidays - PH - Public" disabled="true">
                     <!-- Gathered: 2026-11-20
 
 Confidence: Low - human-readable proclamations reproduced by LawPhil,
 not a structured official feed. Working-day exceptions and separate Eid
 proclamations require interpretation; unproclaimed dates are excluded.
+
+Disabled by default because this calendar contains Low-confidence source data.
+To use it, copy this active time to your own writable Gateway setup or site
+include. Verify that it is suitable for your use, edit dates manually if needed,
+and enable only the reviewed local copy; keep this distributed calendar disabled.
 
 Sources:
 - https://lawphil.net/executive/proc/proc2025/proc_1006_2025.html (Presidential Proclamation 1006 for 2026 (LawPhil copy))
@@ -502,11 +522,16 @@ Sunday rest day. -->
                 <!-- South Korea calendars, sorted with public holidays before collective leave and exchanges.
 Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
 Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
-				<activeTime name="Holidays - KR - Public">
+				<activeTime name="Holidays - KR - Public" disabled="true">
                     <!-- Gathered: 2026-11-20
 
 Confidence: Low - official HTML regulation combined with a secondary
 HTML dated calendar. Movable holidays and substitute rules require review.
+
+Disabled by default because this calendar contains Low-confidence source data.
+To use it, copy this active time to your own writable Gateway setup or site
+include. Verify that it is suitable for your use, edit dates manually if needed,
+and enable only the reviewed local copy; keep this distributed calendar disabled.
 
 Sources:
 - https://www.law.go.kr/법령/관공서의공휴일에관한규정 (Korean government public holiday regulation)

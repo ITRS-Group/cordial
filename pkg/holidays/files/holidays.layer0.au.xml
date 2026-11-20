@@ -105,11 +105,16 @@ and is not included. -->
 					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
 					<timezone><Australia>Sydney</Australia></timezone>
 				</activeTime>
-				<activeTime name="Holidays - AU NT Darwin - Public">
+				<activeTime name="Holidays - AU NT Darwin - Public" disabled="true">
                     <!-- Gathered: 2026-11-20
 
 Confidence: Low - secondary HTML calendar used because the official
 source was inaccessible. Verify Darwin-specific dates against the authority.
+
+Disabled by default because this calendar contains Low-confidence source data.
+To use it, copy this active time to your own writable Gateway setup or site
+include. Verify that it is suitable for your use, edit dates manually if needed,
+and enable only the reviewed local copy; keep this distributed calendar disabled.
 
 Sources:
 - https://nt.gov.au/nt-public-holidays (Northern Territory Government)
@@ -260,12 +265,17 @@ holidays and not encoded. -->
 					<scheduledPeriod><date>02/10/2028</date><override>true</override></scheduledPeriod>
 					<timezone><Australia>Adelaide</Australia></timezone>
 				</activeTime>
-				<activeTime name="Holidays - AU TAS Hobart - Public">
+				<activeTime name="Holidays - AU TAS Hobart - Public" disabled="true">
                     <!-- Gathered: 2026-11-20
 
 Confidence: Low - official HTML legislation plus a secondary HTML date
 table; the official dated calendar was inaccessible. Regional and
 restricted-holiday rules require additional review.
+
+Disabled by default because this calendar contains Low-confidence source data.
+To use it, copy this active time to your own writable Gateway setup or site
+include. Verify that it is suitable for your use, edit dates manually if needed,
+and enable only the reviewed local copy; keep this distributed calendar disabled.
 
 Sources:
 - https://www.legislation.tas.gov.au/view/whole/html/inforce/current/act-2000-096 (Tasmanian Statutory Holidays Act)
@@ -302,11 +312,16 @@ are replaced by weekday observances when they fall on a weekend. -->
 					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
 					<timezone><Australia>Hobart</Australia></timezone>
 				</activeTime>
-				<activeTime name="Holidays - AU VIC Melbourne - Public">
+				<activeTime name="Holidays - AU VIC Melbourne - Public" disabled="true">
                     <!-- Gathered: 2026-11-20
 
 Confidence: Low - secondary HTML calendar used because the official
 pages were inaccessible. Unverified AFL and regional dates are excluded.
+
+Disabled by default because this calendar contains Low-confidence source data.
+To use it, copy this active time to your own writable Gateway setup or site
+include. Verify that it is suitable for your use, edit dates manually if needed,
+and enable only the reviewed local copy; keep this distributed calendar disabled.
 
 Sources:
 - https://business.vic.gov.au/business-information/public-holidays/victorian-public-holidays-2026 (Business Victoria 2026)

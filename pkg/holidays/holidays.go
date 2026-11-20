@@ -1,7 +1,16 @@
 // Package holidays provides optional Geneos holiday calendar includes.
 package holidays
 
-import "embed"
+import (
+	"embed"
+	"strings"
+)
+
+//go:embed VERSION
+var version string
+
+// VERSION records the source-fetch date of this holiday snapshot as vYYYY.MM.DD.
+var VERSION = strings.TrimSpace(version)
 
 // Files contains regional holiday calendars, separate from the standard includes.
 //

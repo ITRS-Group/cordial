@@ -36,8 +36,7 @@ import (
 var includesListCmdDescription string
 
 // versionedDirs specifies the include directories that should be
-// checked for version-named sub-directories (semantic versioning
-// format)
+// checked for semantic-version or holiday snapshot sub-directories.
 var versionedDirs = []string{
 	"includes",
 }

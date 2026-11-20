@@ -11,6 +11,16 @@ import (
 )
 
 func TestHolidayIncludeOverrides(t *testing.T) {
+	lowConfidenceCalendars := map[string]bool{
+		"Holidays - AU NT Darwin - Public":     true,
+		"Holidays - AU TAS Hobart - Public":    true,
+		"Holidays - AU VIC Melbourne - Public": true,
+		"Holidays - ID - Public":               true,
+		"Holidays - ID - Collective Leave":     true,
+		"Holidays - MY Kuala Lumpur - Public":  true,
+		"Holidays - PH - Public":               true,
+		"Holidays - KR - Public":               true,
+	}
 	calendars := make(map[string]map[string]bool)
 	regions := make(map[string]string)
 	groupNames := make(map[string]bool)
@@ -60,6 +70,10 @@ func TestHolidayIncludeOverrides(t *testing.T) {
 			groupNames[group.Name] = true
 			lastKind, lastCalendar := -1, ""
 			for _, calendar := range group.ActiveTimes {
+				disabled := calendar.Disabled != nil && *calendar.Disabled
+				if disabled != lowConfidenceCalendars[calendar.Name] {
+					t.Errorf("%s: disabled = %v; want %v", calendar.Name, disabled, lowConfidenceCalendars[calendar.Name])
+				}
 				var kind int
 				switch {
 				case strings.HasSuffix(calendar.Name, " - Public"):

@@ -57,6 +57,21 @@ validate annual-recurrence choices, or make estimated dates authoritative.
 Each regional document records the source format and confidence beside
 its calendars. The same notes remain in each XML calendar's source comment.
 
+### Low-confidence calendars are disabled
+
+Every calendar containing Low-confidence source data is supplied with
+`disabled="true"` on its named `<activeTime>`, including mixed-source calendars
+whose other dates have higher confidence. Merely referencing it does not
+enable the distributed definition.
+
+To use one, copy the active time into your own writable Gateway setup or site
+include. Review the sources and ensure the calendar is suitable for your
+jurisdiction, market and monitoring schedule. Edit dates manually where needed
+before enabling the reviewed local copy. Give the copy a distinct name and
+reference that name from your schedule, leaving the read-only distributed
+calendar disabled. Regional documentation and each affected XML comment
+identify this required review.
+
 ## Regional documentation
 
 | Region | Documentation | XML include / status |
@@ -81,20 +96,31 @@ territory, then public holidays, bank holidays, collective leave and exchange cl
 The XML country groups use the same order, so public and exchange calendars stay
 together for each jurisdiction.
 
+## Refresh process
+
+The [monthly refresh runbook](AGENT.md) describes source retrieval, date
+conversion, confidence assessment and validation for maintainers and LLM
+agents. It is included in the archive as `docs/AGENT.md` and `docs/AGENT.pdf`
+so users can inspect the collection process as well as the resulting dates.
+
 ## Optional installation
 
-Holidays are distributed separately as `geneos-holidays-include-v<version>.tar.gz`.
+Holidays are distributed separately as `geneos-holiday-includes-vYYYY.MM.DD.tar.gz`.
+Their version is the date the source data was fetched, not the Cordial release
+or archive build date. This snapshot is `v2026.11.20`, recorded in
+the source tree's `pkg/holidays/VERSION`. Month and day are always two digits. Updating documentation
+or rebuilding the archive does not change the snapshot version.
 They are not part of the standard ITRS includes or the files installed by
 `geneos init` or a no-argument `geneos includes install`.
 
 ```shell
-geneos include install /path/to/geneos-holidays-include-v1.31.0.tar.gz
+geneos include install /path/to/geneos-holiday-includes-v2026.11.20.tar.gz
 ```
 
 The archive uses the installer-compatible `geneos-includes-v<version>/`
 wrapper, containing a `holidays-v<version>/` directory of `holidays.*.xml`
 files, `scripts/install-includes.sh`, and a `docs/` directory with this guide,
-regional Markdown and PDFs.
+regional Markdown and PDFs, and the refresh runbook in both formats.
 The archive filename differs from its internal wrapper intentionally; the
 installer validates the contents, not the filename.
 
@@ -103,11 +129,12 @@ stable links such as `gateway/includes/holidays.layer0.in.xml`. It does
 not add Gateway include references or enable calendars. Existing links are
 preserved unless `--update` is supplied. For later upgrades, use
 `geneos include install --update ARCHIVE` or
-`geneos include update --prefix holidays`. The latter selects the holiday
-version matching the running `geneos` release; add `--version v<version>`
+`geneos include update --prefix holidays`. The latter selects the
+newest installed holiday snapshot; add `--version vYYYY.MM.DD`
 to select a different installed version. A full
 `--version holidays-v<version>` remains supported without `--prefix`.
-Updates without either option still select the embedded ITRS source.
+Updates without either option still select the embedded ITRS corpus version,
+which is versioned separately from Cordial and holidays.
 
 Use `geneos include list --prefix holidays --version` to inspect installed
 holiday versions, and `geneos include delete --prefix holidays` to remove
@@ -116,7 +143,7 @@ unused holiday versions. List and delete default to `--prefix itrs`; use
 archive unless `--prefix` is explicitly supplied as a source check.
 
 From the repository root, `make holidays` builds the optional archive into
-`release-<version>/`, using `VERSION` and Docker to package the XML and
+`release-<cordial-version>/`, using `pkg/holidays/VERSION` and Docker to package the XML and
 Markdown/PDF documentation. The full release pipeline also publishes this
 archive and includes it in `SHA256SUMS`. The standard include archive remains
 available through `make includes`.
@@ -127,8 +154,8 @@ Extract the archive into a separate directory, change into its top-level
 wrapper, and run the supplied shell installer with your Geneos home:
 
 ```shell
-tar -xzf /path/to/geneos-holidays-include-v1.31.0.tar.gz
-cd geneos-includes-v1.31.0
+tar -xzf /path/to/geneos-holiday-includes-v2026.11.20.tar.gz
+cd geneos-includes-v2026.11.20
 sh scripts/install-includes.sh /path/to/geneos
 ```
 

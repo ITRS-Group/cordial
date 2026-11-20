@@ -266,7 +266,7 @@ RUN set -eux; \
         mmdc -p /puppeteer.json -i "$source" -o "/tmp/${name}.mermaid.md"; \
         mdpdf "/tmp/${name}.mermaid.md" "geneos-includes/$name.pdf" --border=15mm --gh-style; \
     done; \
-    for source in /app/cordial/pkg/holidays/README.md /app/cordial/pkg/holidays/holiday-calendars-*.md; \
+    for source in /app/cordial/pkg/holidays/README.md /app/cordial/pkg/holidays/AGENT.md /app/cordial/pkg/holidays/holiday-calendars-*.md; \
     do \
         name=$(basename "$source" .md); \
         cp "$source" "geneos-holidays-include/$name.md"; \
@@ -283,7 +283,7 @@ FROM alpine AS geneos-includes
 RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
     apk add tar
 
-COPY VERSION /VERSION
+COPY pkg/includes/VERSION /VERSION
 COPY pkg/includes/files/itrs.*.xml /includes-source/
 COPY pkg/includes/files/config.*.xml /includes-source/
 COPY pkg/includes/scripts/install-includes.sh /includes-source/scripts/install-includes.sh
@@ -306,7 +306,7 @@ FROM alpine AS geneos-holidays-include
 RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
     apk add tar
 
-COPY VERSION /VERSION
+COPY pkg/holidays/VERSION /VERSION
 COPY pkg/holidays/files/holidays.*.xml /holidays-source/
 COPY pkg/includes/scripts/install-includes.sh /holidays-source/scripts/install-includes.sh
 COPY --from=cordial-docs /docs/geneos-holidays-include/ /holidays-source/docs/
@@ -320,7 +320,7 @@ RUN set -eux; \
     find /holidays -type f -exec chmod a-x {} \;; \
     find "/holidays/$archive_root/holidays-$version" -type f -exec chmod a-w {} \;; \
     chmod 0555 "/holidays/$archive_root/scripts/install-includes.sh"; \
-    tar --sort=name -czf "/geneos-holidays-include-$version.tar.gz" -C /holidays "$archive_root"
+    tar --sort=name -czf "/geneos-holiday-includes-$version.tar.gz" -C /holidays "$archive_root"
 
 FROM alpine AS cordial-build
 
@@ -330,7 +330,7 @@ RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
 COPY --from=build /app/cordial/VERSION /
 COPY --from=cordial-docs /docs/. /cordial/docs/
 COPY --from=geneos-includes /geneos-includes-*.tar.gz /
-COPY --from=geneos-holidays-include /geneos-holidays-include-*.tar.gz /
+COPY --from=geneos-holidays-include /geneos-holiday-includes-*.tar.gz /
 
 # tools binaries
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
