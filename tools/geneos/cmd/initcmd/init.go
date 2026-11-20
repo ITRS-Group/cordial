@@ -210,7 +210,14 @@ geneos init
 		}
 		if initOptions.Restore != "" {
 			initialiseOptions = append(initialiseOptions, geneos.BeforeComponentInit(func(h *geneos.Host) error {
-				if err := restore.Restore(initOptions.Restore, restore.Host(h), restore.Shared(true), restore.ProgressTo(os.Stdout)); err != nil {
+				if err := restore.Restore(initOptions.Restore,
+					restore.Host(h),
+					restore.Shared(true),
+					restore.ProgressTo(os.Stdout),
+					restore.BeforeRebuild(func() error {
+						return geneos.InitialiseComponents(h, false)
+					}),
+				); err != nil {
 					return fmt.Errorf("restore from %q: %w", initOptions.Restore, err)
 				}
 				return nil

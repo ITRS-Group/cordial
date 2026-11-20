@@ -142,6 +142,61 @@ func TestLayer3ConfigReferences(t *testing.T) {
 	}
 }
 
+func TestInitialisePreservesExistingIncludes(t *testing.T) {
+	h := newTestGatewayHost(t)
+	version := embeddedIncludeVersion()
+	const oldVersion = "itrs-v0.0.1"
+	files := map[string]string{
+		h.PathTo("gateway", "includes", version, "itrs.layer0.foundation.xml"):                    "restored bundled-version include",
+		h.PathTo("gateway", "includes", oldVersion, "itrs.layer0.foundation.xml"):                 "restored older-version include",
+		h.PathTo("gateway", "includes", "itrs.layer1.server-health.xml"):                          "restored flat include",
+		h.PathTo("gateway", geneos.SiteName(), geneos.SiteName()+"-config.layer0.foundation.xml"): "restored site config",
+	}
+	for name, content := range files {
+		if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(name, []byte(content), 0o664); err != nil {
+			t.Fatal(err)
+		}
+	}
+	links := map[string]string{
+		h.PathTo("gateway", "includes", "itrs.layer0.foundation.xml"): oldVersion + "/itrs.layer0.foundation.xml",
+		h.PathTo("gateway", "includes", "itrs.legacy.xml"):            oldVersion + "/itrs.legacy.xml",
+	}
+	for name, target := range links {
+		if err := os.Symlink(target, name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for range 2 {
+		if err := Initialise(h); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, want := range files {
+		if got, err := os.ReadFile(name); err != nil || string(got) != want {
+			t.Errorf("%s = %q, %v; want preserved %q", name, got, err, want)
+		}
+	}
+	for name, want := range links {
+		if got, err := os.Readlink(name); err != nil || got != want {
+			t.Errorf("%s link = %q, %v; want preserved %q", name, got, err, want)
+		}
+	}
+	const missing = "itrs.layer2.database-health.xml"
+	want, err := IncludesFS.ReadFile("files/" + missing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(h.PathTo("gateway", "includes", version, missing)); err != nil || string(got) != string(want) {
+		t.Errorf("missing bundled include = %q, %v; want embedded contents", got, err)
+	}
+	if got, err := os.Readlink(h.PathTo("gateway", "includes", missing)); err != nil || got != version+"/"+missing {
+		t.Errorf("missing include link = %q, %v", got, err)
+	}
+}
+
 func TestExtractIncludesPreservesExistingConfig(t *testing.T) {
 	for _, symlink := range []bool{false, true} {
 		t.Run(fmt.Sprint(symlink), func(t *testing.T) {

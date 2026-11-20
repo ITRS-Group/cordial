@@ -7,13 +7,14 @@ import (
 )
 
 type restoreOptions struct {
-	compression string
-	shared      bool
-	list        bool
-	names       []string
-	component   *geneos.Component
-	host        *geneos.Host
-	progress    io.Writer
+	compression   string
+	shared        bool
+	list          bool
+	names         []string
+	component     *geneos.Component
+	host          *geneos.Host
+	progress      io.Writer
+	beforeRebuild func() error
 }
 
 var globalRestoreOptions = restoreOptions{
@@ -90,5 +91,13 @@ func Host(h *geneos.Host) RestoreOption {
 func ProgressTo(w io.Writer) RestoreOption {
 	return func(ro *restoreOptions) {
 		ro.progress = w
+	}
+}
+
+// BeforeRebuild runs after archive extraction, before restored instances
+// are rebuilt. It is not called when listing an archive.
+func BeforeRebuild(f func() error) RestoreOption {
+	return func(ro *restoreOptions) {
+		ro.beforeRebuild = f
 	}
 }

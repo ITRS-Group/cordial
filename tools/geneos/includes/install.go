@@ -40,6 +40,16 @@ var includesInstallCmd = &cobra.Command{
 	},
 }
 
+// Initialise fills missing bundled files and links without replacing existing
+// includes, site configuration files, or links to other versions.
+func Initialise(h *geneos.Host) error {
+	version := embeddedIncludeVersion()
+	if err := extractIncludeFiles(h, IncludesFS, version, false, true); err != nil {
+		return err
+	}
+	return updateIncludeLinks(h, version, false, true)
+}
+
 func Install(h *geneos.Host, archive string, override, update bool) error {
 	if archive == "" {
 		if err := extractIncludes(h, IncludesFS, embeddedIncludeVersion(), override); err != nil {

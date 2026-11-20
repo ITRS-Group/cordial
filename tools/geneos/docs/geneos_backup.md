@@ -18,6 +18,8 @@ Instances matching across multiple hosts are not supported, and this returns an 
 
 To include the component shared directory/directories, use the `--shared` option.
 
+Shared-directory symlinks, including Gateway include links, are archived as links without following them. Targets must remain inside the Geneos installation; external targets cause an error. Absolute targets inside the installation are saved as relative targets so the archive can be restored under a different root. Internal dangling links are preserved.
+
 To include AES files, use the `--aes` option. Without this option the files that are skipped are those referenced by the instance `keyfile` and `prevkeyfile` parameters. When using `--shared` files with an `.aes` extension or any `keyfile` directory and it's contents are skipped.
 
 To include certificate and private key files, use the `--tls` option. Without this option the files skipped are those referenced by the instance parameters `certificate`, `privatekey` and `certchain`. When using `--shared` all files with the extensions `.pem`, `.key` and `.crt` are skipped.

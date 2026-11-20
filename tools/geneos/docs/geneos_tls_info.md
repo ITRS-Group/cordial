@@ -10,7 +10,7 @@ The `--connect`/`-c` flag allows you to specify remote endpoints to connect to a
 
 The output format is controlled by the `--format`/`-f` flag. The default is `column`, which produces a human-readable table. The `toolkit` format produces output in a format suitable for ingestion by a Geneos Toolkit sampler, with headlines for total counts and rows of data for each certificate. Other formats are `csv` and `table`. `csv` doesn't include the headline counts, and `table` is similar to `column` but with borders around the table.
 
-By default all certificates found will be listed. To only show leaf certificates, use the `--leaf`/`-L` flag, which will process but not display CA certificates.
+By default all certificates found will be listed. To only show leaf certificates, use the `--leaf-only`/`-L` flag. CA certificates are omitted. For certificates read from files, a leaf is included only if a matching private key is present in any input file; remote endpoints do not require a local private key.
 
 By default a short format is used, which includes only the most important information. If you use the `--long`/`-l` flag, additional details about each certificate will be included in the output.
 
@@ -45,8 +45,8 @@ geneos tls info [PATH...] [flags]
 ### Options
 
 ```text
-  -L, --leaf-only[=true|false]    Only output leaf certificates (i.e. skip CA certificates and any
-                                  certificate without a matching private key in any file)
+  -L, --leaf-only[=true|false]    Only output leaf certificates (skip CA certificates and, for files,
+                                  certificates without a matching private key in any file)
   -l, --long[=true|false]         Output long format (more columns)
   -f, --format string             Output format (column, table, csv, toolkit) (default "column")
   -p, --password SECRET           Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p "" to specify empty password.

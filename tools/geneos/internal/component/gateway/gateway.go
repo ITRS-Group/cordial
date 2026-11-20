@@ -50,7 +50,7 @@ func initialise(h *geneos.Host, ct *geneos.Component, override bool) (err error)
 	if err := geneos.WriteTemplates(h, ct, override); err != nil {
 		return err
 	}
-	return includes.Update(h, "", false)
+	return includes.Initialise(h)
 }
 
 // Component TODO: Describe its purpose and intended use.

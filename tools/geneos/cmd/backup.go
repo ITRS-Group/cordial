@@ -311,10 +311,19 @@ func writeBackup(h *geneos.Host, contents []backupEntry, out io.Writer, compress
 	for _, e := range contents {
 		p := h.Join(root, e.name)
 		fi := e.info
-		if !fi.Mode().IsRegular() && !fi.IsDir() {
-			return fmt.Errorf("%s is not a regular file or directory", p)
+		var link string
+		if fi.Mode()&fs.ModeSymlink != 0 {
+			link, err = h.Readlink(p)
+			if err != nil {
+				return err
+			}
+			if link, err = geneos.ArchiveSymlinkTarget(h, root, e.name, link); err != nil {
+				return err
+			}
+		} else if !fi.Mode().IsRegular() && !fi.IsDir() {
+			return fmt.Errorf("%s is not a regular file, directory or symlink", p)
 		}
-		th, err := tar.FileInfoHeader(fi, "")
+		th, err := tar.FileInfoHeader(fi, link)
 		if err != nil {
 			return err
 		}
@@ -324,7 +333,7 @@ func writeBackup(h *geneos.Host, contents []backupEntry, out io.Writer, compress
 		if err = tw.WriteHeader(th); err != nil {
 			return err
 		}
-		if fi.IsDir() {
+		if fi.IsDir() || fi.Mode()&fs.ModeSymlink != 0 {
 			continue
 		}
 		if err = copyFile(h, p, tw, fi.Size()); err != nil {
@@ -349,7 +358,7 @@ func copyFile(h *geneos.Host, p string, w io.Writer, size int64) error {
 	return nil
 }
 
-// backupEntry is a file or directory to be included in a backup, with
+// backupEntry is a file, directory or symlink to be included in a backup, with
 // the name relative to the Geneos directory and the file information
 // found when walking the directory
 type backupEntry struct {
@@ -435,6 +444,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 		contents,
 		ignoreDirs,
 		ignoreFiles,
+		false,
 	); err != nil {
 		// missing dirs and inaccessible files are probably not errors
 		i.Log().Debug("error walking instance home directory", slog.Any("error", err))
@@ -443,7 +453,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 	resp.Completed = []string{"included in backup"}
 
 	// add global tls directory, in all cases
-	if err := walkDir(i.Host(), i.Host().PathTo("tls")+"/", "tls", contents, ignoreDirs, []string{}); err != nil {
+	if err := walkDir(i.Host(), i.Host().PathTo("tls")+"/", "tls", contents, ignoreDirs, []string{}, false); err != nil {
 		i.Log().Debug("error walking global TLS directory", slog.Any("error", err))
 	}
 
@@ -461,6 +471,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 			contents,
 			ignoreDirs,
 			ignoreFiles,
+			true,
 		); err != nil {
 			// missing dirs and inaccessible files are probably not errors
 			i.Log().Debug("error walking shared directory", slog.Any("error", err))
@@ -475,7 +486,7 @@ var contentsMutex sync.Mutex
 // walkDir walks the given directory on host h, adding files and directories
 // to contents slice, using relative as the base path. ignoreDirs and ignoreFiles
 // are patterns to skip. walkDir is concurrency safe for the contents slice.
-func walkDir(h *geneos.Host, dir, relative string, contents *[]backupEntry, ignoreDirs, ignoreFiles []string) error {
+func walkDir(h *geneos.Host, dir, relative string, contents *[]backupEntry, ignoreDirs, ignoreFiles []string, includeSymlinks bool) error {
 	return h.WalkDir(dir, func(file string, di fs.DirEntry, err error) error {
 		if err != nil {
 			log.Debug("error walking directory", slog.Any("error", err), slog.String("dir", dir))
@@ -498,11 +509,12 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]backupEntry, igno
 			defer contentsMutex.Unlock()
 			*contents = append(*contents, backupEntry{name: filepath.Join(relative, file) + "/", info: fi})
 			return nil
-		case fi.Mode()&fs.ModeSymlink != 0:
-			log.Debug("ignoring symlink", slog.String("file", file))
-		case !fi.Mode().IsRegular():
+		case !fi.Mode().IsRegular() && fi.Mode()&fs.ModeSymlink == 0:
 			log.Debug("ignoring special file", slog.String("file", file))
 		default:
+			if fi.Mode()&fs.ModeSymlink != 0 && !includeSymlinks {
+				return nil
+			}
 			if !backupCmdIncludeAll {
 				for _, ig := range ignoreFiles {
 					if match, _ := filepath.Match(ig, file); match {

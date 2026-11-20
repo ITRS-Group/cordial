@@ -70,7 +70,7 @@ func init() {
 	tlsCmd.AddCommand(infoCmd)
 
 	infoCmd.Flags().BoolVarP(&infoCmdLeafOnly, "leaf-only", "L", false,
-		"Only output leaf certificates (i.e. skip CA certificates and any\ncertificate without a matching private key in any file)")
+		"Only output leaf certificates (skip CA certificates and, for files,\ncertificates without a matching private key in any file)")
 	infoCmd.Flags().BoolVarP(&infoCmdLong, "long", "l", false, "Output long format (more columns)")
 
 	infoCmd.Flags().StringVarP(&infoCmdFormat, "format", "f", "column", "Output format (column, table, csv, toolkit)")
@@ -88,6 +88,7 @@ var infoCmdDescription string
 
 type certInfo struct {
 	Path               string
+	FromConnection     bool
 	Error              error
 	ResponseTime       time.Duration
 	Alias              []string
@@ -97,7 +98,7 @@ type certInfo struct {
 }
 
 var columns = []string{
-	"FileAndIndex",
+	"Source",
 	"Status",
 	"CommonName",
 	"IssuerCommonName",
@@ -110,7 +111,7 @@ var columns = []string{
 }
 
 var columnsLong = []string{
-	"PathAndIndex",
+	"Source",
 	"Status",
 	"CommonName",
 	"IssuerCommonName",
@@ -261,18 +262,18 @@ var infoCmd = &cobra.Command{
 
 				privateKeyPresent := certs.IndexPrivateKey(allKeys, c) >= 0
 
+				name := strings.TrimSuffix(filepath.Base(ci.Path), ":443")
+				fileandindex = name
+				if len(ci.Alias) > n && ci.Alias[n] != "" {
+					fileandindex = fmt.Sprintf("%s/%s", name, ci.Alias[n])
+				} else if !infoCmdLeafOnly {
+					fileandindex = fmt.Sprintf("%s/%d", name, n+1)
+				}
+
 				if infoCmdLeafOnly {
-					// skip if it's a CA cert or if it doesn't have a matching private key in any file
-					if c.IsCA || !privateKeyPresent {
+					// Remote endpoints do not expose their private keys.
+					if c.IsCA || (!privateKeyPresent && !ci.FromConnection) {
 						continue
-					}
-					fileandindex = strings.TrimSuffix(filepath.Base(ci.Path), ":443")
-				} else {
-					name := strings.TrimSuffix(filepath.Base(ci.Path), ":443")
-					if len(ci.Alias) > n && ci.Alias[n] != "" {
-						fileandindex = fmt.Sprintf("%s/%s", name, ci.Alias[n])
-					} else {
-						fileandindex = fmt.Sprintf("%s/%d", name, n+1)
 					}
 				}
 
@@ -428,7 +429,8 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 	}
 
 	ci = certInfo{
-		Path: u.Host,
+		Path:           u.Host,
+		FromConnection: true,
 	}
 	start := time.Now()
 

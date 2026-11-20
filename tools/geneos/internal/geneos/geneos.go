@@ -193,12 +193,12 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 		}
 	}
 
-	// 5. initialise all registered components, includeing writing out templates and include files
+	// 5. initialise all registered components, including writing out templates and include files
 	if err = RootComponent.MakeDirs(h); err != nil {
 		return fmt.Errorf("creating directories: %w", err)
 	}
-	var ct *Component
-	for ct = range ct.OrList(opts.components...) {
+	var all *Component
+	for ct := range all.OrList(opts.components...) {
 		if err := ct.MakeDirs(h); err != nil {
 			return fmt.Errorf("creating directories for component %s: %w", ct.Name, err)
 		}
@@ -208,13 +208,18 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 			return err
 		}
 	}
-	for ct = range ct.OrList(opts.components...) {
-		if err := ct.InitialiseOnce(h, opts.override); err != nil {
+	return InitialiseComponents(h, opts.override, opts.components...)
+}
+
+// InitialiseComponents writes default component files once per host.
+func InitialiseComponents(h *Host, override bool, components ...*Component) error {
+	var all *Component
+	for ct := range all.OrList(components...) {
+		if err := ct.InitialiseOnce(h, override); err != nil {
 			return fmt.Errorf("initialising component %s: %w", ct.Name, err)
 		}
 	}
-
-	return
+	return nil
 }
 
 // Init is called from the main command initialisation

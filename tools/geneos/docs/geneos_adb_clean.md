@@ -14,6 +14,10 @@ If you use the `--keep-all`/`-k` flag, the default action for Gateway, Probe, an
 
 After processing each file, the command prints a concise summary of changed links, the XPath components changed, modifier aliases cleared, and startup-data entries removed. Files with no changes are reported as such.
 
+Use `--verbose`/`-v` to also report each changed data-item XPath and web-page URL with its before and after values, cleared modifier aliases, and removed startup-data entries. Reports identify the archive entry and, for dashboard records, the line number. Details are reported only after the cleaned archive is successfully written.
+
+Use `--log FILE`/`-l FILE` to append command reports and processing diagnostics to a file instead of the console. Without it, reports go to standard output and diagnostics to standard error. The log may contain dashboard names and URLs. `--output`/`-o` continues to select the directory for cleaned ADB files.
+
 To only process modifiers or links, you can use the `--skip-modifiers` and `--skip-links` flags to exclude the respective elements from processing. Note that both flags cannot be used simultaneously, as this would result in no elements being processed.
 
 ## Update Web Page URLs
@@ -83,6 +87,8 @@ geneos adb clean [flags] [PATH...]
                                          will be created with a timestamp added before the ".adb"
                                          extension.
                                          
+  -v, --verbose[=true|false]             Report each change made to the dashboard
+  -l, --log file                         Append command output to file instead of the console
       --gateway OPTION                   Gateway name updates. Default 'remove-all'
       --probe OPTION                     Probe name updates. Default 'remove-all'
       --entity OPTION                    Entity name updates. Default 'remove-all'

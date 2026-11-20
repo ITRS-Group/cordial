@@ -1,13 +1,143 @@
 package adbcmd
 
 import (
+	"archive/zip"
+	"bytes"
+	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/itrs-group/cordial/pkg/geneos/xpath"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/cmd/internal/cmdtest"
 )
+
+func TestCleanMutationReports(t *testing.T) {
+	cmdtest.Env(t)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "source.adb")
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	archive := zip.NewWriter(file)
+	dashboard, err := archive.Create("panel" + extension)
+	if err != nil {
+		t.Fatal(err)
+	}
+	xp := `/geneos/gateway[(@name="Old")]/directory/probe[(@name="P")]/managedEntity[(@name="E")]`
+	modifier := strings.Join([]string{dataItemExprNodeClass, "7.0", "$0$", "Value", "dataitem(" + xp + ")wwwpage(http://example.invalid)", "saved-alias", "1"}, "~")
+	link := geneosURLClass + `~3.0~wwwpage(http://example.invalid)~Example~`
+	fmt.Fprintln(dashboard, modifier)
+	fmt.Fprintln(dashboard, link)
+	fmt.Fprintln(dashboard, dataItemExprNodeClass+"~short")
+	if _, err := archive.Create("startup.dbo"); err != nil {
+		t.Fatal(err)
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	logPath := filepath.Join(dir, "changes.log")
+	if err := os.WriteFile(logPath, []byte("previous\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	missing := filepath.Join(dir, "missing.adb")
+	result := cmdtest.Run(t, cmd.Cmd, "adb", "clean", "-v", "-l", logPath, "-o", filepath.Join(dir, "out"), "--wwwpage", "replace:#^http:#https:#", path, missing)
+	if result.Err == nil {
+		t.Fatal("expected an error for the missing input")
+	}
+	if result.Stdout != "" || result.Stderr != "" {
+		t.Errorf("output was not redirected: stdout=%q stderr=%q", result.Stdout, result.Stderr)
+	}
+	report, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"previous\n", path + ": ", "panel.Activedashboard:1: dataitem:", strconv.Quote(xp),
+		"panel.Activedashboard:1: wwwpage:", "panel.Activedashboard:2: wwwpage:",
+		`"http://example.invalid" -> "https://example.invalid"`,
+		`modifier alias cleared: "saved-alias" -> "$0$"`,
+		`startup-data entry removed: "startup.dbo" -> ""`, missing + ": ",
+		"Too few fields in modifier line",
+	} {
+		if !strings.Contains(string(report), want) {
+			t.Errorf("report missing %q:\n%s", want, report)
+		}
+	}
+
+	outputPath := filepath.Join(dir, "out", filepath.Base(path))
+	verboseArchive, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result = cmdtest.Run(t, cmd.Cmd, "adb", "clean", "-o", filepath.Join(dir, "out"), "--wwwpage", "replace:#^http:#https:#", path)
+	if result.Err != nil {
+		t.Fatalf("clean without verbose: %v; stderr=%s", result.Err, result.Stderr)
+	}
+	if !strings.Contains(result.Stdout, path+": ") || strings.Contains(result.Stdout, "panel.Activedashboard:") {
+		t.Errorf("unexpected non-verbose report: %q", result.Stdout)
+	}
+	normalArchive, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(verboseArchive, normalArchive) {
+		t.Error("verbose reporting changed the cleaned archive")
+	}
+
+	result = cmdtest.Run(t, cmd.Cmd, "adb", "clean", "-v", "-o", filepath.Join(dir, "out"), "--gateway", "keep", "--probe", "keep", "--entity", "keep", "--type", "keep", "--keep-startup-data", path)
+	if result.Err != nil {
+		t.Fatalf("verbose clean with no changes: %v; stderr=%s", result.Err, result.Stderr)
+	}
+	if !strings.Contains(result.Stdout, "No links updated") || strings.Contains(result.Stdout, "panel.Activedashboard:") || strings.Contains(result.Stdout, "startup.dbo:") {
+		t.Errorf("unchanged records should not produce mutation details: %q", result.Stdout)
+	}
+
+	result = cmdtest.Run(t, cmd.Cmd, "adb", "clean", "-v", "-o", filepath.Join(dir, "out"), path)
+	if result.Err != nil || !strings.Contains(result.Stdout, "panel.Activedashboard:1: dataitem:") {
+		t.Errorf("verbose console output = %q, error = %v", result.Stdout, result.Err)
+	}
+
+	if _, err := os.Stat("/dev/full"); err == nil {
+		result = cmdtest.Run(t, cmd.Cmd, "adb", "clean", "-l", "/dev/full", "-o", filepath.Join(dir, "out"), path)
+		if result.Err == nil || !strings.Contains(result.Err.Error(), "write log") {
+			t.Errorf("full log device: got error %v, want a log write error", result.Err)
+		}
+	}
+}
+
+func TestCleanLogRejectsDashboardPaths(t *testing.T) {
+	cmdtest.Env(t)
+	dir := t.TempDir()
+	source := filepath.Join(dir, "source.adb")
+	if err := os.WriteFile(source, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(dir, "alias")
+	if err := os.Symlink(source, alias); err != nil {
+		t.Fatal(err)
+	}
+	for _, logPath := range []string{source, alias, filepath.Join(dir, "out", "source.adb"), filepath.Join(dir, "out", "source.adb.cleaned")} {
+		result := cmdtest.Run(t, cmd.Cmd, "adb", "clean", "-l", logPath, "-o", filepath.Join(dir, "out"), source)
+		if result.Err == nil || !strings.Contains(result.Err.Error(), "conflicts with dashboard") {
+			t.Errorf("log path %q: got error %v, want conflict", logPath, result.Err)
+		}
+	}
+	got, err := os.ReadFile(source)
+	if err != nil || string(got) != "original" {
+		t.Fatalf("source changed: %q, %v", got, err)
+	}
+}
 
 func TestApplyCleanDefaults(t *testing.T) {
 	originalOptions := cleanOptions

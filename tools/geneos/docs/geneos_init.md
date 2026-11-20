@@ -4,11 +4,13 @@ The `init` sub-system is used to initialise your Geneos environment ready to run
 
 On it's own the `init` command will create a new directory structure (or use an existing one if it's considered empty) based on the options you supply. By default it will create a directory named `geneos` in your user's home directory, unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path. Either specify a directory on the command line or you will be prompted for one. To specify a directory pass it as an argument without a flag. It must be an absolute path.
 
+Bundled component templates, Gateway include files and site configuration files are extracted even when no profile is supplied. No instances are created or releases installed unless a profile or `--restore` is supplied.
+
 It is an error, and the exit status is non-zero, if the directory is not empty and `--force`/`-F` is not given, and nothing is changed. If several profile names are given the directory is only initialised once. Any existing root and signing certificates are always kept and never replaced by `init`, and they are added to the trust chain of the installation.
 
 The installation directory is considered empty if it exists but only contains dot prefixed files and directories - so if you are running the `geneos init` command as a newly created user called `geneos` it should work as expected.
 
-If you want to use an existing directory, including adopting an existing installation, then use the `--force`/`-F` option. The `init` command will create any missing directories but will not remove or change existing files. If you adopt an existing installation then see the `init templates` command for how to add default template files to the installation for use by new instances.
+If you want to use an existing directory, including adopting an existing installation, then use the `--force`/`-F` option. The `init` command will create any missing directories and replace bundled component templates, but keep existing instances and site configuration files. See the `init templates` command for how to replace templates separately.
 
 Use `--site`/`-s` to set the initial site name, for example `geneos init --site acme`. Choose a name representing the company, customer, or client using the Geneos deployment, rather than a region or environment; for example, `acme` represents Acme Corp.
 
@@ -39,6 +41,8 @@ PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always prot
 ## Restoring From Backup
 
 Use `geneos init --restore PATH [DIRECTORY]` (`-R`) to initialise the installation and restore instances and shared files from a `geneos backup` archive. By default, `init` also installs the releases needed by the restored component types. Use `--archive`/`-A` to supply local release archives, or add `--no-install`/`-X` to restore without installing releases.
+
+After archive extraction, missing bundled templates and include files are populated before restored instances are rebuilt. Files from the backup take precedence: existing templates, restored shared configuration files, include files and include links are kept, including with `--force`. Initialization only fills missing files and links; it does not upgrade restored includes to the bundled version.
 
 A backup file will not contain a TLS root or signing certificate and private keys. These must be supplied explicitly using the `--signing-bundle` option (and `--signing-bundle-password` if applicable). Use the `geneos tls export` command to export the necessary certificates and keys when creating a backup.
 

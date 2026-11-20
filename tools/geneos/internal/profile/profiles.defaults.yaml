@@ -166,8 +166,8 @@ profiles:
       attributes:
         - APPLICATION=Geneos
         - CATEGORY=Health
-        - COMPONENT=Monitoring
-        - SUBCOMPONENT=Netprobes
+        - SUBCATEGORY=Health Monitoring
+        - COMPONENT=Netprobe
         - ${option:attribute}
       types:
         - Layer 1 - Server Health
@@ -181,7 +181,7 @@ profiles:
         attributes:
           - APPLICATION=Geneos
           - CATEGORY=Health
-          - COMPONENT=Components
+          - SUBCATEGORY=Components
           - ${option:attribute}
         types:
           - Layer 2 - Application Baseline
@@ -206,7 +206,7 @@ profiles:
         - for-each: gateway
           name: ${replace:gatewayname:name:/ /_/} Gateway
           attributes:
-            - SUBCOMPONENT=Gateways
+            - COMPONENT=Gateways
             - GATEWAY=${select:gatewayname:name:Unknown}
           types:
             - Layer 3 - Geneos Gateway
@@ -219,7 +219,7 @@ profiles:
         - for-each: netprobe
           name: ${config:name} Netprobe
           attributes:
-            - SUBCOMPONENT=Netprobes
+            - COMPONENT=Netprobes
             - NETPROBE=${config:name}
           types:
             - Layer 3 - Geneos Netprobe
@@ -231,7 +231,7 @@ profiles:
         - for-each: minimal
           name: ${config:name} Netprobe
           attributes:
-            - SUBCOMPONENT=Netprobes
+            - COMPONENT=Netprobes
             - NETPROBE=${config:name}
           types:
             - Layer 3 - Geneos Netprobe
@@ -239,7 +239,7 @@ profiles:
         - for-each: licd
           name: ${config:name} Licence Daemon
           attributes:
-            - SUBCOMPONENT=Licence Daemon
+            - COMPONENT=Licence Daemon
             - LICENCE_DAEMON=${config:name}
           types:
             - Layer 3 - Geneos Licence Daemon
@@ -247,7 +247,7 @@ profiles:
         - for-each: webserver
           name: ${config:name} Webserver
           attributes:
-            - SUBCOMPONENT=Web Dashboard Servers
+            - COMPONENT=Web Dashboard Servers
             - WEB_DASHBOARD_SERVER=${config:name}
           types:
             - Layer 3 - Geneos Webserver
@@ -255,7 +255,7 @@ profiles:
         - for-each: ac2
           name: ${config:name} Active Console
           attributes:
-            - SUBCOMPONENT=Active Consoles
+            - COMPONENT=Active Consoles
             - ACTIVE_CONSOLE=${config:name}
           types:
             - Layer 3 - Geneos Active Console
@@ -263,7 +263,7 @@ profiles:
         - for-each: ca3
           name: ${config:name} Collection-Agent
           attributes:
-            - SUBCOMPONENT=Collection-Agents
+            - COMPONENT=Collection-Agents
             - COLLECTION_AGENT=${config:name}
           types:
             - Layer 3 - Geneos Collection-Agent
@@ -271,7 +271,7 @@ profiles:
         - for-each: fa2
           name: ${config:name} FIX Analyser Netprobe
           attributes:
-            - SUBCOMPONENT=FIX Analyser Netprobes
+            - COMPONENT=FIX Analyser Netprobes
             - FIX2_NETPROBE=${config:name}
           types:
             - Layer 3 - Geneos FIX Analyser Netprobe
@@ -279,7 +279,7 @@ profiles:
         - for-each: fileagent
           name: ${config:name} Fileagent
           attributes:
-            - SUBCOMPONENT=File Agents
+            - COMPONENT=File Agents
             - FILE_AGENT=${config:name}
           types:
             - Layer 3 - Geneos File Agent
@@ -287,7 +287,7 @@ profiles:
         - for-each: floating
           name: ${config:name} Floating Netprobe
           attributes:
-            - SUBCOMPONENT=Floating Netprobes
+            - COMPONENT=Floating Netprobes
             - FLOATING_NETPROBE=${config:name}
           types:
             - Layer 3 - Geneos Floating Netprobe
@@ -295,7 +295,7 @@ profiles:
         - for-each: md-gateway
           name: ${config:name} MD-Gateway
           attributes:
-            - SUBCOMPONENT=Market-Data Gateways
+            - COMPONENT=Market-Data Gateways
             - MD_GATEWAY=${config:name}
           types:
             - Layer 3 - Geneos Market-Data Gateway
@@ -303,7 +303,7 @@ profiles:
         - for-each: netprobe-router
           name: ${config:name} Netprobe-Router
           attributes:
-            - SUBCOMPONENT=Netprobe-Routers
+            - COMPONENT=Netprobe-Routers
             - NETPROBE_ROUTER=${config:name}
           types:
             - Layer 3 - Geneos Netprobe-Router
@@ -311,7 +311,7 @@ profiles:
         - for-each: san
           name: ${config:name} SAN
           attributes:
-            - SUBCOMPONENT=Self Announcing Netprobes
+            - COMPONENT=Self Announcing Netprobes
             - SAN=${config:name}
           types:
             - Layer 3 - Geneos Self Announcing Netprobe
@@ -319,7 +319,7 @@ profiles:
         - for-each: sso-agent
           name: ${config:name} SSO-Agent
           attributes:
-            - SUBCOMPONENT=SSO-Agents
+            - COMPONENT=SSO-Agents
             - SSO_AGENT=${config:name}
           types:
             - Layer 3 - Geneos SSO-Agent
@@ -327,7 +327,7 @@ profiles:
         - for-each: tr-gateway
           name: ${config:name} Trade Gateway
           attributes:
-            - SUBCOMPONENT=Trade Gateways
+            - COMPONENT=Trade Gateways
             - TR_GATEWAY=${config:name}
           types:
             - Layer 3 - Geneos Trade Gateway

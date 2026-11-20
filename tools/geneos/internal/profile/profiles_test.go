@@ -786,7 +786,10 @@ func TestEmbeddedMonitoringHealthNames(t *testing.T) {
 	if err := pf.UnmarshalKey(pf.Join("profiles", "health-agent", "san"), &endpoints, config.NoExpand()); err != nil {
 		t.Fatal(err)
 	}
-	if len(endpoints) != 1 || !slices.Contains(endpoints[0].Attributes, "COMPONENT=SAN Health") {
+	if len(endpoints) != 1 ||
+		!slices.Contains(endpoints[0].Attributes, "SUBCATEGORY=Health Monitoring") ||
+		!slices.Contains(endpoints[0].Attributes, "COMPONENT=Netprobe") ||
+		!slices.Contains(endpoints[0].ManagedEntitiesCommon.Attributes, "SUBCATEGORY=Components") {
 		t.Fatalf("unexpected Health endpoint configuration: %v", endpoints)
 	}
 
@@ -918,9 +921,11 @@ func TestEmbeddedHealthProfilesGeneratedSetup(t *testing.T) {
 		}
 		switch entity.Name {
 		case sanName:
-			foundEndpoint = hasAttribute("COMPONENT", "SAN Health")
+			foundEndpoint = hasAttribute("SUBCATEGORY", "Health Monitoring") && hasAttribute("COMPONENT", "Netprobe")
 		case "health-example Licence Daemon":
-			foundComponent = hasAttribute("CATEGORY", "Health")
+			foundComponent = hasAttribute("CATEGORY", "Health") &&
+				hasAttribute("SUBCATEGORY", "Components") &&
+				hasAttribute("COMPONENT", "Licence Daemon")
 		}
 	}
 	if !foundEndpoint || !foundComponent {

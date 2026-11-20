@@ -22,6 +22,10 @@ const (
 )
 
 func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bool) (err error) {
+	return extractIncludeFiles(h, sourceFS, version, override, false)
+}
+
+func extractIncludeFiles(h *geneos.Host, sourceFS fs.FS, version string, override, missingOnly bool) (err error) {
 	if err := geneos.ValidateSite(config.Get[string](config.Global(), "site")); err != nil {
 		return err
 	}
@@ -36,7 +40,7 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 	if st != nil && !st.IsDir() {
 		return fmt.Errorf("include version path %q is not a directory", dir)
 	}
-	if st != nil && !override {
+	if st != nil && !override && !missingOnly {
 		return fmt.Errorf("includes directory already exists at %s and replacement is disabled", dir)
 	}
 	pattern, err := includePattern(version)
@@ -61,6 +65,10 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 		p := h.Join(dir, filepath.Base(inc))
 		fi, err := h.Lstat(p)
 		if err == nil {
+			if missingOnly {
+				fmt.Println("Skipping existing include file", p)
+				continue
+			}
 			if fi.Mode().IsRegular() && efi.Size() == fi.Size() {
 				f1h, err := sourceFS.Open(inc)
 				if err != nil {

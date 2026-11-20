@@ -131,6 +131,41 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 	return
 }
 
+// ArchiveSymlinkTarget returns a portable relative link target and rejects
+// targets that resolve outside the archive's installation root.
+func ArchiveSymlinkTarget(h *Host, root, name, target string) (string, error) {
+	if target == "" {
+		return "", fmt.Errorf("empty symlink target for %q", name)
+	}
+	name, err := CleanRelativePath(name)
+	if err != nil {
+		return "", err
+	}
+	root, err = h.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	parent := h.Join(root, h.Dir(name))
+	if h.IsAbs(target) {
+		if !pathWithinRoot(h, root, target) {
+			return "", fmt.Errorf("symlink %q points outside installation root: %q", name, target)
+		}
+		target, err = h.Rel(parent, target)
+		if err != nil {
+			return "", err
+		}
+	}
+	target = h.ToSlash(target)
+	if _, err := CleanRelativePath(path.Join(path.Dir(h.ToSlash(name)), target)); err != nil {
+		return "", fmt.Errorf("unsafe symlink %q -> %q: %w", name, target, err)
+	}
+	targetPath := strings.TrimSuffix(h.ToSlash(parent), "/") + "/" + target
+	if err := rejectSymlinkPath(h, root, targetPath); err != nil {
+		return "", fmt.Errorf("unsafe symlink %q -> %q: %w", name, target, err)
+	}
+	return target, nil
+}
+
 func rejectSymlinkPath(h *Host, root, relative string) error {
 	root, err := h.Abs(root)
 	if err != nil {

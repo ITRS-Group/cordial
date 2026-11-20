@@ -31,6 +31,10 @@ This records breaking and other upgrade-sensitive changes in Cordial. When updat
 
 * **AES options:** `aes set` reads a keyfile from STDIN only without `--keyfile` or `--crc`. `--crc` cannot be combined with `--keyfile` or `--shared`. Check scripts relying on the previously ignored CRC option.
 
+* **Dashboard cleaning reports:** `geneos adb clean` (also `edit`) adds `--verbose`/`-v` for individual before-and-after changes and `--log FILE`/`-l FILE` to append reports and diagnostics to a file rather than the console. `--output`/`-o` still selects the cleaned-dashboard directory. Logs can contain dashboard names and URLs.
+
+* **TLS inventory output:** `geneos tls info` now names its first column `Source` in all output formats, replacing `FileAndIndex` or `PathAndIndex`. With `--leaf-only`, numeric certificate indexes are omitted, but keystore aliases are retained. Update CSV, Toolkit and other output consumers.
+
 ### `geneos` sites, includes and packages
 
 * **Site names:** You can set a site name with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. The default site name is `local`. You should use the same site name for all Geneos deployments.
@@ -49,9 +53,15 @@ This records breaking and other upgrade-sensitive changes in Cordial. When updat
 
 * **Referenced include versions:** `update`, `delete` and `install --update` check Gateway references before removing obsolete links. A referenced link without a same-basename replacement blocks the update; migrate Gateway references and site overrides before removing renamed includes.
 
+* **Shared include backups:** `geneos backup --shared` now preserves shared-directory symlinks without following them. Absolute targets within the installation are saved as portable relative links, and internal dangling links are retained. External targets cause an error. `restore --shared` and `init --restore` restore these links, keep existing destinations and reject writes through symlinked directories. Recreate older backups if they need include links that were previously omitted.
+
+* **Initialization of existing includes:** Component initialization fills missing bundled files and links without replacing existing include files, site configuration files or links to other versions. During `init --restore`, archive files take precedence, including with `--force`; initialization does not upgrade restored includes to the bundled version. Use `geneos includes update` explicitly when an upgrade is intended.
+
 ### Monitoring Health and layer renaming
 
 * **Monitoring Health:** The supplied `motm` and `motm-gateway` profiles are now `health-agent` and `health-gateway`. Instance names and the `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing profiles, saved options and Gateway references are not migrated automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
+
+* **Health profile attributes:** Supplied health profiles now use `SUBCATEGORY=Health Monitoring` or `SUBCATEGORY=Components`, with `COMPONENT` identifying the monitored component instead of `SUBCOMPONENT`. Review dashboards, filters and grouping based on the previous attribute hierarchy.
 
 * **Monitoring layers:** Include and site filenames, Gateway types and other identifiers now use `layer` rather than `level`. Existing Gateway setups, SANs, profiles and site overrides must be migrated; see the [include upgrade guidance](tools/geneos/includes/files/README.md#install-with-the-geneos-command).
 
