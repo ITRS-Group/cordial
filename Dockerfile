@@ -96,6 +96,8 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 # Build PDF documentation using mdpdf. Like all Puppeteer based PDF
 # writers the support for relative links to files is broken, so
 # documents with links to other docs in the same repo will be wrong.
+# utils/pdf supplies the shared print stylesheet and GitHub alert preprocessing.
+# qpdf losslessly compresses the generated PDFs without producing PDF/A.
 #
 FROM node:24 AS cordial-docs
 ARG NODE_ENV=production
@@ -141,8 +143,24 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     mkdir node_modules; \
     npm install --prefer-offline --verbose --global git+https://github.com/elliotblackburn/mdpdf.git#3.0.4; \
     npm install --prefer-offline --global @mermaid-js/mermaid-cli
+RUN --mount=type=cache,id=docs-apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=docs-apt-lists,target=/var/lib/apt/lists,sharing=locked \
+    apt-get -o APT::Keep-Downloaded-Packages=true install -y --no-install-recommends fonts-dejavu-core qpdf
+# Barlow is used on the ITRS documentation site and licensed under the SIL OFL.
+RUN set -eux; \
+    mkdir -p /usr/local/share/fonts/barlow; \
+    for file in Barlow-Regular.ttf Barlow-Italic.ttf Barlow-Bold.ttf Barlow-BoldItalic.ttf OFL.txt; do \
+        wget -q -O "/usr/local/share/fonts/barlow/$file" \
+            "https://raw.githubusercontent.com/google/fonts/89f5431ff0db41bd2fe3f7ba21a723a01622428b/ofl/barlow/$file"; \
+    done; \
+    fc-cache -f /usr/local/share/fonts/barlow
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm install --prefer-offline --global markdown-it@14.1.0
+ENV NODE_PATH=/usr/local/lib/node_modules
+ENV MDPDF_STYLES=/app/pdf/print.css
 
 # base files
+COPY utils/pdf/ /app/pdf/
 COPY VERSION README.md CHANGELOG.md UPDATENOTES.md HIGHLIGHTS.md /app/cordial/
 COPY pkg /app/cordial/pkg
 # tools
@@ -155,6 +173,7 @@ COPY libraries /app/cordial/libraries/
 COPY gdna /app/cordial/gdna
 
 WORKDIR /docs
+RUN cp /usr/local/share/fonts/barlow/OFL.txt Barlow-OFL.txt
 COPY tools/ims-gateway/*.md ims-gateway/
 COPY tools/ims-gateway/screenshots/ ims-gateway/screenshots/
 COPY tools/dv2email/README.md dv2email.md
@@ -197,7 +216,7 @@ RUN set -eux; \
         do \
             b=$(basename "$i" .md); \
             mmdc -p /puppeteer.json -i "$i" -o "/tmp/${b}${MERMAID}.md"; \
-            mdpdf "/tmp/${b}${MERMAID}.md" "${i%.md}.pdf" --border=15mm --gh-style; \
+            node /app/pdf/mdpdf.cjs "/tmp/${b}${MERMAID}.md" "${i%.md}.pdf" --border=15mm --gh-style; \
         done; \
             for i in ims-gateway/*.md; \
             do \
@@ -215,19 +234,19 @@ RUN set -eux; \
                     sed -i 's#(SDP-AUTH.md#(ims-gateway-sdp-auth.md#g' "ims-gateway/$destination"; \
                 fi; \
                 mmdc -p /puppeteer.json -i "/app/cordial/tools/ims-gateway/${b}.md" -o "/app/cordial/tools/ims-gateway/${b}${MERMAID}.md"; \
-                mdpdf "/app/cordial/tools/ims-gateway/${b}${MERMAID}.md" "ims-gateway/$output" --border=15mm --gh-style; \
+                node /app/pdf/mdpdf.cjs "/app/cordial/tools/ims-gateway/${b}${MERMAID}.md" "ims-gateway/$output" --border=15mm --gh-style; \
             done; \
     for i in ${READMEDIRS}; \
     do \
             mmdc -p /puppeteer.json -i /app/cordial/$i/README.md -o /app/cordial/$i/README${MERMAID}.md; \
-            mdpdf /app/cordial/$i/README${MERMAID}.md ${i##*/}.pdf --border=15mm --gh-style; \
+            node /app/pdf/mdpdf.cjs /app/cordial/$i/README${MERMAID}.md ${i##*/}.pdf --border=15mm --gh-style; \
     done; \
     for i in gdna/*.md; \
     do \
             b=$(basename "$i" .md); \
             name=$(printf '%s' "$b" | tr '[:upper:]_' '[:lower:]-'); \
             mmdc -p /puppeteer.json -i "/app/cordial/gdna/${b}.md" -o "/app/cordial/gdna/${b}${MERMAID}.md"; \
-            mdpdf "/app/cordial/gdna/${b}${MERMAID}.md" "gdna/gdna-${name}.pdf" --border=15mm --gh-style; \
+            node /app/pdf/mdpdf.cjs "/app/cordial/gdna/${b}${MERMAID}.md" "gdna/gdna-${name}.pdf" --border=15mm --gh-style; \
             mv "$i" "gdna/gdna-${name}.md"; \
     done; \
         for target in gdna/gdna-*.md; \
@@ -242,7 +261,7 @@ RUN set -eux; \
     cp /app/cordial/tools/geneos/docs/COMMANDS.md geneos/geneos-commands.md; \
     mmdc -p /puppeteer.json -i /app/cordial/tools/geneos/docs/COMMANDS.md -o /tmp/geneos-commands${MERMAID}.md; \
     sed 's#^---$#<div style="break-before: page; page-break-before: always;"></div>#' /tmp/geneos-commands${MERMAID}.md > /tmp/geneos-commands-pdf.md; \
-    mdpdf /tmp/geneos-commands-pdf.md geneos/geneos-commands.pdf --border=15mm --gh-style; \
+    node /app/pdf/mdpdf.cjs /tmp/geneos-commands-pdf.md geneos/geneos-commands.pdf --border=15mm --gh-style; \
     for name in CHANGELOG UPDATENOTES HIGHLIGHTS; \
     do \
         cp "/app/cordial/$name.md" "$name.md"; \
@@ -251,11 +270,11 @@ RUN set -eux; \
     for name in CHANGELOG UPDATENOTES HIGHLIGHTS; \
     do \
         mmdc -p /puppeteer.json -i "$name.md" -o "/tmp/${name}${MERMAID}.md"; \
-        mdpdf "/tmp/${name}${MERMAID}.md" "$name.pdf" --border=15mm --gh-style; \
+        node /app/pdf/mdpdf.cjs "/tmp/${name}${MERMAID}.md" "$name.pdf" --border=15mm --gh-style; \
     done; \
     cp /app/cordial/README.md README.md; \
     mmdc -p /puppeteer.json -i /app/cordial/README.md -o /app/cordial/README${MERMAID}.md; \
-    mdpdf /app/cordial/README${MERMAID}.md README.pdf --border=15mm --gh-style
+    node /app/pdf/mdpdf.cjs /app/cordial/README${MERMAID}.md README.pdf --border=15mm --gh-style
 
 RUN set -eux; \
     mkdir -p geneos-includes geneos-holidays-include; \
@@ -264,15 +283,30 @@ RUN set -eux; \
         name=$(basename "$source" .md); \
         cp "$source" "geneos-includes/$name.md"; \
         mmdc -p /puppeteer.json -i "$source" -o "/tmp/${name}.mermaid.md"; \
-        mdpdf "/tmp/${name}.mermaid.md" "geneos-includes/$name.pdf" --border=15mm --gh-style; \
+        node /app/pdf/mdpdf.cjs "/tmp/${name}.mermaid.md" "geneos-includes/$name.pdf" --border=15mm --gh-style; \
     done; \
     for source in /app/cordial/pkg/holidays/README.md /app/cordial/pkg/holidays/AGENT.md /app/cordial/pkg/holidays/holiday-calendars-*.md; \
     do \
         name=$(basename "$source" .md); \
         cp "$source" "geneos-holidays-include/$name.md"; \
         mmdc -p /puppeteer.json -i "$source" -o "/tmp/holidays-${name}.mermaid.md"; \
-        mdpdf "/tmp/holidays-${name}.mermaid.md" "geneos-holidays-include/$name.pdf" --border=15mm --gh-style; \
+        node /app/pdf/mdpdf.cjs "/tmp/holidays-${name}.mermaid.md" "geneos-holidays-include/$name.pdf" --border=15mm --gh-style; \
     done
+
+RUN set -eux; \
+    find /docs -type f -name '*.pdf' -exec sh -ec ' \
+        for pdf do \
+            tmp=$(mktemp "${pdf}.XXXXXXXX"); \
+            trap '\''rm -f -- "$tmp"'\'' EXIT; \
+            qpdf --object-streams=generate --recompress-flate --compression-level=9 "$pdf" "$tmp"; \
+            if [ "$(wc -c < "$tmp")" -lt "$(wc -c < "$pdf")" ]; then \
+                chmod --reference="$pdf" "$tmp"; \
+                mv -f -- "$tmp" "$pdf"; \
+            else \
+                rm -f -- "$tmp"; \
+            fi; \
+            trap - EXIT; \
+        done' sh {} +
 
 #
 # assemble files from previous stages into a .tar.gz ready for extraction in the
