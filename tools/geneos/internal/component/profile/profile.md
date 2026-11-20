@@ -16,7 +16,9 @@ To select another file, use the global `--profiles` option:
 geneos --profiles ~/config/profiles.yaml profile list
 ```
 
-Use the same option when you deploy or rebuild that profile. The installed profile instance stores options, not a copy of the YAML definition or its source path.
+When you add or deploy a profile from a file, Geneos stores its absolute path as `config.profiles` on the installed profile instance. Later rebuilds and redeploys read that file again; you do not have to repeat `--profiles`. An explicit `--profiles` overrides the saved path for that command. A rebuild uses the override once, while a redeploy saves it. If there is no saved path, normal profile file lookup applies. If a saved file is missing or unreadable, Geneos reports an error instead of silently using another definition.
+
+Use `geneos set profile NAME config.profiles=/path/to/custom.yaml` to change the saved source. Keep custom YAML outside the standard user configuration path: `geneos profile install` writes to the standard path by default, not to the saved source. Use `--output` to choose another destination explicitly.
 
 The supplied configuration is [internal/profile/profiles.defaults.yaml](../../profile/profiles.defaults.yaml). Use it as an example. Put installation-specific changes in your selected profile file, not in the source file.
 
@@ -69,7 +71,7 @@ Supplied Gateway profiles use `${site}` for configuration include paths. Choose 
 Monitoring Health was previously known as Monitor-Of-The-Monitors (MOTM); the supplied `motm` and `motm-gateway` profiles are now `health-agent` and `health-gateway`.
 
 > [!IMPORTANT]
-> Existing profile files, installed instances, saved options and Gateway references are not renamed automatically. Back up customised definitions and instance configurations, then update scripts, filters and references using the old names, `CATEGORY=MOTM` or `COMPONENT=MOTM-SAN`. Deploying the new profiles can create additional instances with new names; preserve the necessary options and validate the new setup before retiring the old one. `geneos profile extract` backs up an existing user file but replaces it with the embedded defaults, so merge any customisations back afterwards.
+> Existing profile files, installed instances, saved options and Gateway references are not renamed automatically. Back up customised definitions and instance configurations, then update scripts, filters and references using the old names, `CATEGORY=MOTM` or `COMPONENT=MOTM-SAN`. Deploying the new profiles can create additional instances with new names; preserve the necessary options and validate the new setup before retiring the old one. `geneos profile install` backs up an existing destination file before replacing it with the embedded defaults, so merge any customisations back afterwards.
 
 ### Initialise a Demo Installation
 
@@ -486,7 +488,7 @@ A rebuild reads the selected YAML definition again and reuses the options saved 
 2. Apply the definition again:
 
    ```bash
-   geneos --profiles ~/config/profiles.yaml rebuild profile application
+   geneos rebuild profile application
    ```
 
 3. Check the affected instances with `geneos show`. For a SAN, check the generated managed entities.
@@ -503,7 +505,9 @@ A rebuild reads the selected YAML definition again and reuses the options saved 
    geneos --profiles ~/config/profiles.yaml restart profile application
    ```
 
-The component's `config.rebuild` setting controls generated files. The normal Gateway setting is `initial`; SAN and Floating Netprobe use `always`. `--force` permits a rebuild for `initial`, but not for `never`. A profile rebuild reloads members whose generated configuration changes; `--force` also reloads members after an unchanged supported rebuild. Use `--reload`/`-r` to request member reloads regardless of changes. Members with `config.rebuild=never` are not reloaded by a rebuild. A rebuild does not restart processes. See the [rebuild command reference](../../../docs/geneos_rebuild.md).
+A profile instance defaults to `config.rebuild=always`. Set `geneos set profile NAME config.rebuild=never` to prevent applying the profile, even on a forced rebuild or redeploy. Members keep their own rebuild policies when operated on independently.
+
+Each member's `config.rebuild` setting controls its generated files. The normal Gateway setting is `initial`; SAN and Floating Netprobe use `always`. `--force` permits a rebuild for `initial`, but not for `never`. A profile rebuild reloads members whose generated configuration changes; `--force` also reloads members after an unchanged supported rebuild. Use `--reload`/`-r` to request member reloads regardless of changes. Members with `config.rebuild=never` are not reloaded by a rebuild. A rebuild does not restart processes. See the [rebuild command reference](../../../docs/geneos_rebuild.md).
 
 To change a saved option and force a rebuild and reload in one command:
 
@@ -548,4 +552,4 @@ Current implementation limits:
 
 - Removing an instance from the YAML does not delete the installed instance. Renaming an entry can create a new instance and leave the old one in place.
 
-- [`geneos profile extract`](geneos_profile_extract.md) and its `update` alias write the embedded defaults to the standard user profiles file. If that file differs, it is backed up as `profiles-YYYYMMDDHHMMSS.yaml` before replacement; if it already matches, no file change is made. A custom file selected with `--profiles` is not overwritten.
+- [`geneos profile install`](geneos_profile_install.md) (aliases `extract` and `update`) writes the embedded defaults to the standard user profiles file. Use `--output` to select an existing directory or a `.yaml` or `.yml` file. Different destination files are backed up before replacement; matching files are left unchanged. `--profiles` does not select the destination.

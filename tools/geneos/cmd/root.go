@@ -70,6 +70,11 @@ var (
 	AllowRoot bool
 )
 
+// ProfilesOverride reports whether the command selected a profiles file explicitly.
+func ProfilesOverride() bool {
+	return profilesFile != ""
+}
+
 // GeneosUnsetError is returned when no existing Geneos environment is
 // found. It is rendered through a simple markdown renderer for TTY
 // output.

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strconv"
@@ -30,6 +31,29 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
+
+const (
+	ProfileSourceKey  = "config.profiles"
+	ProfileRebuildKey = "config.rebuild"
+)
+
+func SetProfileConfigParam(cf *config.Config, name, value string) (bool, error) {
+	switch name {
+	case ProfileSourceKey:
+		if value != "" {
+			path, err := filepath.Abs(config.ResolveHome(value))
+			if err != nil {
+				return true, fmt.Errorf("resolve %s: %w", name, err)
+			}
+			value = path
+		}
+	case ProfileRebuildKey:
+	default:
+		return false, nil
+	}
+	config.Set(cf, name, value)
+	return true, nil
+}
 
 // optionString returns the saved profile option value as the
 // comma-separated string used for the repeatable options. Options
@@ -197,6 +221,14 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 			name, value, found := strings.Cut(param, "=")
 			if !found || name == "" {
 				return nil, fmt.Errorf("profile options must be NAME=VALUE pairs")
+			}
+			if handled, err := SetProfileConfigParam(cf, name, value); handled {
+				if err != nil {
+					return nil, err
+				}
+				delete(options, name)
+				changed = true
+				continue
 			}
 			options[name] = value
 			changed = true

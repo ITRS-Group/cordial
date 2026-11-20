@@ -46,7 +46,8 @@ var profileDescription string
 func init() {
 	cmd.Cmd.AddCommand(profileCmd)
 	profileCmd.AddCommand(profileListCmd)
-	profileCmd.AddCommand(profileExtractCmd)
+	profileCmd.AddCommand(profileInstallCmd)
+	profileInstallCmd.Flags().StringP("output", "o", "", "Write to an existing directory or a .yaml/.yml file (default: user Geneos configuration directory)")
 
 	profileCmd.SetHelpFunc(profileHelp)
 }
@@ -176,20 +177,25 @@ func formatProfileList(w io.Writer, profiles map[string]any, source, format stri
 	return result.Formatted(w, format, headings, nil)
 }
 
-//go:embed _docs/extract.md
-var profileExtractDescription string
+//go:embed _docs/install.md
+var profileInstallDescription string
 
-var profileExtractCmd = &cobra.Command{
-	Use:                   "extract",
-	Aliases:               []string{"update"},
-	Short:                 "Extract the embedded profile configuration",
-	Long:                  profileExtractDescription,
+var profileInstallCmd = &cobra.Command{
+	Use:                   "install",
+	Aliases:               []string{"extract", "update"},
+	Short:                 "Install the embedded profile configuration",
+	Long:                  profileInstallDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
+	Args:                  cobra.NoArgs,
 	RunE: func(command *cobra.Command, _ []string) error {
-		profilesPath, err := config.UserConfigPath(cordial.ExecutableName(), "profiles.yaml")
+		output, err := command.Flags().GetString("output")
 		if err != nil {
-			return fmt.Errorf("resolve user profiles path: %w", err)
+			return err
+		}
+		profilesPath, err := profileInstallPath(output)
+		if err != nil {
+			return err
 		}
 
 		backup, changed, err := extractProfileConfig(profilesPath, profileconfig.EmbeddedDefaults(), time.Now())
@@ -208,10 +214,38 @@ var profileExtractCmd = &cobra.Command{
 	},
 }
 
+func profileInstallPath(output string) (string, error) {
+	const filename = "profiles.yaml"
+	if output == "" {
+		path, err := config.UserConfigPath(cordial.ExecutableName(), filename)
+		if err != nil {
+			return "", fmt.Errorf("resolve user profiles path: %w", err)
+		}
+		return path, nil
+	}
+
+	output = config.ResolveHome(output)
+	info, err := os.Stat(output)
+	switch {
+	case err == nil && info.IsDir():
+		return filepath.Join(output, filename), nil
+	case err == nil && !info.Mode().IsRegular():
+		return "", fmt.Errorf("profile output %q is not a regular file or directory", output)
+	case err != nil && !errors.Is(err, os.ErrNotExist):
+		return "", fmt.Errorf("check profile output %q: %w", output, err)
+	}
+	switch strings.ToLower(filepath.Ext(output)) {
+	case ".yaml", ".yml":
+		return output, nil
+	default:
+		return "", fmt.Errorf("profile output %q must be an existing directory or a .yaml/.yml file", output)
+	}
+}
+
 func extractProfileConfig(filename string, embedded []byte, now time.Time) (backup string, changed bool, err error) {
 	dir := filepath.Dir(filename)
 	if err = os.MkdirAll(dir, 0o755); err != nil {
-		return "", false, fmt.Errorf("create user profiles directory: %w", err)
+		return "", false, fmt.Errorf("create profiles directory: %w", err)
 	}
 
 	current, readErr := os.ReadFile(filename)
@@ -219,7 +253,7 @@ func extractProfileConfig(filename string, embedded []byte, now time.Time) (back
 		return "", false, nil
 	}
 	if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
-		return "", false, fmt.Errorf("read user profiles file: %w", readErr)
+		return "", false, fmt.Errorf("read profiles file: %w", readErr)
 	}
 
 	temp, err := os.CreateTemp(dir, ".profiles-*.yaml")

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/itrs-group/cordial"
@@ -37,12 +38,50 @@ var initialised sync.Map
 func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) (err error) {
 	opts := evaluateProfileDeployOptions(options...)
 
-	// discover which components are in the profile
-	pf := Profiles
-	if pf == nil {
-		return errors.New("no profiles configuration loaded")
+	pct := geneos.ParseComponent("profile")
+	existing := instance.Instances(h, pct, instance.MatchNames(name))
+	settings := config.New()
+	if len(existing) > 0 {
+		cf := existing[0].Config()
+		if opts.flags == nil || (!opts.flags.Changed("profiles") && !opts.flags.Changed("profile")) {
+			config.Set(settings, values.ProfileSourceKey, config.Get[string](cf, values.ProfileSourceKey, config.NoExpand()))
+		}
+		config.Set(settings, values.ProfileRebuildKey, config.Get[string](cf, values.ProfileRebuildKey))
+	}
+	for _, param := range opts.vals.Params {
+		if key, value, ok := strings.Cut(param, "="); ok {
+			if _, err := values.SetProfileConfigParam(settings, key, value); err != nil {
+				return err
+			}
+		}
+	}
+	pf, err := ConfigForSource(config.Get[string](settings, values.ProfileSourceKey, config.NoExpand()), Profiles)
+	if err != nil {
+		return err
 	}
 
+	profileOptions := []instance.AddOption{
+		instance.WithValues(opts.vals),
+		instance.Base(opts.base),
+		instance.Insecure(opts.insecure),
+		instance.WithCertBundle(opts.certBundle),
+		instance.WithCertBundlePassword(opts.certBundlePassword),
+		instance.WithKeyfile(opts.keyfile),
+		instance.KeyfileCRC(opts.keyfileCRC),
+		instance.WithImports(opts.importFiles),
+		instance.StartAfterAdd(opts.startAfterAdd),
+		instance.WithFlags(opts.flags),
+		instance.WithProfiles(pf),
+	}
+	if config.Get[string](settings, values.ProfileRebuildKey) == "never" {
+		if len(existing) > 0 {
+			return reapplyProfile(existing[0], profileOptions)
+		}
+		_, err = instance.Add(h, pct, name, profileOptions...)
+		return err
+	}
+
+	SetExpandOptions(h, pf, PflagSetToMap(opts.flags, IncludeFlags...), opts.vals.Params)
 	// the failures of the individual components are returned together
 	// after all of them have been tried
 	var errs []error
@@ -77,22 +116,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 
 	// finally, install the profile instance. the port is for the
 	// component instance and not for the profile
-	profileOptions := []instance.AddOption{
-		instance.WithValues(opts.vals),
-		instance.Base(opts.base),
-		instance.Insecure(opts.insecure),
-		instance.WithCertBundle(opts.certBundle),
-		instance.WithCertBundlePassword(opts.certBundlePassword),
-		instance.WithKeyfile(opts.keyfile),
-		instance.KeyfileCRC(opts.keyfileCRC),
-		instance.WithImports(opts.importFiles),
-		instance.StartAfterAdd(opts.startAfterAdd),
-		instance.WithFlags(opts.flags),
-		instance.WithProfiles(pf),
-	}
-
-	pct := geneos.ParseComponent("profile")
-	if existing := instance.Instances(h, pct, instance.MatchNames(name)); len(existing) > 0 {
+	if len(existing) > 0 {
 		// the profile instance may be left over from an earlier deploy
 		// that failed part way, so re-apply it to update the member
 		// instances, which are added above without profile values

@@ -6,7 +6,7 @@ The include view reports copies, Gateway usage, status flags, modification time,
 
 The version view lists the current include links and available source-prefixed semantic-version directories, such as `itrs-v1.31.0` and `acme-ops-v2.0.0-rc.1`, as well as legacy unprefixed versions. The prefix identifies the include **source**. Version columns retain the full directory name, including the source, wherever shown. Use `--all` to list each file inside those directories. In long and machine-readable version views, `TargetVersion` (`targetVersion`) identifies each current link's target version separately from the `Version` row label.
 
-The Gateway view lists includes configured for each Gateway, ordered by priority. The `File` field contains only the include file's basename; nested group names do not change it. Gateway-local includes are omitted unless `--all` is set.
+The Gateway view lists includes configured for each Gateway, ordered by priority. The `File` field contains only the include file's basename; nested group names do not change it. In machine-readable output, `ID` is the Gateway name and priority joined by a colon (for example, `gateway-a:3`); priority is unique within each Gateway. Gateway-local includes are omitted unless `--all` is set.
 
 With `--gateway`, optional instance names or shell-style glob patterns limit output to matching Gateways. Patterns support `*`, `?`, and character classes such as `[ab]`; quote them to prevent shell expansion. Multiple names or patterns are combined without duplicate rows. With no names, all Gateways are listed; patterns matching no Gateways produce no rows. Name filtering applies only to the Gateway view.
 
@@ -15,7 +15,7 @@ geneos includes list --gateway 'prod-*'
 geneos includes list --gateway gateway-a gateway-b
 ```
 
-Use `--long` for version, permissions, owner, remote latency, and certificate-validity columns where available. Owner information is not currently collected. The `--format` option accepts `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`; column output uses human-readable sizes, while machine-readable formats use byte counts. CSV, toolkit, JSON, and pretty outputs always use the long columns. CSV and toolkit headings use camelCase; column and table headings use NormalCase. Headings contain no spaces.
+Use `--long` for version, permissions, owner, remote latency, and certificate-validity columns where available. Owner information is not currently collected. The `--format` option accepts `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`; column, table, CSV, and toolkit output use human-readable sizes, while JSON and pretty output use byte counts. CSV, toolkit, JSON, and pretty outputs always use the long columns. CSV and toolkit headings use camelCase; column and table headings use NormalCase. Headings contain no spaces.
 
 Set `--format json` to output the selected view as a compact array of objects using the long fields regardless of `--long`. Permission values use octal strings such as `"0644"`; table output retains symbolic permissions. Fields use lower-camel-case names. Counts, priorities, and byte sizes are JSON numbers. Unknown or missing sizes are `-1`; a known empty file has size `0`. Set `--format pretty` for the same JSON output with indentation.
 

@@ -27,6 +27,7 @@ import (
 	"log/slog"
 	"maps"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -126,6 +127,12 @@ func Initialise(appName string) (written bool) {
 // ReadConfig reads the profiles configuration from the specified file.
 // Also sets the global Profiles variable.
 func ReadConfig(profilesFile string) (pf *config.Config, err error) {
+	pf, err = readConfig(profilesFile)
+	Profiles = pf
+	return
+}
+
+func readConfig(profilesFile string) (pf *config.Config, err error) {
 	options := []config.FileOption{
 		config.AppName(cordial.ExecutableName()),
 		config.FilePath(profilesFile),
@@ -138,12 +145,11 @@ func ReadConfig(profilesFile string) (pf *config.Config, err error) {
 	}
 
 	pf, err = config.Read("profiles", options...)
-	Profiles = pf
 	if err != nil {
 		return pf, err
 	}
 
-	configPath := config.Path("profiles", options...)
+	configPath := pf.ConfigFileUsed()
 
 	if configPath != "" {
 		log.Debug("profiles loaded", slog.String("from", configPath))
@@ -152,6 +158,29 @@ func ReadConfig(profilesFile string) (pf *config.Config, err error) {
 	}
 
 	return
+}
+
+// ConfigForSource loads a saved profile source without changing the command's
+// profiles configuration. An empty source keeps normal configuration lookup.
+func ConfigForSource(path string, fallback *config.Config) (*config.Config, error) {
+	if path == "" {
+		if fallback == nil {
+			return nil, errors.New("no profiles configuration loaded")
+		}
+		return fallback, nil
+	}
+	pf, err := readConfig(path)
+	if err != nil {
+		return nil, fmt.Errorf("load profiles from %q: %w", path, err)
+	}
+	return pf, nil
+}
+
+func SourcePath(pf *config.Config) (string, error) {
+	if path := pf.ConfigFileUsed(); path != "" {
+		return filepath.Abs(path)
+	}
+	return "", nil
 }
 
 // Common TODO: Describe its purpose and intended use.

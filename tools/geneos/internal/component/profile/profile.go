@@ -34,6 +34,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 const name = "profile"
@@ -64,6 +65,8 @@ var Component = geneos.Component{
 		`binary=/bin/true`,
 		`home={{join .root "profile" "profiles" .name}}`,
 		`autostart=false`,
+		`config.rebuild=always`,
+		`config.profiles=`,
 	},
 
 	Directories: []string{
@@ -182,32 +185,44 @@ func (i *Profile) Add(options ...any) (err error) {
 
 	opts := instance.EvalAddOptions(options...)
 
-	// pick up the profile config, which is set in cmd but we can't
-	// import that here
-	pf := cmd.Profiles
-	if pf == nil {
-		log.Error("no profiles configuration provided")
-		return os.ErrInvalid
-	}
-
-	// update flags from saved set ?
 	confOpts := profile.PflagSetToMap(opts.Flags, profile.IncludeFlags...)
 	confOpts["insecure"] = opts.Insecure
+	source := ""
 	for _, v := range opts.Values.Params {
 		name, value, found := strings.Cut(v, "=")
-		if found {
-			confOpts[name] = value
+		if !found {
+			continue
 		}
+		if handled, err := values.SetProfileConfigParam(cf, name, value); handled {
+			if err != nil {
+				return err
+			}
+			if name == values.ProfileSourceKey {
+				source = config.Get[string](cf, name, config.NoExpand())
+			}
+			continue
+		}
+		confOpts[name] = value
 	}
 	config.Set(cf, cf.Join("config", "options"), confOpts)
-	profile.SetExpandOptions(i.Host(), pf, confOpts, nil)
 
-	if err = profile.Apply(i.Host(), pf, i.Name(), true); err != nil {
-		return err
+	pf := opts.Profiles
+	if pf == nil || source != "" {
+		pf, err = profile.ConfigForSource(source, cmd.Profiles)
+		if err != nil {
+			return err
+		}
 	}
-
-	// default config XML etc.
-	return nil
+	path, err := profile.SourcePath(pf)
+	if err != nil {
+		return fmt.Errorf("resolve profile source: %w", err)
+	}
+	config.Set(cf, values.ProfileSourceKey, path)
+	if config.Get[string](cf, values.ProfileRebuildKey) == "never" {
+		return nil
+	}
+	profile.SetExpandOptions(i.Host(), pf, confOpts, nil)
+	return profile.Apply(i.Host(), pf, i.Name(), true)
 }
 
 // Command TODO: Document its behavior, inputs, and effects.
@@ -248,10 +263,16 @@ func (i *Profile) Reload() (err error) {
 // rebuilds of any instances
 func (i *Profile) Rebuild(initial bool) (changed bool, err error) {
 	cf := i.Config()
-	pf := cmd.Profiles
-	if pf == nil {
-		log.Error("no profiles configuration provided")
-		return false, os.ErrInvalid
+	if config.Get[string](cf, values.ProfileRebuildKey) == "never" {
+		return false, nil
+	}
+	var source string
+	if !cmd.ProfilesOverride() {
+		source = config.Get[string](cf, values.ProfileSourceKey, config.NoExpand())
+	}
+	pf, err := profile.ConfigForSource(source, cmd.Profiles)
+	if err != nil {
+		return false, err
 	}
 
 	// the saved options are coerced, so that those saved as strings by
