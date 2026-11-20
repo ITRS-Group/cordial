@@ -3,6 +3,7 @@ package includes
 import (
 	"archive/tar"
 	"compress/gzip"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +13,8 @@ import (
 	"testing/fstest"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	holidaycontent "github.com/itrs-group/cordial/pkg/holidays"
+	includecontent "github.com/itrs-group/cordial/pkg/includes"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -45,6 +48,43 @@ func TestInstallEmbeddedLinkModes(t *testing.T) {
 	}
 }
 
+func TestInstallPrefixSelection(t *testing.T) {
+	archive := writeTestIncludeArchive(t,
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/", kind: tar.TypeDir},
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/holidays-v1.2.3/holidays.test.xml", contents: "<gateway/>"},
+	)
+	for _, test := range []struct {
+		name, archive, prefix string
+		wantError             bool
+	}{
+		{"inferred-archive", archive, "", false},
+		{"matching-archive", archive, "holidays", false},
+		{"mismatched-archive", archive, "itrs", true},
+		{"not-embedded", "", "holidays", true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			err := installIncludes(h, test.archive, true, true, test.prefix)
+			if test.wantError {
+				if err == nil {
+					t.Fatal("mismatched prefix accepted")
+				}
+				if _, err := os.Lstat(h.PathTo("gateway", "includes")); !os.IsNotExist(err) {
+					t.Fatalf("rejected installation changed destination: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			link := h.PathTo("gateway", "includes", "holidays.test.xml")
+			if target, err := os.Readlink(link); err != nil || target != "holidays-v1.2.3/holidays.test.xml" {
+				t.Fatalf("installed link = %q, %v", target, err)
+			}
+		})
+	}
+}
+
 func TestInstallReportsActions(t *testing.T) {
 	capture := func(t *testing.T, run func() error) string {
 		t.Helper()
@@ -68,7 +108,7 @@ func TestInstallReportsActions(t *testing.T) {
 
 	t.Run("templates-and-links", func(t *testing.T) {
 		h := newTestGatewayHost(t)
-		configs, err := filepath.Glob("files/config.*.xml")
+		configs, err := fs.Glob(includecontent.Files, "files/config.*.xml")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -247,6 +287,75 @@ func TestInstallEmbeddedCreatesVersionedAndConfigFiles(t *testing.T) {
 		if _, err := os.Lstat(path); !os.IsNotExist(err) {
 			t.Errorf("obsolete file %q was installed: %v", path, err)
 		}
+	}
+}
+
+func TestInstallOptionalHolidayCorpus(t *testing.T) {
+	h := newTestGatewayHost(t)
+	if err := Initialise(h); err != nil {
+		t.Fatal(err)
+	}
+	dir := h.PathTo("gateway", "includes")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "holidays") || strings.Contains(entry.Name(), ".holidays-") {
+			t.Fatalf("initialization installed optional calendar %q", entry.Name())
+		}
+	}
+	const version = "holidays-v1.2.3"
+	const wrapper = "geneos-includes-v1.2.3/"
+	files, err := fs.Glob(holidaycontent.Files, "files/holidays.*.xml")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("holiday corpus: %v, %v", files, err)
+	}
+	archiveEntries := []includeArchiveEntry{
+		{name: wrapper, kind: tar.TypeDir},
+		{name: wrapper + version + "/", kind: tar.TypeDir},
+		{name: wrapper + "docs/", kind: tar.TypeDir},
+		{name: wrapper + "docs/README.md", contents: holidaycontent.Documentation},
+	}
+	for _, file := range files {
+		data, err := holidaycontent.Files.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		archiveEntries = append(archiveEntries, includeArchiveEntry{
+			name: wrapper + version + "/" + filepath.Base(file), contents: string(data),
+		})
+	}
+	archive := writeTestIncludeArchive(t, archiveEntries...)
+	publishedName := filepath.Join(filepath.Dir(archive), "geneos-holidays-include-v1.2.3.tar.gz")
+	if err := os.Rename(archive, publishedName); err != nil {
+		t.Fatal(err)
+	}
+	if err := Install(h, publishedName, false, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := Install(h, "", true, true); err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		name := filepath.Base(file)
+		want, err := holidaycontent.Files.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, err := os.ReadFile(filepath.Join(dir, version, name)); err != nil || string(got) != string(want) {
+			t.Errorf("installed holiday %q differs from corpus: %v", name, err)
+		}
+		if target, err := os.Readlink(filepath.Join(dir, name)); err != nil || target != version+"/"+name {
+			t.Errorf("holiday link %q = %q, %v", name, target, err)
+		}
+	}
+	if target, err := os.Readlink(filepath.Join(dir, "itrs.layer0.foundation.xml")); err != nil ||
+		target != embeddedIncludeVersion()+"/itrs.layer0.foundation.xml" {
+		t.Errorf("standard include link changed: %q, %v", target, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "docs")); !os.IsNotExist(err) {
+		t.Errorf("archive documentation installed into live includes: %v", err)
 	}
 }
 
@@ -554,7 +663,7 @@ func TestStandaloneInstallerMigratesLegacyConfig(t *testing.T) {
 	if err := os.Symlink("config.test.xml", filepath.Join(legacy, "config.link.xml")); err != nil {
 		t.Fatal(err)
 	}
-	command := exec.Command("sh", "files/install-includes.sh", root)
+	command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", root)
 	command.Env = append(os.Environ(), "INCLUDES_SOURCE="+source)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("standalone install failed: %v\n%s", err, output)
@@ -607,7 +716,7 @@ func TestStandaloneInstallerSourceVersions(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(siteDir, "local.test.xml"), []byte("custom"), 0644); err != nil {
 				t.Fatal(err)
 			}
-			command := exec.Command("sh", "files/install-includes.sh", root)
+			command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", root)
 			command.Env = append(os.Environ(), "INCLUDES_SOURCE="+archive)
 			if output, err := command.CombinedOutput(); err != nil {
 				t.Fatalf("standalone install failed: %v\n%s", err, output)
@@ -621,6 +730,84 @@ func TestStandaloneInstallerSourceVersions(t *testing.T) {
 				t.Fatalf("standalone site template = %q, %v", data, err)
 			}
 		})
+	}
+}
+
+func TestStandaloneHolidayInstallerPreservesExistingFiles(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("standalone installer requires Unix shell tools")
+	}
+	root, archive := t.TempDir(), t.TempDir()
+	const version = "holidays-v1.2.3"
+	parent := filepath.Join(root, "gateway", "includes")
+	for _, directory := range []string{
+		filepath.Join(archive, version),
+		filepath.Join(parent, "itrs-v1.0.0"),
+		filepath.Join(parent, "holidays-v1.0.0"),
+	} {
+		if err := os.MkdirAll(directory, 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, name := range []string{"holidays.new.xml", "holidays.old.xml", "holidays.custom.xml"} {
+		if err := os.WriteFile(filepath.Join(archive, version, name), []byte("<gateway/>"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, content := range map[string]string{
+		"itrs-v1.0.0/itrs.test.xml":        "standard",
+		"holidays-v1.0.0/holidays.old.xml": "old holiday",
+		"holidays.custom.xml":              "custom holiday",
+	} {
+		if err := os.WriteFile(filepath.Join(parent, name), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	links := map[string]string{
+		"itrs.test.xml":    "itrs-v1.0.0/itrs.test.xml",
+		"holidays.old.xml": "holidays-v1.0.0/holidays.old.xml",
+		"holidays.new.xml": "missing/holidays.new.xml",
+		"config":           "missing-config",
+	}
+	for name, target := range links {
+		if err := os.Symlink(target, filepath.Join(parent, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(archive, version, "holidays.missing.xml"), []byte("<gateway/>"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run := func() ([]byte, error) {
+		command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", root)
+		command.Env = append(os.Environ(), "INCLUDES_SOURCE="+archive)
+		return command.CombinedOutput()
+	}
+	if output, err := run(); err != nil {
+		t.Fatalf("holiday shell installation failed: %v\n%s", err, output)
+	}
+	for name, target := range links {
+		if got, err := os.Readlink(filepath.Join(parent, name)); err != nil || got != target {
+			t.Errorf("existing %s link changed to %q: %v", name, got, err)
+		}
+	}
+	if got, err := os.ReadFile(filepath.Join(parent, "holidays.custom.xml")); err != nil || string(got) != "custom holiday" {
+		t.Errorf("custom holiday file changed: %q, %v", got, err)
+	}
+	if got, err := os.ReadFile(filepath.Join(parent, "itrs.test.xml")); err != nil || string(got) != "standard" {
+		t.Errorf("standard include changed: %q, %v", got, err)
+	}
+	link := filepath.Join(parent, "holidays.missing.xml")
+	if got, err := os.Readlink(link); err != nil || got != version+"/holidays.missing.xml" {
+		t.Errorf("missing holiday link = %q, %v", got, err)
+	}
+	if info, err := os.Stat(link); err != nil || info.Mode().Perm() != 0444 {
+		t.Errorf("installed holiday permissions = %v, %v", info, err)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "gateway", "local")); !os.IsNotExist(err) {
+		t.Errorf("holiday installer touched site configuration: %v", err)
+	}
+	if output, err := run(); err == nil || !strings.Contains(string(output), "Version already installed") {
+		t.Fatalf("reinstallation should refuse the existing version: %v\n%s", err, output)
 	}
 }
 

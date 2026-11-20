@@ -22,7 +22,8 @@ var includesUpdateCmdVersion string
 func init() {
 	includesCmd.AddCommand(includesUpdateCmd)
 
-	includesUpdateCmd.Flags().StringVarP(&includesUpdateCmdVersion, "version", "V", "", "Specify full source-version directory to update includes to")
+	includesUpdateCmd.Flags().StringVarP(&includesUpdateCmdVersion, "version", "V", "", "Select a semantic version or full source-version directory")
+	includesUpdateCmd.Flags().String("prefix", "itrs", "Select the include source prefix")
 }
 
 var includesUpdateCmd = &cobra.Command{
@@ -36,9 +37,17 @@ var includesUpdateCmd = &cobra.Command{
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
+		prefix, err := commandIncludePrefix(command, false)
+		if err != nil {
+			return err
+		}
+		version, err := includeVersionForPrefix(includesUpdateCmdVersion, prefix, command.Flags().Changed("prefix"))
+		if err != nil {
+			return err
+		}
 		h := geneos.GetHost(cmd.Hostname)
 
-		err = Update(h, includesUpdateCmdVersion, true)
+		err = Update(h, version, true)
 		if err != nil {
 			return err
 		}

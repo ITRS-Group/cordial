@@ -39,6 +39,19 @@ The prefix is the include **source**, independently of the deployment's site. Us
 | `config.layer2.programs-and-logs.xml` | Gateway setup template for Layer 2 Application Baseline configuration. |
 | `config.layer3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Layer 3 Geneos. |
 
+Holiday calendars are a separate optional corpus under the `holidays` source,
+distributed as `geneos-holidays-include-v<version>.tar.gz`. They are not embedded
+in the `geneos` executable or installed by `geneos init` or a no-argument
+`geneos includes install`. Install the archive explicitly:
+
+```shell
+geneos include install /path/to/geneos-holidays-include-v1.31.0.tar.gz
+```
+
+Its documentation is in the archive's `docs/README.md` and regional pages
+(source tree: `pkg/holidays/`). Installing it makes calendars available but
+does not add them to Gateway setups or enable holiday scheduling.
+
 Choose a site name representing the company, customer, or client using the Geneos deployment, rather than a region or environment. For example, an installation with `geneos config set site=acme`, ITRS includes and an additional `acme` source has files organized like this:
 
 ```text
@@ -92,6 +105,16 @@ geneos includes install /path/to/geneos-includes-v1.31.0.tar.gz
 
 Add `--update` to replace existing top-level include paths with links to the installed version. Obsolete-link cleanup is restricted to that source, and updates refuse to replace a link owned by another source.
 
+`includes update`, `list` and `delete` accept `--prefix`, defaulting to `itrs`.
+For example, `geneos include update --prefix holidays` selects the installed
+holiday version matching the running release; add `--version v1.31.0` to
+choose another version. Full source-version names still work with `update
+--version` without a prefix flag. List and delete accept `--prefix '*'` to
+include all sources; use it for the previous complete inventory or cross-source
+cleanup. Install/extract infer the source from an archive unless an explicit
+`--prefix` is supplied to require a matching source. No-argument installation
+supports only the embedded ITRS source.
+
 > [!IMPORTANT]
 > Include and site filenames have changed from `levelN` to `layerN`, and Gateway types, groups, environments and XPath targets now use `Layer N` names. The former `itrs.level1.infrastructure.xml` and `itrs.level2.application-core.xml` are now `itrs.layer1.server-health.xml` and `itrs.layer2.programs-and-logs.xml`. Back up your configuration and install without `--update`; copy or merge site overrides into the new site files without overwriting existing settings. Update Gateway setups, SANs, customised profiles and any other references before running `geneos includes update`. Existing configurations are not renamed automatically.
 
@@ -106,6 +129,11 @@ cd geneos-includes-v1.31.0
 ```
 
 The script installs into a fresh version directory, keeps existing config templates, and creates only missing top-level links. It uses `gateway/local/local-config.*.xml` and does not read the `geneos` site setting; use `geneos includes install` for a site name such as `acme`. It is intended for initial installation and does not replace the `geneos includes install` command's archive validation, backups, or Gateway-reference checks. If the version is already present, or you need to update live links, use `geneos includes install --update` or inspect and back up the affected files first.
+
+The holiday archive bundles the same source-aware shell installer. Archives
+without a `config/` directory, including holidays, do not create or migrate site
+configuration. Each archive installs only its own source and preserves existing
+top-level files and links.
 
 ## How-To
 

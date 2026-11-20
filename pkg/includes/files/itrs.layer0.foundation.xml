@@ -1101,6 +1101,9 @@ GROUP by attributes</data>
 			</rule>
 		</ruleGroup>
 	</rules>
+	<activeTimes>
+		<gatewayControlledProbeActiveTimes>true</gatewayControlledProbeActiveTimes>
+	</activeTimes>
 	<persistence><!--Persistence is enabled by default for all history periods. If the default timings
 are not suitable, override in a higher priority include file or main setup file.--></persistence>
 	<selfAnnouncingProbes>

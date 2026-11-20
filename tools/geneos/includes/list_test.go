@@ -106,6 +106,46 @@ func TestIncludesListSourceVersions(t *testing.T) {
 					t.Errorf("directory row lacks version %q: %s", version, data)
 				}
 			}
+			for _, prefix := range []string{"itrs", "acme-ops"} {
+				if err := output.Truncate(0); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := output.Seek(0, 0); err != nil {
+					t.Fatal(err)
+				}
+				if err := listIncludesForPrefix(h, prefix); err != nil {
+					t.Fatal(err)
+				}
+				data, err := os.ReadFile(output.Name())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := json.Unmarshal(data, &rows); err != nil {
+					t.Fatal(err)
+				}
+				found := false
+				for _, row := range rows {
+					version, _ := row["version"].(string)
+					if version == "current" {
+						continue
+					}
+					if strings.HasPrefix(version, "current # ") {
+						version, _ = row["targetVersion"].(string)
+					}
+					if version == "" {
+						continue
+					}
+					version, _, _ = strings.Cut(version, " # ")
+					source, _, err := parseIncludeVersion(version)
+					if err != nil || source != prefix {
+						t.Fatalf("prefix %s included another source: %s", prefix, data)
+					}
+					found = true
+				}
+				if !found {
+					t.Fatalf("prefix %s returned no matching files: %s", prefix, data)
+				}
+			}
 		})
 	}
 }
@@ -124,6 +164,12 @@ func TestIncludesListFormatValidation(t *testing.T) {
 }
 
 func TestIncludesListGatewayPatterns(t *testing.T) {
+	prefixFlag := includeListCmd.Flags().Lookup("prefix")
+	oldPrefix := prefixFlag.Value.String()
+	if err := prefixFlag.Value.Set("*"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = prefixFlag.Value.Set(oldPrefix) })
 	previousAll := geneos.ALL
 	geneos.ALL = geneos.NewHost(geneos.ALLHOSTS)
 	t.Cleanup(func() { geneos.ALL = previousAll })
@@ -639,10 +685,10 @@ func TestMachineGatewayIDAndFlags(t *testing.T) {
 	required := false
 	row := gatewayIncludeMachineRow("gw", gatewayInclude{
 		includeFile: includeFile{Status: includeStatusOK, Shared: true},
-		Priority: 3,
-		Required: &required,
-		Disabled: true,
-		Location: "example.xml",
+		Priority:    3,
+		Required:    &required,
+		Disabled:    true,
+		Location:    "example.xml",
 	})
 	if len(row) != len(gatewayColumnsMachine) {
 		t.Fatalf("machine gateway row has %d columns, want %d", len(row), len(gatewayColumnsMachine))

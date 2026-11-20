@@ -258,13 +258,20 @@ RUN set -eux; \
     mdpdf /app/cordial/README${MERMAID}.md README.pdf --border=15mm --gh-style
 
 RUN set -eux; \
-    mkdir -p geneos-includes; \
-    for source in /app/cordial/tools/geneos/includes/files/README.md /app/cordial/tools/geneos/includes/files/_docs/*.md; \
+    mkdir -p geneos-includes geneos-holidays-include; \
+    for source in /app/cordial/pkg/includes/README.md /app/cordial/pkg/includes/_docs/*.md; \
     do \
         name=$(basename "$source" .md); \
         cp "$source" "geneos-includes/$name.md"; \
         mmdc -p /puppeteer.json -i "$source" -o "/tmp/${name}.mermaid.md"; \
         mdpdf "/tmp/${name}.mermaid.md" "geneos-includes/$name.pdf" --border=15mm --gh-style; \
+    done; \
+    for source in /app/cordial/pkg/holidays/README.md /app/cordial/pkg/holidays/holiday-calendars-*.md; \
+    do \
+        name=$(basename "$source" .md); \
+        cp "$source" "geneos-holidays-include/$name.md"; \
+        mmdc -p /puppeteer.json -i "$source" -o "/tmp/holidays-${name}.mermaid.md"; \
+        mdpdf "/tmp/holidays-${name}.mermaid.md" "geneos-holidays-include/$name.pdf" --border=15mm --gh-style; \
     done
 
 #
@@ -277,9 +284,9 @@ RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
     apk add tar
 
 COPY VERSION /VERSION
-COPY tools/geneos/includes/files/itrs.*.xml /includes-source/
-COPY tools/geneos/includes/files/config.*.xml /includes-source/
-COPY tools/geneos/includes/files/install-includes.sh /includes-source/scripts/install-includes.sh
+COPY pkg/includes/files/itrs.*.xml /includes-source/
+COPY pkg/includes/files/config.*.xml /includes-source/
+COPY pkg/includes/scripts/install-includes.sh /includes-source/scripts/install-includes.sh
 COPY --from=cordial-docs /docs/geneos-includes/ /includes-source/docs/
 RUN set -eux; \
     version=$(cat /VERSION); \
@@ -294,6 +301,27 @@ RUN set -eux; \
     chmod 0555 "/includes/$archive_root/scripts/install-includes.sh"; \
     tar --sort=name -czf "/geneos-includes-$version.tar.gz" -C /includes "$archive_root"
 
+FROM alpine AS geneos-holidays-include
+
+RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
+    apk add tar
+
+COPY VERSION /VERSION
+COPY pkg/holidays/files/holidays.*.xml /holidays-source/
+COPY pkg/includes/scripts/install-includes.sh /holidays-source/scripts/install-includes.sh
+COPY --from=cordial-docs /docs/geneos-holidays-include/ /holidays-source/docs/
+RUN set -eux; \
+    version=$(cat /VERSION); \
+    archive_root="geneos-includes-$version"; \
+    mkdir -p "/holidays/$archive_root/holidays-$version" "/holidays/$archive_root/scripts" "/holidays/$archive_root/docs"; \
+    cp /holidays-source/holidays.*.xml "/holidays/$archive_root/holidays-$version/"; \
+    cp /holidays-source/scripts/install-includes.sh "/holidays/$archive_root/scripts/"; \
+    cp /holidays-source/docs/* "/holidays/$archive_root/docs/"; \
+    find /holidays -type f -exec chmod a-x {} \;; \
+    find "/holidays/$archive_root/holidays-$version" -type f -exec chmod a-w {} \;; \
+    chmod 0555 "/holidays/$archive_root/scripts/install-includes.sh"; \
+    tar --sort=name -czf "/geneos-holidays-include-$version.tar.gz" -C /holidays "$archive_root"
+
 FROM alpine AS cordial-build
 
 RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
@@ -302,6 +330,7 @@ RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
 COPY --from=build /app/cordial/VERSION /
 COPY --from=cordial-docs /docs/. /cordial/docs/
 COPY --from=geneos-includes /geneos-includes-*.tar.gz /
+COPY --from=geneos-holidays-include /geneos-holidays-include-*.tar.gz /
 
 # tools binaries
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/

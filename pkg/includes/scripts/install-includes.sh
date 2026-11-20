@@ -44,12 +44,13 @@ if [ -e "$INCLUDES_DIR/$VERSION" ] || [ -L "$INCLUDES_DIR/$VERSION" ]; then
     printf 'Version already installed: %s\n' "$INCLUDES_DIR/$VERSION" >&2
     exit 1
 fi
-CONFIG_DIR=$GENEOS_HOME/gateway/local
-if [ -L "$CONFIG_DIR" ] || { [ -e "$CONFIG_DIR" ] && [ ! -d "$CONFIG_DIR" ]; }; then
-    printf 'Config destination is not a directory: %s\n' "$CONFIG_DIR" >&2
-    exit 1
-fi
-mkdir -p "$INCLUDES_DIR/$VERSION" "$CONFIG_DIR"
+for directory in "$GENEOS_HOME/gateway" "$INCLUDES_DIR"; do
+    if [ -L "$directory" ] || { [ -e "$directory" ] && [ ! -d "$directory" ]; }; then
+        printf 'Include destination is not a directory: %s\n' "$directory" >&2
+        exit 1
+    fi
+done
+mkdir -p "$INCLUDES_DIR/$VERSION"
 
 copy_old_config() (
     source_dir=$1
@@ -77,35 +78,44 @@ copy_old_config() (
     done
 )
 
-if [ -L "$INCLUDES_DIR/config" ] || { [ -e "$INCLUDES_DIR/config" ] && [ ! -d "$INCLUDES_DIR/config" ]; }; then
-    printf 'Old config path is not a directory: %s\n' "$INCLUDES_DIR/config" >&2
-    exit 1
-fi
-if [ -d "$INCLUDES_DIR/config" ]; then
-    copy_old_config "$INCLUDES_DIR/config" "$CONFIG_DIR"
-fi
-
-for source in "$CONFIG_DIR"/local.*.xml; do
-    [ -e "$source" ] || [ -L "$source" ] || continue
-    name=${source##*/}
-    destination="$CONFIG_DIR/local-config.${name#local.}"
-    if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
-        cp -pLn "$source" "$destination"
+if [ -d "$SOURCE_DIR/config" ]; then
+    CONFIG_DIR=$GENEOS_HOME/gateway/local
+    if [ -L "$CONFIG_DIR" ] || { [ -e "$CONFIG_DIR" ] && [ ! -d "$CONFIG_DIR" ]; }; then
+        printf 'Config destination is not a directory: %s\n' "$CONFIG_DIR" >&2
+        exit 1
     fi
-done
+    mkdir -p "$CONFIG_DIR"
+
+    if [ -L "$INCLUDES_DIR/config" ] || { [ -e "$INCLUDES_DIR/config" ] && [ ! -d "$INCLUDES_DIR/config" ]; }; then
+        printf 'Old config path is not a directory: %s\n' "$INCLUDES_DIR/config" >&2
+        exit 1
+    fi
+    if [ -d "$INCLUDES_DIR/config" ]; then
+        copy_old_config "$INCLUDES_DIR/config" "$CONFIG_DIR"
+    fi
+
+    for source in "$CONFIG_DIR"/local.*.xml; do
+        [ -e "$source" ] || [ -L "$source" ] || continue
+        name=${source##*/}
+        destination="$CONFIG_DIR/local-config.${name#local.}"
+        if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
+            cp -pLn "$source" "$destination"
+        fi
+    done
+
+    for source in "$SOURCE_DIR"/config/config.*.xml; do
+        [ -f "$source" ] || continue
+        name=${source##*/}
+        destination="$CONFIG_DIR/local-$name"
+        if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
+            install -m 0664 "$source" "$destination"
+        fi
+    done
+fi
 
 for source in "$VERSION_DIR"/"$SOURCE".*.xml; do
     [ -f "$source" ] || continue
     install -m 0444 "$source" "$INCLUDES_DIR/$VERSION/${source##*/}"
-done
-
-for source in "$SOURCE_DIR"/config/config.*.xml; do
-    [ -f "$source" ] || continue
-    name=${source##*/}
-    destination="$CONFIG_DIR/local-$name"
-    if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
-        install -m 0664 "$source" "$destination"
-    fi
 done
 
 for source in "$INCLUDES_DIR/$VERSION"/"$SOURCE".*.xml; do

@@ -23,6 +23,7 @@ var ErrIncludeVersionLinked = errors.New("include version is referenced by a gat
 func init() {
 	includesCmd.AddCommand(includesDeleteCmd)
 	includesDeleteCmd.Flags().StringP("version", "V", "", "Select include versions using a shell-style pattern")
+	includesDeleteCmd.Flags().String("prefix", "itrs", "Select the include source prefix, or '*' for all sources")
 }
 
 var includesDeleteCmd = &cobra.Command{
@@ -42,6 +43,10 @@ var includesDeleteCmd = &cobra.Command{
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, args []string) error {
+		prefix, err := commandIncludePrefix(command, true)
+		if err != nil {
+			return err
+		}
 		pattern, err := command.Flags().GetString("version")
 		if err != nil {
 			return err
@@ -55,13 +60,17 @@ var includesDeleteCmd = &cobra.Command{
 				return fmt.Errorf("include version pattern must not be empty")
 			}
 		}
-		return Delete(geneos.GetHost(cmd.Hostname), patterns...)
+		return deleteIncludes(geneos.GetHost(cmd.Hostname), prefix, patterns...)
 	},
 }
 
 func Delete(h *geneos.Host, patterns ...string) error {
+	return deleteIncludes(h, "", patterns...)
+}
+
+func deleteIncludes(h *geneos.Host, prefix string, patterns ...string) error {
 	if len(patterns) == 0 {
-		return deleteIncludeVersionPattern(h, "")
+		return deleteIncludeVersionPattern(h, "", prefix)
 	}
 	if len(patterns) > 1 {
 		for _, pattern := range patterns {
@@ -72,14 +81,14 @@ func Delete(h *geneos.Host, patterns ...string) error {
 	}
 	var failures []error
 	for _, pattern := range patterns {
-		if err := deleteIncludeVersionPattern(h, pattern); err != nil {
+		if err := deleteIncludeVersionPattern(h, pattern, prefix); err != nil {
 			failures = append(failures, fmt.Errorf("version pattern %q: %w", pattern, err))
 		}
 	}
 	return errors.Join(failures...)
 }
 
-func deleteIncludeVersionPattern(h *geneos.Host, pattern string) error {
+func deleteIncludeVersionPattern(h *geneos.Host, pattern, prefix string) error {
 	pattern = strings.TrimSpace(pattern)
 	allUnlinked := pattern == ""
 	if allUnlinked {
@@ -105,7 +114,8 @@ func deleteIncludeVersionPattern(h *geneos.Host, pattern string) error {
 		if !entry.IsDir() {
 			continue
 		}
-		if _, _, err := parseIncludeVersion(entry.Name()); err != nil {
+		source, _, err := parseIncludeVersion(entry.Name())
+		if err != nil || prefix != "" && source != prefix {
 			continue
 		}
 		if matched, _ := path.Match(pattern, entry.Name()); !matched {

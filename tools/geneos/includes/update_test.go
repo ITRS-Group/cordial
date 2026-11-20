@@ -11,6 +11,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/host"
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
 type canonicalizingIncludeHost struct {
@@ -305,6 +306,80 @@ func TestUpdateDefaultUsesSourceVersion(t *testing.T) {
 	link := h.PathTo("gateway", "includes", "itrs.layer0.foundation.xml")
 	if target, err := os.Readlink(link); err != nil || target != "itrs-"+cordial.VERSION+"/itrs.layer0.foundation.xml" {
 		t.Fatalf("default version link = %q, %v", target, err)
+	}
+}
+
+func TestUpdatePrefixSelection(t *testing.T) {
+	oldHostname := cmd.Hostname
+	cmd.Hostname = "localhost"
+	t.Cleanup(func() { cmd.Hostname = oldHostname })
+	for _, test := range []struct {
+		name, prefix, version, want string
+	}{
+		{"default", "", "", embeddedIncludeVersion()},
+		{"holiday-release", "holidays", "", "holidays-" + cordial.VERSION},
+		{"holiday-version", "holidays", "v2.0.0", "holidays-v2.0.0"},
+		{"holiday-unprefixed-version", "holidays", "2.0.0", "holidays-v2.0.0"},
+		{"itrs-version", "itrs", "v2.0.0", "itrs-v2.0.0"},
+		{"legacy-version", "", "v2.0.0", "v2.0.0"},
+		{"full-source", "", "holidays-v2.0.0", "holidays-v2.0.0"},
+		{"matching-prefix", "holidays", "holidays-v2.0.0", "holidays-v2.0.0"},
+		{"mismatch", "itrs", "holidays-v2.0.0", ""},
+		{"unsafe-prefix", "../holidays", "", ""},
+		{"reserved-prefix", "config", "", ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			writeTestGatewaySetup(t, h, "<gateway/>")
+			parent := h.PathTo("gateway", "includes")
+			versions := []string{embeddedIncludeVersion(), "holidays-" + cordial.VERSION, "itrs-v2.0.0", "holidays-v2.0.0", "v2.0.0"}
+			for _, version := range versions {
+				if err := os.MkdirAll(filepath.Join(parent, version), 0755); err != nil {
+					t.Fatal(err)
+				}
+				source, _, _ := parseIncludeVersion(version)
+				if err := os.WriteFile(filepath.Join(parent, version, source+".test.xml"), nil, 0444); err != nil {
+					t.Fatal(err)
+				}
+			}
+			prefixFlag := includesUpdateCmd.Flags().Lookup("prefix")
+			oldPrefix, oldChanged := prefixFlag.Value.String(), prefixFlag.Changed
+			oldVersion := includesUpdateCmdVersion
+			t.Cleanup(func() {
+				_ = prefixFlag.Value.Set(oldPrefix)
+				prefixFlag.Changed = oldChanged
+				includesUpdateCmdVersion = oldVersion
+			})
+			prefix := test.prefix
+			if prefix == "" {
+				prefix = "itrs"
+			}
+			if err := prefixFlag.Value.Set(prefix); err != nil {
+				t.Fatal(err)
+			}
+			prefixFlag.Changed = test.prefix != ""
+			includesUpdateCmdVersion = test.version
+			err := includesUpdateCmd.RunE(includesUpdateCmd, nil)
+			if test.want == "" {
+				if err == nil {
+					t.Fatal("invalid source selection succeeded")
+				}
+				for _, source := range []string{"itrs", "holidays"} {
+					if _, err := os.Lstat(filepath.Join(parent, source+".test.xml")); !os.IsNotExist(err) {
+						t.Fatalf("rejected update changed links: %v", err)
+					}
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			source, _, _ := parseIncludeVersion(test.want)
+			link := filepath.Join(parent, source+".test.xml")
+			if target, err := os.Readlink(link); err != nil || target != test.want+"/"+source+".test.xml" {
+				t.Fatalf("selected link = %q, %v; want version %s", target, err, test.want)
+			}
+		})
 	}
 }
 

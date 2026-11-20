@@ -1,6 +1,15 @@
 Update the top-level include symlinks to point to files in a versioned include directory on the selected host.
 
-By default, the links are updated to `itrs-<version>` embedded in the running `geneos` executable. Use `--version` to select a full directory name already present under `gateway/includes`, such as `itrs-v1.31.0` or `acme-ops-v2.0.0-rc.1`. The prefix is the include **source**; its final version suffix is a `v`-prefixed semantic version, including optional prerelease and build metadata. Legacy unprefixed semantic-version directories remain selectable and are treated as the `itrs` source. If the selected directory is missing, the command returns an error; only the current source-prefixed embedded version is extracted automatically when needed.
+By default, the links are updated to `itrs-<version>` embedded in the running `geneos` executable. Use `--prefix` to select another include **source**, such as `holidays`. Without `--version`, the selected directory is `<prefix>-<running-geneos-version>`, not the newest installed version. Other sources must already be installed; only the current embedded ITRS version is extracted automatically when needed.
+
+Use `--prefix holidays --version v1.31.0` to select `holidays-v1.31.0`. A version may omit its leading `v`. Full source-version directory names, such as `holidays-v1.31.0` or `acme-ops-v2.0.0-rc.1`, also remain supported without `--prefix`; an explicitly supplied conflicting prefix is an error. The final version suffix is a `v`-prefixed semantic version, including optional prerelease and build metadata. Without an explicit prefix, bare semantic versions select legacy unprefixed ITRS directories as before; with `--prefix itrs`, they select `itrs-v<version>`. A missing selected directory is an error.
+
+```shell
+geneos include update
+geneos include update --prefix holidays
+geneos include update --prefix holidays --version v1.31.0
+geneos include update --version holidays-v1.31.0
+```
 
 Links that already point to the selected version are left unchanged. If a target path already exists with a different link or file, it is removed before creating the new symlink, except that a link owned by another source blocks the update before any links change.
 

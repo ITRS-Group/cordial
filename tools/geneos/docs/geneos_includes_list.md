@@ -2,6 +2,8 @@
 
 List include files found in the selected Geneos installation and include references used by its Gateways. The default view groups shared and versioned includes by file name. Use one of `--include`, `--version`, or `--gateway` to select a view.
 
+`--prefix` selects the include source and defaults to `itrs`. Use `--prefix holidays` for holiday includes or quote `--prefix '*'` for the previous complete inventory, including site templates, unprefixed local files and remote references. The filter applies to every view and to `--all`. Source ownership is taken from the version directory when available (legacy semantic-version directories belong to ITRS); otherwise the file basename must start with `<prefix>.`. Gateway usage and safety checks still inspect all sources.
+
 The include view reports copies, Gateway usage, status flags, modification time, size, and location. Shared and versioned paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files, whose locations are shown exactly as configured in the Gateway setup. The main Gateway setup file is an exception: its local path is shown relative to that Gateway's instance directory in both the include and Gateway views.
 
 The version view lists the current include links and available source-prefixed semantic-version directories, such as `itrs-v1.31.0` and `acme-ops-v2.0.0-rc.1`, as well as legacy unprefixed versions. The prefix identifies the include **source**. Version columns retain the full directory name, including the source, wherever shown. Use `--all` to list each file inside those directories. In long and machine-readable version views, `TargetVersion` (`targetVersion`) identifies each current link's target version separately from the `Version` row label.
@@ -11,8 +13,9 @@ The Gateway view lists includes configured for each Gateway, ordered by priority
 With `--gateway`, optional instance names or shell-style glob patterns limit output to matching Gateways. Patterns support `*`, `?`, and character classes such as `[ab]`; quote them to prevent shell expansion. Multiple names or patterns are combined without duplicate rows. With no names, all Gateways are listed; patterns matching no Gateways produce no rows. Name filtering applies only to the Gateway view.
 
 ```shell
-geneos includes list --gateway 'prod-*'
-geneos includes list --gateway gateway-a gateway-b
+geneos includes list --prefix '*' --gateway 'prod-*'
+geneos includes list --prefix '*' --gateway gateway-a gateway-b
+geneos includes list --prefix holidays --version --all
 ```
 
 Use `--long` for version, permissions, owner, remote latency, and certificate-validity columns where available. Owner information is not currently collected. The `--format` option accepts `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`; column, table, CSV, and toolkit output use human-readable sizes, while JSON and pretty output use byte counts. CSV, toolkit, JSON, and pretty outputs always use the long columns. CSV and toolkit headings use camelCase; column and table headings use NormalCase. Headings contain no spaces.
@@ -59,6 +62,7 @@ geneos includes list [NAMES...] [flags]
   -i, --include[=true|false]      List include files by shared include files
   -l, --long[=true|false]         Long format with extra information
   -n, --no-remote[=true|false]    Exclude remote include files lookups
+      --prefix string             Select the include source prefix, or '*' for all sources (default "itrs")
       --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -v, --version[=true|false]      List include files by version
 ```

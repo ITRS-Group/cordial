@@ -1,6 +1,8 @@
 Delete unused version directories and their top-level symlinks from `gateway/includes` on the selected host. The `remove` alias has the same behaviour.
 
-With no version pattern, all unused source-prefixed and legacy semantic-version directories are removed and versions referenced by gateways are skipped. The prefix identifies the include **source**, for example `itrs` in `itrs-v1.31.0`. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match full directory names, including the source and `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
+`--prefix` selects the include **source** and defaults to `itrs`, including legacy unprefixed semantic-version directories. Use `--prefix holidays` for holiday versions, or quote `--prefix '*'` to select all sources. This source filter also applies to explicit version patterns, so a broad pattern cannot remove another source accidentally.
+
+With no version pattern, all unused versions of the selected source are removed and versions referenced by gateways are skipped. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match full directory names, including the source and `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
 
 Before removing any version, the command checks every symlink directly in the parent `gateway/includes` directory and loads gateway setups using the same loader as `list --gateway`. All links for a version are checked before any are removed. A gateway reference to even one link or directly into the version protects every link and the entire version directory. Include groups, disabled and optional includes, relative and absolute targets, link chains, directory aliases, and dangling references into the version are checked.
 
@@ -11,7 +13,8 @@ Links originating elsewhere are not removed: those are manually managed by the u
 ```shell
 geneos includes delete
 geneos includes delete 'itrs-v1.30.*'
-geneos includes delete 'itrs-v1.29.*' 'acme-v1.30.*'
+geneos includes delete --prefix holidays 'holidays-v1.30.*'
+geneos includes delete --prefix '*' 'itrs-v1.29.*' 'acme-v1.30.*'
 geneos includes delete --version 'itrs-v1.31.0-rc.*'
 geneos includes remove -V 'v1.29.*' # legacy directories
 ```

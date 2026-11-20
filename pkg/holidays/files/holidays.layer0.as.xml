@@ -1,0 +1,652 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.1-261009/gateway.xsd">
+    <!-- Full-day local-time overrides. Annual dates (DD/MM) precede dated exceptions (DD/MM/YYYY).
+See holiday-calendars-as.md for Asia excluding India coverage and source confidence.
+Confidence varies by calendar and source format; it is not a guarantee of accuracy or completeness. -->
+	<activeTimes>
+		<activeTimeGroup name="Layer 0 - Holidays">
+			<activeTimeGroup name="Layer 0 - AS - China">
+                <!-- China calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - CN SSE - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable closure notices;
+each notice's year and market scope require interpretation.
+
+Sources:
+- https://www.sse.com.cn/disclosure/dealinstruc/closed/ (Shanghai Stock Exchange closure notices)
+
+Notes:
+Timezone: Asia/Shanghai. This calendar follows holiday closure ranges, not
+additional ordinary weekends. It is not a public work calendar; government
+make-up workdays and Stock Connect sessions follow different rules. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/10/2026</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Shanghai</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - AS - Hong Kong">
+                <!-- Hong Kong calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - HK - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official annual HTML tables; human-readable dates
+and substitute-day notes require interpretation.
+
+Sources:
+- https://www.gov.hk/en/about/abouthk/holiday/2026.htm (GovHK 2026)
+- https://www.gov.hk/en/about/abouthk/holiday/2027.htm (GovHK 2027)
+
+Notes:
+Timezone: Asia/Hong_Kong. Gazetted general holidays, excluding the ordinary
+Sunday recurrence. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/07/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>13/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/07/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Hong_Kong</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - AS - Indonesia">
+                <!-- Indonesia calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - ID - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium for the official 2026 HTML announcement; Low for the
+2027 secondary HTML date table alongside the linked decree. Distinguish
+public holidays from collective leave; unverified IDX dates are excluded.
+
+Sources:
+- https://www.kemenkopmk.go.id/pemerintah-tetapkan-17-hari-libur-nasional-dan-8-hari-cuti-bersama-tahun-2026 (Kemenko PMK 2026 announcement)
+- https://www.kemenkopmk.go.id/surat-keputusan-bersama-menteri-agama-menteri-ketenagakerjaan-dan-menteri-pan-rb-tentang-hari-libur (Kemenko PMK 2027 joint ministerial decree)
+- https://publicholidays.co.id/#2027-public-holidays (2027 date table)
+- https://www.idx.co.id/id/data-pasar/kalender-bursa/ (Indonesia Stock Exchange (IDX) trading calendar)
+- https://publicholidays.co.id/ (2027 date table publisher)
+
+Notes:
+Timezone: Asia/Jakarta.
+
+The Indonesia Stock Exchange (IDX) trading calendar could not be verified.
+Neither calendar is a substitute for the IDX schedule.
+
+National public holidays only; excludes collective leave and trading closures. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/06</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/08</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/08/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Jakarta</Asia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - ID - Collective Leave">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium for the official 2026 HTML announcement; Low for the
+2027 secondary HTML date table alongside the linked decree. Collective
+leave is separate from public holidays and trading closures.
+
+Sources:
+- https://www.kemenkopmk.go.id/pemerintah-tetapkan-17-hari-libur-nasional-dan-8-hari-cuti-bersama-tahun-2026 (Kemenko PMK 2026 announcement)
+- https://www.kemenkopmk.go.id/surat-keputusan-bersama-menteri-agama-menteri-ketenagakerjaan-dan-menteri-pan-rb-tentang-hari-libur (Kemenko PMK 2027 joint ministerial decree)
+- https://publicholidays.co.id/#2027-public-holidays (2027 date table)
+- https://www.idx.co.id/id/data-pasar/kalender-bursa/ (Indonesia Stock Exchange (IDX) trading calendar)
+- https://publicholidays.co.id/ (2027 date table publisher)
+
+Notes:
+Timezone: Asia/Jakarta.
+
+The Indonesia Stock Exchange (IDX) trading calendar could not be verified.
+Neither calendar is a substitute for the IDX schedule.
+
+Collective leave (cuti bersama) is opt-in. Reference this calendar in addition
+to Holidays - ID - Public only if these leave days apply to your organisation.
+No annually recurring dates. -->
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Jakarta</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - AS - Japan">
+                <!-- Japan calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - JP - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: High - official machine-readable CSV with explicit dates;
+character encoding and published coverage still need checking.
+
+Sources:
+- https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv (Japan Cabinet Office official holiday CSV)
+
+Notes:
+Timezone: Asia/Tokyo. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/02</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/02</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/04</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/08</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/11</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/11</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/07/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/07/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/10/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Tokyo</Asia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - JP JPX Cash - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML exchange calendar;
+cash-market closures must be distinguished from other sessions.
+
+Sources:
+- https://www.jpx.co.jp/english/corporate/about-jpx/calendar/index.html (Japan Exchange Group market holidays)
+
+Notes:
+Timezone: Asia/Tokyo. All dates from Holidays - JP - Public plus the recurring
+dates in this calendar. The exchange active time includes both sets; no second
+reference is needed. Derivatives holiday and overnight sessions are out of
+scope. -->
+					<scheduledPeriod><date>02/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/12</date><override>true</override></scheduledPeriod>
+					<activeTime ref="Holidays - JP - Public"/>
+					<timezone><Asia>Tokyo</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - AS - Macao">
+                <!-- Macao calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - MO - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official annual HTML tables; public holidays and
+compensatory rest days require interpretation.
+
+Sources:
+- https://www.gov.mo/en/public-holidays/year-2026/ (Macao SAR 2026)
+- https://www.gov.mo/en/public-holidays/year-2027/ (Macao SAR 2027)
+
+Notes:
+Timezone: Asia/Macau. Includes full-day civil-service compensatory rest days.
+This is not the private-sector obligatory-holidays subset. No local equities
+calendar is provided; do not substitute HKEX without checking the market
+monitored. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/10</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/10</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/11</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>13/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Macau</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - AS - Malaysia">
+                <!-- Malaysia calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - MY Kuala Lumpur - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Low - secondary HTML date listing; the linked official PDF
+was unavailable and was not parsed. Estimated 2027 dates are excluded.
+
+Sources:
+- https://www.kabinet.gov.my/storage/2025/08/HKA-2026.pdf (Cabinet Division's 2026 schedule)
+- https://publicholidays.com.my/kuala-lumpur/ (Kuala Lumpur 2026 listing)
+- https://www.bursamalaysia.com/ (Bursa Malaysia)
+
+Notes:
+Timezone: Asia/Kuala_Lumpur. Covers federal and Federal Territory public
+holidays applicable in Kuala Lumpur, not Selangor or other Malaysian states.
+The Cabinet Division's 2026 schedule was unavailable when checked; the dated
+entries use the Kuala Lumpur 2026 listing, which links to that schedule and
+includes subsequent observances. The listing labels its 2027 dates as
+estimates; they are not included. In 2026 Thaipusam fell on Federal Territory
+Day (1 February), so the nominal date has one override and the two substitute
+dates are included.
+
+The Bursa Malaysia calendar is not included: a full-year cash-market closure
+list could not be verified. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/02</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/08</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/09</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/11/2026</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Kuala_Lumpur</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - AS - Philippines">
+                <!-- Philippines calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - PH - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Low - human-readable proclamations reproduced by LawPhil,
+not a structured official feed. Working-day exceptions and separate Eid
+proclamations require interpretation; unproclaimed dates are excluded.
+
+Sources:
+- https://lawphil.net/executive/proc/proc2025/proc_1006_2025.html (Presidential Proclamation 1006 for 2026 (LawPhil copy))
+- https://lawphil.net/executive/proc/proc2026/proc_1189_2026.html (Presidential Proclamation 1189 for Eid'l Fitr (LawPhil copy))
+- https://lawphil.net/executive/proc/proc2026/proc_1264_2026.html (Presidential Proclamation 1264 for Eid'l Adha (LawPhil copy))
+- https://lawphil.net/executive/proc/proc2026/proc_1427_2026.html (Presidential Proclamation 1427 for 2027 (LawPhil copy))
+- https://lawphil.net/statutes/repacts/ra2007/ra_9492_2007.html (Republic Act 9492)
+- https://www.pse.com.ph/ (Philippine Stock Exchange (PSE))
+
+Notes:
+Timezone: Asia/Manila. Covers nationwide regular holidays and special
+non-working days, not Manila city-only proclamations or PSE closures. EDSA
+People Power Revolution Anniversary is a special working day in both years.
+The 2027 Eid dates are not included pending separate proclamations. Holidays
+that can move to a nearby weekday under Republic Act 9492 use the dates in the
+proclamations rather than annual overrides.
+
+The Philippine Stock Exchange (PSE) calendar is not included: a full-year
+cash-market closure list could not be verified. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/11</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/08/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/08/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Manila</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - AS - Singapore">
+                <!-- Singapore calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - SG - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML calendar; Sunday observances and
+published date changes require interpretation.
+
+Sources:
+- https://www.mom.gov.sg/employment-practices/public-holidays (Ministry of Manpower public holidays)
+
+Notes:
+Timezone: Asia/Singapore. Includes the published Monday observances for a
+Sunday rest day. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/08</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/10/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Singapore</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - AS - South Korea">
+                <!-- South Korea calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - KR - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Low - official HTML regulation combined with a secondary
+HTML dated calendar. Movable holidays and substitute rules require review.
+
+Sources:
+- https://www.law.go.kr/법령/관공서의공휴일에관한규정 (Korean government public holiday regulation)
+- https://www.timeanddate.com/holidays/south-korea/2026 (dated 2026 calendar)
+
+Notes:
+Timezone: Asia/Seoul. Includes the 2026 local elections. No separate Korea
+Exchange schedule has been verified. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/03</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/06</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/07</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/08</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/10</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/10</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/10/2026</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Seoul</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - AS - Taiwan">
+                <!-- Taiwan calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-as.md. -->
+				<activeTime name="Holidays - TW Government - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: High - official government CSV calendar resources linked
+from the data catalogue. Named holidays must be separated from ordinary
+weekends, adjusted workdays and calendar metadata.
+
+Sources:
+- https://data.gov.tw/en/datasets/14718 (Directorate-General of Personnel Administration government work calendar)
+
+Notes:
+Timezone: Asia/Taipei. Includes named holidays and adjustments, not ordinary
+unnamed weekends. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Taipei</Asia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - TW TWSE - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: High - official machine-readable JSON holiday schedule;
+structured notes still need interpreting to distinguish trading closures
+from clearing and settlement-only days.
+
+Sources:
+- https://www.twse.com.tw/rwd/en/holidaySchedule/holidaySchedule?queryYear=2027&response=json (Taiwan Stock Exchange holiday schedule)
+
+Notes:
+Timezone: Asia/Taipei. February 2 and 3 are closed for trading even though
+clearing and settlement remain open. -->
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Taipei</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+		</activeTimeGroup>
+	</activeTimes>
+</gateway>

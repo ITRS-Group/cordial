@@ -1,22 +1,15 @@
 package includes
 
 import (
-	"embed"
-
 	"github.com/spf13/cobra"
 
+	includecontent "github.com/itrs-group/cordial/pkg/includes"
 	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
 var log = logger.Logger
-
-//go:embed files/*
-var IncludesFS embed.FS
-
-//go:embed files/README.md
-var includeCmdDescription string
 
 func init() {
 	cmd.Cmd.AddCommand(includesCmd)
@@ -27,7 +20,7 @@ var includesCmd = &cobra.Command{
 	Aliases:      []string{"include"},
 	GroupID:      cmd.CommandGroupSubsystems,
 	Short:        "Manage includes",
-	Long:         includeCmdDescription,
+	Long:         includecontent.Documentation,
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		cmd.CmdGlobal:       "false",

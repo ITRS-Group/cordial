@@ -2725,6 +2725,19 @@ The prefix is the include **source**, independently of the deployment's site. Us
 | `config.layer2.programs-and-logs.xml` | Gateway setup template for Layer 2 Application Baseline configuration. |
 | `config.layer3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Layer 3 Geneos. |
 
+Holiday calendars are a separate optional corpus under the `holidays` source,
+distributed as `geneos-holidays-include-v<version>.tar.gz`. They are not embedded
+in the `geneos` executable or installed by `geneos init` or a no-argument
+`geneos includes install`. Install the archive explicitly:
+
+```shell
+geneos include install /path/to/geneos-holidays-include-v1.31.0.tar.gz
+```
+
+Its documentation is in the archive's `docs/README.md` and regional pages
+(source tree: `pkg/holidays/`). Installing it makes calendars available but
+does not add them to Gateway setups or enable holiday scheduling.
+
 Choose a site name representing the company, customer, or client using the Geneos deployment, rather than a region or environment. For example, an installation with `geneos config set site=acme`, ITRS includes and an additional `acme` source has files organized like this:
 
 ```text
@@ -2778,6 +2791,16 @@ geneos includes install /path/to/geneos-includes-v1.31.0.tar.gz
 
 Add `--update` to replace existing top-level include paths with links to the installed version. Obsolete-link cleanup is restricted to that source, and updates refuse to replace a link owned by another source.
 
+`includes update`, `list` and `delete` accept `--prefix`, defaulting to `itrs`.
+For example, `geneos include update --prefix holidays` selects the installed
+holiday version matching the running release; add `--version v1.31.0` to
+choose another version. Full source-version names still work with `update
+--version` without a prefix flag. List and delete accept `--prefix '*'` to
+include all sources; use it for the previous complete inventory or cross-source
+cleanup. Install/extract infer the source from an archive unless an explicit
+`--prefix` is supplied to require a matching source. No-argument installation
+supports only the embedded ITRS source.
+
 > [!IMPORTANT]
 > Include and site filenames have changed from `levelN` to `layerN`, and Gateway types, groups, environments and XPath targets now use `Layer N` names. The former `itrs.level1.infrastructure.xml` and `itrs.level2.application-core.xml` are now `itrs.layer1.server-health.xml` and `itrs.layer2.programs-and-logs.xml`. Back up your configuration and install without `--update`; copy or merge site overrides into the new site files without overwriting existing settings. Update Gateway setups, SANs, customised profiles and any other references before running `geneos includes update`. Existing configurations are not renamed automatically.
 
@@ -2792,6 +2815,11 @@ cd geneos-includes-v1.31.0
 ```
 
 The script installs into a fresh version directory, keeps existing config templates, and creates only missing top-level links. It uses `gateway/local/local-config.*.xml` and does not read the `geneos` site setting; use `geneos includes install` for a site name such as `acme`. It is intended for initial installation and does not replace the `geneos includes install` command's archive validation, backups, or Gateway-reference checks. If the version is already present, or you need to update live links, use `geneos includes install --update` or inspect and back up the affected files first.
+
+The holiday archive bundles the same source-aware shell installer. Archives
+without a `config/` directory, including holidays, do not create or migrate site
+configuration. Each archive installs only its own source and preserves existing
+top-level files and links.
 
 ## How-To
 
@@ -2895,7 +2923,9 @@ For a broken link, inspect its target with `readlink` and confirm there is exact
 
 Delete unused version directories and their top-level symlinks from `gateway/includes` on the selected host. The `remove` alias has the same behaviour.
 
-With no version pattern, all unused source-prefixed and legacy semantic-version directories are removed and versions referenced by gateways are skipped. The prefix identifies the include **source**, for example `itrs` in `itrs-v1.31.0`. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match full directory names, including the source and `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
+`--prefix` selects the include **source** and defaults to `itrs`, including legacy unprefixed semantic-version directories. Use `--prefix holidays` for holiday versions, or quote `--prefix '*'` to select all sources. This source filter also applies to explicit version patterns, so a broad pattern cannot remove another source accidentally.
+
+With no version pattern, all unused versions of the selected source are removed and versions referenced by gateways are skipped. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match full directory names, including the source and `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
 
 Before removing any version, the command checks every symlink directly in the parent `gateway/includes` directory and loads gateway setups using the same loader as `list --gateway`. All links for a version are checked before any are removed. A gateway reference to even one link or directly into the version protects every link and the entire version directory. Include groups, disabled and optional includes, relative and absolute targets, link chains, directory aliases, and dangling references into the version are checked.
 
@@ -2906,7 +2936,8 @@ Links originating elsewhere are not removed: those are manually managed by the u
 ```shell
 geneos includes delete
 geneos includes delete 'itrs-v1.30.*'
-geneos includes delete 'itrs-v1.29.*' 'acme-v1.30.*'
+geneos includes delete --prefix holidays 'holidays-v1.30.*'
+geneos includes delete --prefix '*' 'itrs-v1.29.*' 'acme-v1.30.*'
 geneos includes delete --version 'itrs-v1.31.0-rc.*'
 geneos includes remove -V 'v1.29.*' # legacy directories
 ```
@@ -2925,6 +2956,7 @@ geneos includes delete [VERSION_PATTERN...] [flags]
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --prefix string             Select the include source prefix, or '*' for all sources (default "itrs")
       --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -V, --version string            Select include versions using a shell-style pattern
 ```
@@ -2990,11 +3022,28 @@ geneos includes fix [NAMES...] [flags]
 
 Install include files embedded in the `geneos` executable or from a local `.tar.gz` archive to the selected host. With no archive argument, the embedded files and configuration templates are installed. `extract` is an alias for `install` and accepts the same arguments and options.
 
+`--prefix` defaults to `itrs` for embedded installation. Archives identify their own source when the flag is omitted, preserving existing archive installation commands. Supply `--prefix holidays` to require a holiday archive; a mismatched source fails before any destination files or links change. Only ITRS includes are embedded, so selecting another prefix without an archive is an error. The flag selects or checks the source; it does not rename files or download archives.
+
 The archive must contain a single top-level directory named `geneos-includes-<version>` (for example `geneos-includes-v1.31.0`). Inside it, one directory named `<source>-<version>` (for example `itrs-v1.31.0` or `acme-ops-v1.31.0-rc.1`) contains `<source>.*.xml` functional include files. The prefix identifies the include **source**, independently of the deployment's site. Source names use letters, digits, dots, underscores or hyphens and begin with a letter or digit. The suffix is a `v`-prefixed semantic version, including optional prerelease and build metadata. Legacy unprefixed version directories remain supported as the `itrs` source.
 
 Unversioned `config.*.xml` templates belong in a separate `config/` directory; `config` is reserved and cannot be a functional include source. The standalone `scripts/install-includes.sh` and `docs/` Markdown/PDF documentation may also be included. The wrapper's version must match the semantic-version suffix of the contents directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins. Installation strips only the wrapper, preserving the full source-prefixed directory name.
 
 Managed includes are installed under `gateway/includes/<source>-<version>`, including when that directory already exists. Embedded includes use the `itrs` source. Changed files are backed up to timestamped `.bak` files; unchanged files are left in place.
+
+The optional `geneos-holidays-include-v<version>.tar.gz` archive uses the same
+`geneos-includes-<version>` wrapper, with `holidays-<version>/holidays.*.xml`
+contents and separate holiday documentation. Install it explicitly with
+`geneos include install ARCHIVE`; holidays are not embedded in the executable
+or installed by initialization. Use `includes update --prefix holidays` for
+the running release version, or add `--version v<version>` for another
+installed holiday version.
+
+Both standard and holiday archives include `scripts/install-includes.sh` for
+installation without `geneos`. It creates a new source-version directory and
+only missing links; it refuses an existing version. It processes site
+configuration only when the extracted archive has a `config/` directory, so
+holiday installation does not create or migrate site templates. Run it from
+the extracted archive wrapper with the Geneos home as its argument.
 
 Configuration templates are installed under `gateway/<site>/<site>-config.*.xml`, next to `gateway/includes`. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment; for example, use `geneos config set site=acme` for Acme Corp. The `-config` infix distinguishes local overrides from functional includes when source and site have the same name. The archive retains its original `config/` and `config.*.xml` names. Templates from different sources share this site directory; use distinct template basenames to avoid sharing a destination.
 
@@ -3026,6 +3075,8 @@ geneos includes install
 geneos includes install --update
 geneos includes install geneos-includes-v1.31.0.tar.gz
 geneos includes install --update geneos-includes-v1.31.0.tar.gz
+geneos include install geneos-holidays-include-v1.31.0.tar.gz
+geneos include install --prefix holidays --update geneos-holidays-include-v1.31.0.tar.gz
 ```
 
 The archive is read locally; the global `--host` (`-H`) option selects the installation destination. Completed filesystem operations are not rolled back if a later operation fails.
@@ -3044,6 +3095,7 @@ geneos includes install [ARCHIVE.tar.gz] [flags]
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --prefix string             Require this include source prefix (archives otherwise select their own source) (default "itrs")
       --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -U, --update[=true|false]       Update version links for existing include files
 ```
@@ -3060,6 +3112,8 @@ geneos includes install [ARCHIVE.tar.gz] [flags]
 
 List include files found in the selected Geneos installation and include references used by its Gateways. The default view groups shared and versioned includes by file name. Use one of `--include`, `--version`, or `--gateway` to select a view.
 
+`--prefix` selects the include source and defaults to `itrs`. Use `--prefix holidays` for holiday includes or quote `--prefix '*'` for the previous complete inventory, including site templates, unprefixed local files and remote references. The filter applies to every view and to `--all`. Source ownership is taken from the version directory when available (legacy semantic-version directories belong to ITRS); otherwise the file basename must start with `<prefix>.`. Gateway usage and safety checks still inspect all sources.
+
 The include view reports copies, Gateway usage, status flags, modification time, size, and location. Shared and versioned paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files, whose locations are shown exactly as configured in the Gateway setup. The main Gateway setup file is an exception: its local path is shown relative to that Gateway's instance directory in both the include and Gateway views.
 
 The version view lists the current include links and available source-prefixed semantic-version directories, such as `itrs-v1.31.0` and `acme-ops-v2.0.0-rc.1`, as well as legacy unprefixed versions. The prefix identifies the include **source**. Version columns retain the full directory name, including the source, wherever shown. Use `--all` to list each file inside those directories. In long and machine-readable version views, `TargetVersion` (`targetVersion`) identifies each current link's target version separately from the `Version` row label.
@@ -3069,8 +3123,9 @@ The Gateway view lists includes configured for each Gateway, ordered by priority
 With `--gateway`, optional instance names or shell-style glob patterns limit output to matching Gateways. Patterns support `*`, `?`, and character classes such as `[ab]`; quote them to prevent shell expansion. Multiple names or patterns are combined without duplicate rows. With no names, all Gateways are listed; patterns matching no Gateways produce no rows. Name filtering applies only to the Gateway view.
 
 ```shell
-geneos includes list --gateway 'prod-*'
-geneos includes list --gateway gateway-a gateway-b
+geneos includes list --prefix '*' --gateway 'prod-*'
+geneos includes list --prefix '*' --gateway gateway-a gateway-b
+geneos includes list --prefix holidays --version --all
 ```
 
 Use `--long` for version, permissions, owner, remote latency, and certificate-validity columns where available. Owner information is not currently collected. The `--format` option accepts `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`; column, table, CSV, and toolkit output use human-readable sizes, while JSON and pretty output use byte counts. CSV, toolkit, JSON, and pretty outputs always use the long columns. CSV and toolkit headings use camelCase; column and table headings use NormalCase. Headings contain no spaces.
@@ -3117,6 +3172,7 @@ geneos includes list [NAMES...] [flags]
   -i, --include[=true|false]      List include files by shared include files
   -l, --long[=true|false]         Long format with extra information
   -n, --no-remote[=true|false]    Exclude remote include files lookups
+      --prefix string             Select the include source prefix, or '*' for all sources (default "itrs")
       --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -v, --version[=true|false]      List include files by version
 ```
@@ -3133,7 +3189,16 @@ geneos includes list [NAMES...] [flags]
 
 Update the top-level include symlinks to point to files in a versioned include directory on the selected host.
 
-By default, the links are updated to `itrs-<version>` embedded in the running `geneos` executable. Use `--version` to select a full directory name already present under `gateway/includes`, such as `itrs-v1.31.0` or `acme-ops-v2.0.0-rc.1`. The prefix is the include **source**; its final version suffix is a `v`-prefixed semantic version, including optional prerelease and build metadata. Legacy unprefixed semantic-version directories remain selectable and are treated as the `itrs` source. If the selected directory is missing, the command returns an error; only the current source-prefixed embedded version is extracted automatically when needed.
+By default, the links are updated to `itrs-<version>` embedded in the running `geneos` executable. Use `--prefix` to select another include **source**, such as `holidays`. Without `--version`, the selected directory is `<prefix>-<running-geneos-version>`, not the newest installed version. Other sources must already be installed; only the current embedded ITRS version is extracted automatically when needed.
+
+Use `--prefix holidays --version v1.31.0` to select `holidays-v1.31.0`. A version may omit its leading `v`. Full source-version directory names, such as `holidays-v1.31.0` or `acme-ops-v2.0.0-rc.1`, also remain supported without `--prefix`; an explicitly supplied conflicting prefix is an error. The final version suffix is a `v`-prefixed semantic version, including optional prerelease and build metadata. Without an explicit prefix, bare semantic versions select legacy unprefixed ITRS directories as before; with `--prefix itrs`, they select `itrs-v<version>`. A missing selected directory is an error.
+
+```shell
+geneos include update
+geneos include update --prefix holidays
+geneos include update --prefix holidays --version v1.31.0
+geneos include update --version holidays-v1.31.0
+```
 
 Links that already point to the selected version are left unchanged. If a target path already exists with a different link or file, it is removed before creating the new symlink, except that a link owned by another source blocks the update before any links change.
 
@@ -3155,8 +3220,9 @@ geneos includes update [flags]
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --prefix string             Select the include source prefix (default "itrs")
       --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
-  -V, --version string            Specify full source-version directory to update includes to
+  -V, --version string            Select a semantic version or full source-version directory
 ```
 
 ## SEE ALSO

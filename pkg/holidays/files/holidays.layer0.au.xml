@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.1-261009/gateway.xsd">
+    <!-- Full-day local-time overrides. Annual dates (DD/MM) precede dated exceptions (DD/MM/YYYY).
+See holiday-calendars-au.md for Australia coverage and source confidence.
+Confidence varies by calendar and source format; it is not a guarantee of accuracy or completeness. -->
+	<activeTimes>
+		<activeTimeGroup name="Layer 0 - Holidays">
+			<activeTimeGroup name="Layer 0 - AU - Australia">
+                <!-- Australia calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-au.md. -->
+				<activeTime name="Holidays - AU ACT - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML calendar; human-readable dates,
+regional exceptions and bank-holiday exclusions require interpretation.
+
+Sources:
+- https://www.act.gov.au/living-in-the-act/public-holidays-school-terms-and-daylight-saving (ACT Government)
+
+Notes:
+Timezone: Australia/Sydney. The August bank holiday is not included. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>13/03/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/06/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/10/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/03/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/03/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/03/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/04/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/04/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/05/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/06/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/10/2029</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Sydney</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU NSW - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML calendar; human-readable dates and
+additional-versus-substitute holiday rules require interpretation.
+
+Sources:
+- https://www.nsw.gov.au/about-nsw/public-holidays (NSW Government)
+
+Notes:
+Timezone: Australia/Sydney. The August bank holiday is not a public holiday
+and is not included. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Sydney</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU NT Darwin - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Low - secondary HTML calendar used because the official
+source was inaccessible. Verify Darwin-specific dates against the authority.
+
+Sources:
+- https://nt.gov.au/nt-public-holidays (Northern Territory Government)
+- https://publicholidays.com.au/northern-territory/ (published NT calendar mirror)
+
+Notes:
+Timezone: Australia/Darwin. The official page was inaccessible during
+collection; use the published NT calendar mirror. Includes Darwin Show Day,
+not other local show holidays. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/07/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/07/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/08/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/06/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/07/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/08/2028</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Darwin</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU QLD Brisbane - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML calendar; statewide and Brisbane-only
+show holidays must be distinguished.
+
+Sources:
+- https://www.qld.gov.au/recreation/travel/holidays/public (Queensland Government)
+
+Notes:
+Timezone: Australia/Brisbane. Includes the Brisbane show holiday, not other
+local show dates. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/08/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/08/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/10/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/03/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/03/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/04/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/04/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/05/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/08/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/10/2029</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Brisbane</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU SA - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML calendar; full-day holidays must be
+distinguished from partial-day holidays and observance rules.
+
+Sources:
+- https://www.safework.sa.gov.au/resources/public-holidays (SafeWork SA)
+
+Notes:
+Timezone: Australia/Adelaide. Christmas Eve and New Year's Eve are part-day
+holidays and not encoded. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>13/03/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/06/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/10/2028</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Adelaide</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU TAS Hobart - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Low - official HTML legislation plus a secondary HTML date
+table; the official dated calendar was inaccessible. Regional and
+restricted-holiday rules require additional review.
+
+Sources:
+- https://www.legislation.tas.gov.au/view/whole/html/inforce/current/act-2000-096 (Tasmanian Statutory Holidays Act)
+- https://publicholidays.com.au/tasmania/ (published Tasmanian calendar)
+- https://worksafe.tas.gov.au/topics/laws-and-compliance/public-holidays (WorkSafe Tasmania calendar)
+
+Notes:
+Timezone: Australia/Hobart. The WorkSafe Tasmania calendar was inaccessible
+during collection. Includes Royal Hobart Regatta and Royal Hobart Show;
+excludes the restricted Easter Tuesday holiday and regional holidays outside
+Hobart. The Act adds Easter Sunday from 2027. New Year's Day and Boxing Day
+are replaced by weekday observances when they fall on a weekend. -->
+					<scheduledPeriod><date>25/04</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Hobart</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU VIC Melbourne - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Low - secondary HTML calendar used because the official
+pages were inaccessible. Unverified AFL and regional dates are excluded.
+
+Sources:
+- https://business.vic.gov.au/business-information/public-holidays/victorian-public-holidays-2026 (Business Victoria 2026)
+- https://business.vic.gov.au/business-information/public-holidays/victorian-public-holidays-2027 (Business Victoria 2027)
+- https://publicholidays.com.au/victoria/ (published Victorian calendar mirror)
+
+Notes:
+Timezone: Australia/Melbourne. The official pages were inaccessible during
+collection; use the published Victorian calendar mirror. Melbourne Cup Day
+applies to Melbourne; regional alternatives and the AFL Grand Final holiday
+(not verified) are not encoded. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Melbourne</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU WA Perth - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML calendar; Perth and regional
+observances must be distinguished.
+
+Sources:
+- https://www.wa.gov.au/service/employment/workplace-arrangements/public-holidays-western-australia (Western Australian Government)
+
+Notes:
+Timezone: Australia/Perth. Regional variations are not included. The
+provisional Show Days (September 25, 2028 and September 24, 2029) are not
+encoded. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>13/03/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/06/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>13/11/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/03/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/03/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/03/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/04/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/04/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/06/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/11/2029</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Perth</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU ASX 24 - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable exchange schedule;
+both day and night sessions must be closed for a full-day override.
+
+Sources:
+- https://www.asx.com.au/markets/market-resources/asx-24-trading-calendar (ASX 24 trading calendar)
+
+Notes:
+Timezone: Australia/Sydney. Includes dates on which both day and night
+sessions are closed. For example, Australia Day is not encoded because the
+night session is open. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Sydney</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU ASX Cash - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable exchange calendar;
+cash-market holidays differ from public and settlement calendars.
+
+Sources:
+- https://www.asx.com.au/markets/market-resources/trading-hours-calendar/cash-market-trading-hours/trading-calendar (ASX Trade cash market calendar)
+
+Notes:
+Timezone: Australia/Sydney. ASX Trade is open on NSW's additional Anzac Day
+holiday in 2027. Do not use this calendar for futures or settlement. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Sydney</Australia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - AU TMX Australia - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML trading-hours calendar;
+venue-specific full-day and partial-day closures require interpretation.
+
+Sources:
+- https://www.tmxaustralia.com/about/hours (TMX Australia hours and holidays)
+
+Notes:
+Timezone: Australia/Sydney. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Australia>Sydney</Australia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+		</activeTimeGroup>
+	</activeTimes>
+</gateway>

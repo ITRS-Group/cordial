@@ -52,6 +52,7 @@ var includesListCmdByInclude bool
 
 func init() {
 	includesCmd.AddCommand(includeListCmd)
+	includeListCmd.Flags().String("prefix", "itrs", "Select the include source prefix, or '*' for all sources")
 
 	includeListCmd.Flags().BoolVarP(&includesListCmdByGateway, "gateway", "g", false, "List include files by gateway usage")
 	includeListCmd.Flags().BoolVarP(&includesListCmdByVersion, "version", "v", false, "List include files by version")
@@ -80,6 +81,10 @@ var includeListCmd = &cobra.Command{
 		geneos.CmdAuditActions:         "never",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
+		prefix, err := commandIncludePrefix(command, true)
+		if err != nil {
+			return err
+		}
 		_, names, _, err := genecmd.FetchArgs(command)
 		if err != nil {
 			return err
@@ -91,7 +96,7 @@ var includeListCmd = &cobra.Command{
 			includesListCmdByInclude = true
 		}
 
-		return listIncludes(geneos.GetHost(genecmd.Hostname), names...)
+		return listIncludesForPrefix(geneos.GetHost(genecmd.Hostname), prefix, names...)
 	},
 }
 
@@ -157,6 +162,10 @@ var gatewayColumnsMachine = []string{"ID", "Gateway", "File", "Priority", "statu
 // and can optionally exclude remote include files if the --no-remote
 // flag is set.
 func listIncludes(h *geneos.Host, names ...string) (err error) {
+	return listIncludesForPrefix(h, "", names...)
+}
+
+func listIncludesForPrefix(h *geneos.Host, prefix string, names ...string) (err error) {
 	root := h.PathTo("gateway")
 	geneosHome := h.PathTo()
 	// Gateway instances share a parent directory, so any instance home gives the same relative paths.
@@ -170,12 +179,16 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 	}
 
 	if includesListCmdByVersion {
+		versionDirs = slices.DeleteFunc(versionDirs, func(entry fs.DirEntry) bool {
+			source, _, _ := parseIncludeVersion(entry.Name())
+			return prefix != "" && source != prefix
+		})
 		resps := responses.GeneralResponses{}
 
 		for _, v := range versionedDirs {
 			vinc := versionedIncludes
 			vinc = slices.DeleteFunc(vinc, func(e includeFile) bool {
-				return e.Version == ""
+				return e.Version == "" || !includeMatchesPrefix(h, e, prefix)
 			})
 			d := h.Join(root, v)
 			fi, err := h.Stat(d)
@@ -352,6 +365,9 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 		// paths that have that basename
 		basenameMap := make(map[string][]string)
 		for _, include := range includesByPath {
+			if !includeMatchesPrefix(h, include, prefix) {
+				continue
+			}
 			base := h.Base(include.Path)
 			if _, ok := basenameMap[base]; !ok {
 				basenameMap[base] = []string{}
@@ -380,6 +396,9 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 
 		resps := responses.GeneralResponses{}
 		for path, inc := range includesByPath {
+			if !includeMatchesPrefix(h, inc, prefix) {
+				continue
+			}
 			if inc.GatewayLocal && !includesListCmdAll {
 				continue
 			}
@@ -461,6 +480,9 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 		for gwname, si := range gatewayIncludes {
 			for _, p := range si {
 				var resp *responses.General
+				if !includeMatchesPrefix(h, p.includeFile, prefix) {
+					continue
+				}
 				if p.GatewayLocal && !includesListCmdAll {
 					continue
 				}
@@ -495,6 +517,16 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 		return formatIncludeResponses(os.Stdout, resps, columns)
 	}
 	return nil
+}
+
+func includeMatchesPrefix(h *geneos.Host, include includeFile, prefix string) bool {
+	if prefix == "" {
+		return true
+	}
+	if source, _, err := parseIncludeVersion(include.Version); err == nil {
+		return source == prefix
+	}
+	return strings.HasPrefix(h.Base(include.Path), prefix+".")
 }
 
 func includeListLocation(h *geneos.Host, gatewayWorkingDir, geneosHome, location string, include includeFile) (string, error) {

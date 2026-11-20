@@ -9,7 +9,7 @@ GENERATED_DOC_DIRS = tools/geneos/docs gdna/docs tools/dv2email/docs tools/ims-g
 	integrations/servicenow/docs integrations/servicenow2/docs integrations/pagerduty/docs
 export DOCKER_BUILDKIT = 1
 
-.PHONY: all release base test-images clean build docs gdna includes check-version check-cross check-examples
+.PHONY: all release base test-images clean build docs gdna includes holidays check-version check-cross check-examples
 
 all: release gdna
 
@@ -44,6 +44,7 @@ release: check-version docs
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/geneos-includes-$(VERSION).tar.gz release-$(VERSION)/
+	docker cp cordial-build-$(VERSION):/geneos-holidays-include-$(VERSION).tar.gz release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/. release-$(VERSION)/
 	-docker rm cordial-docs-$(VERSION)
@@ -60,7 +61,7 @@ release: check-version docs
 	for file in release-$(VERSION)/docs/gdna/*.md release-$(VERSION)/docs/gdna/*.pdf; do \
 		case "$${file##*/}" in gdna-[a-z]*.md|gdna-[a-z]*.pdf) ;; *) rm -f "$$file" ;; esac; \
 	done
-	cd release-$(VERSION) && $(SHA256SUM) cordial-$(VERSION).tar.gz geneos-includes-$(VERSION).tar.gz > SHA256SUMS
+	cd release-$(VERSION) && $(SHA256SUM) cordial-$(VERSION).tar.gz geneos-includes-$(VERSION).tar.gz geneos-holidays-include-$(VERSION).tar.gz > SHA256SUMS
 
 includes:
 	docker build --tag geneos-includes:$(VERSION) --target geneos-includes .
@@ -69,6 +70,14 @@ includes:
 	docker create --name geneos-includes-$(VERSION) geneos-includes:$(VERSION)
 	docker cp geneos-includes-$(VERSION):/geneos-includes-$(VERSION).tar.gz release-$(VERSION)/
 	docker rm geneos-includes-$(VERSION)
+
+holidays:
+	docker build --tag geneos-holidays-include:$(VERSION) --target geneos-holidays-include .
+	mkdir -p release-$(VERSION)/
+	-docker rm geneos-holidays-include-$(VERSION)
+	docker create --name geneos-holidays-include-$(VERSION) geneos-holidays-include:$(VERSION)
+	docker cp geneos-holidays-include-$(VERSION):/geneos-holidays-include-$(VERSION).tar.gz release-$(VERSION)/
+	docker rm geneos-holidays-include-$(VERSION)
 
 build: check-version
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
@@ -95,5 +104,5 @@ docs:
 	docker build --tag cordial-docs:$(VERSION) --target cordial-docs .
 
 clean:
-	-docker rm cordial-build-$(VERSION) cordial-docs-$(VERSION) geneos-includes-$(VERSION)
-	-docker image rm cordial-build:$(VERSION) cordial-docs:$(VERSION) geneos-includes:$(VERSION)
+	-docker rm cordial-build-$(VERSION) cordial-docs-$(VERSION) geneos-includes-$(VERSION) geneos-holidays-include-$(VERSION)
+	-docker image rm cordial-build:$(VERSION) cordial-docs:$(VERSION) geneos-includes:$(VERSION) geneos-holidays-include:$(VERSION)
