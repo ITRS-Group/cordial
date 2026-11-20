@@ -2,11 +2,13 @@
 
 The `rebuild` command will rebuild all matching instances whose TYPE supports templates for configuration file depending on the `config.rebuild` setting for each instance.
 
-The values for the `config.rebuild` option are: `never`, `initial` and `always`. The default value depends on the TYPE; For Gateways it is `initial` and for SANs and Floating Netprobes it is `always`.
+The values for the `config.rebuild` option are: `never`, `initial` and `always`. Gateways default to `initial`. Profiles, SANs, and Floating Netprobes default to `always`.
 
 You can force a rebuild for an instance that has the `config.rebuild` set to `initial` by using the `--force`/`-F` option. Instances with a `never` setting are never rebuilt.
 
 When rebuilding a profile, `--force` also reloads its members after a supported rebuild even if the generated configuration is unchanged. It does not override `config.rebuild=never`.
+
+A profile rebuild reads `config.profiles` when set. An explicit `--profiles FILE` overrides it for that command without changing the saved path. A profile with `config.rebuild=never` is not reapplied, including on redeploy; this does not change the rebuild policies of its members when they are operated on independently.
 
 Profile rebuilds report the actions taken for each member, including configuration writes, rebuilds, unchanged or skipped rebuilds, and reload results.
 
