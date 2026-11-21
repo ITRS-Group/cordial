@@ -1234,7 +1234,7 @@ If there are no instances selected then the archive is named either simple `gene
 
 Instances matching across multiple hosts are not supported, and this returns an error. If the instance (or all matching instances) are on the same remote host then these are all saved and the default filename will include the host label (the `geneos host` name).
 
-To include the component shared directory/directories, use the `--shared` option.
+To include the component shared directory/directories, use the `--shared` option. For Gateways this includes the configured site directory `gateway/<site>`, or `gateway/local` when no site is configured.
 
 Shared-directory symlinks, including Gateway include links, are archived as links without following them. Targets must remain inside the Geneos installation; external targets cause an error. Absolute targets inside the installation are saved as relative targets so the archive can be restored under a different root. Internal dangling links are preserved.
 
@@ -2979,7 +2979,7 @@ geneos includes delete [VERSION_PATTERN...] [flags]
 
 Repair broken local include references, and update references to the old `config` directory to site files, in gateway setup files on the selected host. With no names, all gateways are checked. Optional instance names and shell-style glob patterns select gateways just as for `includes list --gateway`; quote patterns to prevent shell expansion. Only matching gateways are changed, but valid include references from all gateways remain available as repair candidates.
 
-Only references with exactly one valid same-basename replacement are changed. HTTP and HTTPS locations, valid files, unmatched names, and ambiguous matches are left unchanged. Candidates are installed shared and versioned includes and valid include references from gateway setups. Symlinks and paths resolving to the same file count as one candidate. Multiple distinct versions of a file make the match ambiguous.
+Only references with exactly one valid same-basename replacement are changed. HTTP and HTTPS locations, valid files, unmatched names, and ambiguous matches are left unchanged. Candidates are installed shared and versioned includes and valid include references from gateway setups. A top-level active link in `gateway/includes` is preferred over archived version directories. Without an active link, multiple distinct versions of a file make the match ambiguous. Symlinks and paths resolving to the same file count as one candidate.
 
 References to files under `gateway/includes/config` are also changed to the corresponding site file `gateway/<site>/<site>-config.*` (`config.*` gains a `<site>-` prefix; other names and subdirectories are unchanged) but only if that file exists with exactly the same content as the old one. The previous `gateway/<site>/<site>.*` naming can be migrated to `<site>-config.*` on the same condition. Changed or missing site files leave the reference as it is.
 
@@ -3287,7 +3287,14 @@ PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always prot
 
 Use `geneos init --restore PATH [DIRECTORY]` (`-R`) to initialise the installation and restore instances and shared files from a `geneos backup` archive. By default, `init` also installs the releases needed by the restored component types. Use `--archive`/`-A` to supply local release archives, or add `--no-install`/`-X` to restore without installing releases.
 
+Use `--start` to start instances successfully restored from the archive. `--log`/`-l` implies `--start` for restored instances and follows their primary and console logs. Profile members are started during profile initialization as before, and `--log` follows all requested profile members after all profiles have been deployed.
+
+> [!WARNING]
+> Set the site to the same name as the source installation, for example with `geneos init --site acme --restore PATH`. If the site differs, the source site directory in the backup is not restored, and bundled includes create configuration files for the destination site instead. Restored Gateway setups may still reference the source site files. If neither installation has a site set, both use `local`.
+
 After archive extraction, missing bundled templates and include files are populated before restored instances are rebuilt. Files from the backup take precedence: existing templates, restored shared configuration files, include files and include links are kept, including with `--force`. Initialization only fills missing files and links; it does not upgrade restored includes to the bundled version.
+
+If the destination `GENEOS_HOME` differs from the source, restored Gateway setups may contain absolute include paths pointing to the old installation. Consider running `geneos includes fix --dry-run` and reviewing its proposed changes before running `geneos includes fix`. This is not automatic because changes should be carefully considered and reviewed. The command only repairs broken references with a unique matching replacement; valid paths, including paths still pointing to the source installation, are left unchanged.
 
 A backup file will not contain a TLS root or signing certificate and private keys. These must be supplied explicitly using the `--signing-bundle` option (and `--signing-bundle-password` if applicable). Use the `geneos tls export` command to export the necessary certificates and keys when creating a backup.
 
@@ -3338,6 +3345,7 @@ geneos init [PROFILE] [flags] [DIRECTORY]
   -R, --restore PATH                     Restore from backup file PATH
   -X, --no-install[=true|false]          Don't install any releases after restore
   -n, --name string                      Override default Gateway, licence daemon and Webserver instance names for the all profile
+      --start[=true|false]               Start restored instances
   -M, --minimal[=true|false]             use a minimal Netprobe release
   -i, --include PRIORITY:[PATH|URL]      An include file in the format PRIORITY:[PATH|URL]
                                          (Repeat as required, gateway only)
@@ -5123,6 +5131,8 @@ If an instance name is given in the format `DEST=SRC` then instances in the arch
 Existing instances will not be overwritten, similarly for shared directories. It is an error if an instance named on the command line is not in the archive, but the other instances that are are still restored.
 
 With `--shared`, symlinks in shared directories are restored as links, including dangling links whose targets remain inside the installation. Existing files and links are kept. Link targets that escape the installation and archive entries that write through symlinked directories are rejected. `geneos init --restore` uses the same checks and preserves restored include links when filling missing bundled files.
+
+Gateway site files are restored from the directory matching the currently configured site, or `gateway/local` when no site is configured. Set the same site as the backup before restoring, including when using `geneos init --restore`.
 
 The command accepts a combination of filenames and instance name patterns, with optional renaming, and distinguishes them by validating the arguments. Any arguments that are not valid instance names (or wildcard or rename patterns) are treated as archive files. In case your archive file matches a valid instance name you should either use an absolute path to the file or a `./` prefix.
 

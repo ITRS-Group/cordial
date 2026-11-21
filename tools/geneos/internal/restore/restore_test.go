@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -403,6 +404,41 @@ func TestRestoreFirstEntryWithNoSize(t *testing.T) {
 	}
 	if !strings.Contains(progress.String(), "licd zero 4 files") {
 		t.Errorf("progress = %q, want 4 files restored", progress.String())
+	}
+}
+
+func TestRestoreAfterRestoreSkipsExistingAndListings(t *testing.T) {
+	root := newTestRoot(t)
+	archive := writeArchive(t, "backup.tar.gz", "gzip", licdEntries)
+	var restored []string
+	afterRestore := restore.AfterRestore(func(i geneos.Instance) {
+		restored = append(restored, i.Type().String()+":"+i.Name())
+	})
+
+	if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Component(&licd.Component), afterRestore); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(restored, []string{"licd:restored"}) {
+		t.Fatalf("restored callbacks = %q", restored)
+	}
+
+	restored = nil
+	if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Component(&licd.Component), afterRestore); err != nil {
+		t.Fatal(err)
+	}
+	if len(restored) != 0 {
+		t.Fatalf("callback ran for an existing instance: %q", restored)
+	}
+
+	if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Component(&licd.Component), restore.List(true), afterRestore); err != nil {
+		t.Fatal(err)
+	}
+	if len(restored) != 0 {
+		t.Fatalf("callback ran while listing: %q", restored)
+	}
+
+	if _, err := os.Stat(filepath.Join(root, "licd", "licds", "restored")); err != nil {
+		t.Fatal(err)
 	}
 }
 

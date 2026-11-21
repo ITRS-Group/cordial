@@ -40,6 +40,8 @@ PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always prot
 
 Use `geneos init --restore PATH [DIRECTORY]` (`-R`) to initialise the installation and restore instances and shared files from a `geneos backup` archive. By default, `init` also installs the releases needed by the restored component types. Use `--archive`/`-A` to supply local release archives, or add `--no-install`/`-X` to restore without installing releases.
 
+Use `--start` to start instances successfully restored from the archive. `--log`/`-l` implies `--start` for restored instances and follows their primary and console logs. Profile members are started during profile initialization as before, and `--log` follows all requested profile members after all profiles have been deployed.
+
 > [!WARNING]
 > Set the site to the same name as the source installation, for example with `geneos init --site acme --restore PATH`. If the site differs, the source site directory in the backup is not restored, and bundled includes create configuration files for the destination site instead. Restored Gateway setups may still reference the source site files. If neither installation has a site set, both use `local`.
 

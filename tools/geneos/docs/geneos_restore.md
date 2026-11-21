@@ -14,6 +14,8 @@ Existing instances will not be overwritten, similarly for shared directories. It
 
 With `--shared`, symlinks in shared directories are restored as links, including dangling links whose targets remain inside the installation. Existing files and links are kept. Link targets that escape the installation and archive entries that write through symlinked directories are rejected. `geneos init --restore` uses the same checks and preserves restored include links when filling missing bundled files.
 
+Gateway site files are restored from the directory matching the currently configured site, or `gateway/local` when no site is configured. Set the same site as the backup before restoring, including when using `geneos init --restore`.
+
 The command accepts a combination of filenames and instance name patterns, with optional renaming, and distinguishes them by validating the arguments. Any arguments that are not valid instance names (or wildcard or rename patterns) are treated as archive files. In case your archive file matches a valid instance name you should either use an absolute path to the file or a `./` prefix.
 
 To read from STDIN use `-` but then you must also specify the compression type used with the `--decompress/-z` flag. Supported values are `gzip`, `bzip2` and `none`.

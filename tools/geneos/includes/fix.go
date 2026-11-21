@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"slices"
 	"strings"
 
@@ -67,7 +68,9 @@ func Fix(h *geneos.Host, dryRun bool, names ...string) error {
 	}
 	var (
 		candidates = make(map[string][]string)
+		preferred  = make(map[string][]string)
 		seen       = make(map[string]bool)
+		seenActive = make(map[string]bool)
 		selected   = make(map[string]bool)
 		root       = h.PathTo("gateway")
 		setups     []includeFixSetup
@@ -77,6 +80,7 @@ func Fix(h *geneos.Host, dryRun bool, names ...string) error {
 	addCandidate := func(filename string) error {
 		var (
 			info     fs.FileInfo
+			linkInfo fs.FileInfo
 			resolved string
 			key      string
 			err      error
@@ -100,6 +104,17 @@ func Fix(h *geneos.Host, dryRun bool, names ...string) error {
 		if !seen[key] {
 			seen[key] = true
 			candidates[h.Base(filename)] = append(candidates[h.Base(filename)], filename)
+		}
+		linkInfo, err = h.Lstat(filename)
+		if err != nil {
+			return err
+		}
+		if linkInfo.Mode()&fs.ModeSymlink != 0 && h.Dir(h.Clean(filename)) == h.Clean(h.Join(root, "includes")) {
+			activeKey := key
+			if !seenActive[activeKey] {
+				seenActive[activeKey] = true
+				preferred[h.Base(filename)] = append(preferred[h.Base(filename)], filename)
+			}
 		}
 		return nil
 	}
@@ -173,6 +188,7 @@ func Fix(h *geneos.Host, dryRun bool, names ...string) error {
 			})
 		}
 	}
+	maps.Copy(candidates, preferred)
 	for _, setup := range setups {
 		if !selected[instance.IDString(setup.gateway)] {
 			continue

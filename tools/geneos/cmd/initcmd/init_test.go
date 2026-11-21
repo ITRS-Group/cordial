@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -125,6 +126,29 @@ func TestInitRestore(t *testing.T) {
 				t.Fatalf("stat installed release = %v (want install: %v)", err, tc.wantInstall)
 			}
 		})
+	}
+}
+
+func TestInitRestoreStart(t *testing.T) {
+	cmdtest.Env(t)
+	tmp := t.TempDir()
+	marker := filepath.Join(tmp, "started")
+	program := filepath.Join(tmp, "fixture-licd")
+	if err := os.WriteFile(program, []byte("#!/bin/sh\n: > "+marker+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	backup := filepath.Join(tmp, "backup.tar.gz")
+	writeInitArchive(t, backup, map[string]string{
+		"licd/licds/restored/licd.json": `{"name":"restored","program":` + strconv.Quote(program) + `}`,
+	})
+
+	root := filepath.Join(tmp, "geneos")
+	res := cmdtest.Run(t, cmd.Cmd, "init", "--insecure", "--restore", backup, "--no-install", "--start", root)
+	if res.Err != nil {
+		t.Fatalf("init --start: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("restored instance was not started: %v", err)
 	}
 }
 

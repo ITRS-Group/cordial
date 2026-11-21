@@ -15,6 +15,7 @@ type restoreOptions struct {
 	host          *geneos.Host
 	progress      io.Writer
 	beforeRebuild func() error
+	afterRestore  func(geneos.Instance)
 }
 
 var globalRestoreOptions = restoreOptions{
@@ -99,5 +100,13 @@ func ProgressTo(w io.Writer) RestoreOption {
 func BeforeRebuild(f func() error) RestoreOption {
 	return func(ro *restoreOptions) {
 		ro.beforeRebuild = f
+	}
+}
+
+// AfterRestore runs for each instance after it has been restored and rebuilt.
+// It is not called for skipped instances or when listing an archive.
+func AfterRestore(f func(geneos.Instance)) RestoreOption {
+	return func(ro *restoreOptions) {
+		ro.afterRestore = f
 	}
 }

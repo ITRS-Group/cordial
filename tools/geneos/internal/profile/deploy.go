@@ -14,6 +14,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
@@ -69,16 +70,22 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 		instance.WithKeyfile(opts.keyfile),
 		instance.KeyfileCRC(opts.keyfileCRC),
 		instance.WithImports(opts.importFiles),
-		instance.StartAfterAdd(opts.startAfterAdd),
 		instance.WithFlags(opts.flags),
 		instance.WithProfiles(pf),
 	}
 	if config.Get[string](settings, values.ProfileRebuildKey) == "never" {
 		if len(existing) > 0 {
-			return reapplyProfile(existing[0], profileOptions)
+			err = reapplyProfile(existing[0], profileOptions)
+		} else {
+			_, err = instance.Add(h, pct, name, profileOptions...)
 		}
-		_, err = instance.Add(h, pct, name, profileOptions...)
-		return err
+		if err != nil {
+			return err
+		}
+		if err := startProfileMembers(h, name, opts.startAfterAdd); err != nil {
+			return err
+		}
+		return followProfileLogs(h, name, opts.followLogs)
 	}
 
 	SetExpandOptions(h, pf, PflagSetToMap(opts.flags, IncludeFlags...), opts.vals.Params)
@@ -137,12 +144,32 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 			return err
 		}
 	}
-
-	if opts.followLogs {
-		members := instance.Instances(h, nil, instance.MatchParameters(config.Join("config", "profile")+"="+name))
-		instance.FollowInstanceLogs(members, instance.WithStderr(true))
+	if err := startProfileMembers(h, name, opts.startAfterAdd); err != nil {
+		return err
 	}
 
+	return followProfileLogs(h, name, opts.followLogs)
+}
+
+func startProfileMembers(h *geneos.Host, name string, start bool) error {
+	if !start {
+		return nil
+	}
+	members := instance.Instances(h, nil, instance.MatchParameters(config.Join("config", "profile")+"="+name))
+	return instance.DoInstances("start", members, func(i geneos.Instance, _ ...any) *responses.General {
+		resp := responses.New[responses.General](i)
+		resp.Err = instance.Start(i)
+		resp.Audited = true
+		return resp
+	}).Report(os.Stdout, responses.IgnoreErrs(geneos.ErrRunning, os.ErrProcessDone))
+}
+
+func followProfileLogs(h *geneos.Host, name string, follow bool) error {
+	if !follow {
+		return nil
+	}
+	members := instance.Instances(h, nil, instance.MatchParameters(config.Join("config", "profile")+"="+name))
+	instance.FollowInstanceLogs(members, instance.WithStderr(true))
 	return nil
 }
 

@@ -16,7 +16,7 @@ If there are no instances selected then the archive is named either simple `gene
 
 Instances matching across multiple hosts are not supported, and this returns an error. If the instance (or all matching instances) are on the same remote host then these are all saved and the default filename will include the host label (the `geneos host` name).
 
-To include the component shared directory/directories, use the `--shared` option.
+To include the component shared directory/directories, use the `--shared` option. For Gateways this includes the configured site directory `gateway/<site>`, or `gateway/local` when no site is configured.
 
 Shared-directory symlinks, including Gateway include links, are archived as links without following them. Targets must remain inside the Geneos installation; external targets cause an error. Absolute targets inside the installation are saved as relative targets so the archive can be restored under a different root. Internal dangling links are preserved.
 

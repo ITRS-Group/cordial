@@ -328,6 +328,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		} else if !opts.list && !stat.skipped {
 			// rebuild the configuration of each instance restored
 			i, gerr := instance.GetWithHost(opts.host, geneos.ParseComponent(ctName), name)
+			restoredOK := false
 			if gerr != nil {
 				log.Debug("getting instance for final rebuild", slog.Any("error", gerr), slog.String("ctName", ctName), slog.String("name", name))
 				errs = append(errs, fmt.Errorf("%s %s: %w", ctName, name, gerr))
@@ -335,9 +336,15 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				if !errors.Is(rerr, geneos.ErrNotSupported) {
 					i.Log().Debug("rebuild of instance failed", slog.Any("error", rerr), slog.String("ctName", ctName), slog.String("name", name))
 					errs = append(errs, fmt.Errorf("%s %s: rebuild failed: %w", ctName, name, rerr))
+				} else {
+					restoredOK = true
 				}
 			} else {
 				fmt.Fprintf(opts.progress, "%s %s config rebuild complete\n", ctName, name)
+				restoredOK = true
+			}
+			if restoredOK && opts.afterRestore != nil {
+				opts.afterRestore(i)
 			}
 		}
 
