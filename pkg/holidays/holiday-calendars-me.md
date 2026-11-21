@@ -1,5 +1,9 @@
 # Middle East (ME) holiday calendars
 
+> [!IMPORTANT]
+>
+> These calendars were built with AI/LLM assistance and have not been validated by humans. Verify dates and suitability before use, and review the [refresh runbook](RUNBOOK.md).
+
 Snapshot gathered **2026-11-20**. See the [overall holiday calendar guide](README.md) for coverage limits, source-confidence grades and scheduling examples.
 
 No verified Middle Eastern calendars are included in this snapshot, so there is no ME XML include yet. This does not mean that the region has no holidays. Public, bank and exchange schedules need separate jurisdiction-specific sources. Where an authority publishes dates through later announcements, those announced dates are needed before overrides can be encoded; estimates are not treated as confirmed closures.

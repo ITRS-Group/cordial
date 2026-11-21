@@ -1,5 +1,9 @@
 # South America (SA) holiday calendars
 
+> [!IMPORTANT]
+>
+> These calendars were built with AI/LLM assistance and have not been validated by humans. Verify dates and suitability before use, and review the [refresh runbook](RUNBOOK.md).
+
 Snapshot gathered **2026-11-20**. See the [overall holiday calendar guide](README.md) for date formats, coverage limits, source-confidence grades and Geneos scheduling examples.
 
 Gateway include: `holidays.layer0.sa.xml`. Under **Layer 0 - Holidays**, the **Layer 0 - SA - Country** groups hold the named calendars.

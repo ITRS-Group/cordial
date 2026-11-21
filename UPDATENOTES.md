@@ -55,7 +55,7 @@ This records breaking and other upgrade-sensitive changes in Cordial. When updat
 
 * **Low-confidence holiday calendars:** Active times containing any Low-confidence source data, including mixed-confidence calendars, are distributed disabled. Copy a calendar into your own writable Gateway setup or site include, verify its suitability, and edit dates manually if needed before enabling the reviewed local copy. Leave the distributed definition disabled.
 
-* **Holiday collection process:** The holiday archive includes `docs/AGENT.md` and its PDF version, explaining the monthly source-fetching, date-conversion, confidence-rating and validation workflow for maintainers, LLM agents and users.
+* **Holiday collection process:** The holiday archive includes `docs/RUNBOOK.md` and its PDF version, explaining the monthly source-fetching, date-conversion, confidence-rating and validation workflow for maintainers, LLM agents and users. The calendars are built with AI/LLM assistance and have not been validated by humans, so users must verify the dates and suitability before operational use.
 
 * **Minor breaking change — package installation:** `-A` now means `--archive`, not `--all`; use `--all` explicitly. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`. Explicit URLs are still fetched.
 

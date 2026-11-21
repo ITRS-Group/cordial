@@ -1,5 +1,11 @@
 # Financial centre holiday calendars
 
+> [!IMPORTANT]
+>
+> These holiday calendars were built using AI/LLM-assisted collection and conversion processes and have not been validated by humans. They must be treated as unverified reference data, not as authoritative schedules. Exercise care before operational use: verify every relevant date, observance, jurisdiction, market and timezone against current official sources, and confirm that the calendar is suitable for its intended schedule.
+>
+> Review the [holiday calendar refresh runbook](RUNBOOK.md) for how dates are obtained, interpreted, converted and rated, including the process's limitations. The runbook describes the collection workflow but does not provide human validation.
+
 Snapshot gathered **2026-11-20**. Public holiday and exchange calendars
 are listed separately. Dates are local to the timezone shown. Tables use
 `DD-MM` for day-first dates (including the US as requested), `MM-DD` where
@@ -98,9 +104,9 @@ together for each jurisdiction.
 
 ## Refresh process
 
-The [monthly refresh runbook](AGENT.md) describes source retrieval, date
+The [monthly refresh runbook](RUNBOOK.md) describes source retrieval, date
 conversion, confidence assessment and validation for maintainers and LLM
-agents. It is included in the archive as `docs/AGENT.md` and `docs/AGENT.pdf`
+agents. It is included in the archive as `docs/RUNBOOK.md` and `docs/RUNBOOK.pdf`
 so users can inspect the collection process as well as the resulting dates.
 
 ## Optional installation

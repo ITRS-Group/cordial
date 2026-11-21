@@ -285,7 +285,7 @@ RUN set -eux; \
         mmdc -p /puppeteer.json -i "$source" -o "/tmp/${name}.mermaid.md"; \
         node /app/pdf/mdpdf.cjs "/tmp/${name}.mermaid.md" "geneos-includes/$name.pdf" --border=15mm --gh-style; \
     done; \
-    for source in /app/cordial/pkg/holidays/README.md /app/cordial/pkg/holidays/AGENT.md /app/cordial/pkg/holidays/holiday-calendars-*.md; \
+    for source in /app/cordial/pkg/holidays/README.md /app/cordial/pkg/holidays/RUNBOOK.md /app/cordial/pkg/holidays/holiday-calendars-*.md; \
     do \
         name=$(basename "$source" .md); \
         cp "$source" "geneos-holidays-include/$name.md"; \

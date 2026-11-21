@@ -1,5 +1,9 @@
 # India (IN) holiday calendars
 
+> [!IMPORTANT]
+>
+> These calendars were built with AI/LLM assistance and have not been validated by humans. Verify dates and suitability before use, and review the [refresh runbook](RUNBOOK.md).
+
 Snapshot gathered **2026-11-20**. See the [overall holiday calendar guide](README.md) for date formats, coverage limits, source-confidence grades and Geneos scheduling examples.
 
 Gateway include: `holidays.layer0.in.xml`. The **Layer 0 - IN - India** group holds city-specific bank calendars and the NSE cash-market calendar, all using `Asia/Kolkata`.

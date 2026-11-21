@@ -1,5 +1,9 @@
 # Holiday calendar refresh runbook for LLM agents
 
+> [!IMPORTANT]
+>
+> This runbook explains an AI/LLM-assisted collection process. It does not certify the resulting dates, which have not been validated by humans. Maintainers must verify the collected evidence and each calendar's suitability before use.
+
 Use this runbook for a monthly refresh, or when an authority publishes an
 amendment. The task is to collect evidence, interpret full-day closures, and
 update the calendar XML and its documentation consistently. Do not redesign
