@@ -220,7 +220,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 			key = config.ResolveHome(keystr)
 		}
 
-		listen := fmt.Sprintf("%s:%d", config.Get[string](cf, cf.Join("server", "host"), config.DefaultValue("0.0.0.0")), config.Get[uint16](cf, cf.Join("server", "port"), config.DefaultValue(6543)))
+		listen := fmt.Sprintf("%s:%d", config.Get[string](cf, cf.Join("server", "host"), config.DefaultValue("0.0.0.0")), config.Get[uint16](cf, cf.Join("server", "port"), config.DefaultValue(uint16(6543))))
 		err = e.StartTLS(listen, cert, key)
 
 		if err != nil {

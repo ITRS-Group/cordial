@@ -149,7 +149,7 @@ func hostListInstanceCSVHosts(h *geneos.Host, w any) (err error) {
 		row.Username,
 		row.Hostname,
 		row.Flags,
-		config.Get[string](h.Config, "port", config.DefaultValue(22)),
+		config.Get[string](h.Config, "port", config.DefaultValue("22")),
 		row.Directory,
 	})
 	return
@@ -172,7 +172,7 @@ func hostListRow(h *geneos.Host) listCmdType {
 		Username:  username,
 		Hostname:  config.Get[string](h.Config, "hostname"),
 		Flags:     flags,
-		Port:      config.Get[uint16](h.Config, "port", config.DefaultValue(22)),
+		Port:      config.Get[uint16](h.Config, "port", config.DefaultValue(uint16(22))),
 		Directory: config.Get[string](h.Config, cordial.ExecutableName()),
 	}
 }

@@ -85,6 +85,7 @@ var Component = geneos.Component{
 		`logdir=logs`,
 		`logfile=` + name + `.log`,
 		`port=4317`,
+		`reporter-port=4318`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib"}}`,
 		`setup={{join "${config:home}" "router-config.yaml"}}`,
 		`autostart=true`,
@@ -352,8 +353,8 @@ func (i *Router) Command(skipFileCheck bool) (args, env []string, home string, e
 
 	env = []string{
 		fmt.Sprintf("PLUGIN_DIR=%s", config.Get[string](cf, "plugins", config.DefaultValue(i.Host().Join(base, "plugins")))),
-		fmt.Sprintf("COLLECTOR_PORT=%d", config.Get[uint16](cf, "port", config.DefaultValue(4317))),
-		fmt.Sprintf("REPORTER_PORT=%d", config.Get[uint16](cf, "reporter-port", config.DefaultValue(4318))),
+		fmt.Sprintf("COLLECTOR_PORT=%d", config.Get[uint16](cf, "port", config.DefaultValue(uint16(4317)))),
+		fmt.Sprintf("REPORTER_PORT=%d", config.Get[uint16](cf, "reporter-port", config.DefaultValue(uint16(4318)))),
 		fmt.Sprintf("REPORTER_HOST=%s", config.Get[string](cf, "reporter-host", config.DefaultValue("localhost"))),
 		fmt.Sprintf("HOSTNAME=%s", config.Get[string](cf, "hostname", config.DefaultValue(hostname))),
 		fmt.Sprintf("APP=%s", config.Get[string](cf, "router-name", config.DefaultValue(i.Name()))),
