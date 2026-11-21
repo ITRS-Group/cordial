@@ -21,6 +21,9 @@ import (
 
 func TestInitRestoreInitialisesBeforeRebuild(t *testing.T) {
 	cmdtest.Env(t)
+	previousSite := config.Get[string](config.Global(), "site")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previousSite) })
+	config.Set(config.Global(), "site", "")
 	root := filepath.Join(t.TempDir(), "geneos")
 	templateDir := filepath.Join(root, "gateway", "templates")
 	if err := os.MkdirAll(templateDir, 0o775); err != nil {
@@ -36,6 +39,7 @@ func TestInitRestoreInitialisesBeforeRebuild(t *testing.T) {
 		"gateway/gateways/restored/gateway.json":                     `{"name":"restored"}`,
 		"gateway/shared/restored.txt":                                "restored shared contents",
 		"gateway/config/config.layer0.foundation.xml":                "restored config contents",
+		"gateway/local/local-config.layer0.foundation.xml":           "restored site contents",
 		"gateway/includes/itrs.layer0.foundation.xml":                "restored primary include",
 		"gateway/includes/itrs-v0.0.1/itrs.layer1.server-health.xml": "restored linked include",
 	}, map[string]string{
@@ -48,11 +52,12 @@ func TestInitRestoreInitialisesBeforeRebuild(t *testing.T) {
 	}
 	for path, want := range map[string]string{
 		templatePath: customTemplate,
-		filepath.Join(root, "gateway", "gateways", "restored", "instance.setup.xml"): customTemplate,
-		filepath.Join(root, "gateway", "shared", "restored.txt"):                     "restored shared contents",
-		filepath.Join(root, "gateway", "config", "config.layer0.foundation.xml"):     "restored config contents",
-		filepath.Join(root, "gateway", "includes", "itrs.layer0.foundation.xml"):     "restored primary include",
-		filepath.Join(root, "gateway", "includes", "itrs.layer1.server-health.xml"):  "restored linked include",
+		filepath.Join(root, "gateway", "gateways", "restored", "instance.setup.xml"):  customTemplate,
+		filepath.Join(root, "gateway", "shared", "restored.txt"):                      "restored shared contents",
+		filepath.Join(root, "gateway", "config", "config.layer0.foundation.xml"):      "restored config contents",
+		filepath.Join(root, "gateway", "local", "local-config.layer0.foundation.xml"): "restored site contents",
+		filepath.Join(root, "gateway", "includes", "itrs.layer0.foundation.xml"):      "restored primary include",
+		filepath.Join(root, "gateway", "includes", "itrs.layer1.server-health.xml"):   "restored linked include",
 	} {
 		got, err := os.ReadFile(path)
 		if err != nil || string(got) != want {

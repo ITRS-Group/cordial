@@ -40,7 +40,12 @@ PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always prot
 
 Use `geneos init --restore PATH [DIRECTORY]` (`-R`) to initialise the installation and restore instances and shared files from a `geneos backup` archive. By default, `init` also installs the releases needed by the restored component types. Use `--archive`/`-A` to supply local release archives, or add `--no-install`/`-X` to restore without installing releases.
 
+> [!WARNING]
+> Set the site to the same name as the source installation, for example with `geneos init --site acme --restore PATH`. If the site differs, the source site directory in the backup is not restored, and bundled includes create configuration files for the destination site instead. Restored Gateway setups may still reference the source site files. If neither installation has a site set, both use `local`.
+
 After archive extraction, missing bundled templates and include files are populated before restored instances are rebuilt. Files from the backup take precedence: existing templates, restored shared configuration files, include files and include links are kept, including with `--force`. Initialization only fills missing files and links; it does not upgrade restored includes to the bundled version.
+
+If the destination `GENEOS_HOME` differs from the source, restored Gateway setups may contain absolute include paths pointing to the old installation. Consider running `geneos includes fix --dry-run` and reviewing its proposed changes before running `geneos includes fix`. This is not automatic because changes should be carefully considered and reviewed. The command only repairs broken references with a unique matching replacement; valid paths, including paths still pointing to the source installation, are left unchanged.
 
 A backup file will not contain a TLS root or signing certificate and private keys. These must be supplied explicitly using the `--signing-bundle` option (and `--signing-bundle-password` if applicable). Use the `geneos tls export` command to export the necessary certificates and keys when creating a backup.
 

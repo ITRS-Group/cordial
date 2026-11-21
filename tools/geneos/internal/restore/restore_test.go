@@ -139,6 +139,34 @@ var licdEntries = []tarEntry{
 	{"licd/licds/restored/licd.txt", "some content"},
 }
 
+func TestRestoreGatewaySiteShared(t *testing.T) {
+	previous := config.Get[string](config.Global(), "site")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+	for _, test := range []struct{ site, directory string }{
+		{"", "local"},
+		{"Acme Site", "Acme_Site"},
+	} {
+		t.Run(test.directory, func(t *testing.T) {
+			root := newTestRoot(t)
+			config.Set(config.Global(), "site", test.site)
+			name := "gateway/" + test.directory + "/site.xml"
+			archive := writeArchive(t, "backup.tar", "none", []tarEntry{{name, "site configuration"}})
+			if err := restore.Restore(archive, restore.Host(geneos.LOCAL)); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(filepath.Join(root, name)); !errors.Is(err, os.ErrNotExist) {
+				t.Errorf("site file restored without shared option: %v", err)
+			}
+			if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Shared(true)); err != nil {
+				t.Fatal(err)
+			}
+			if got, err := os.ReadFile(filepath.Join(root, name)); err != nil || string(got) != "site configuration" {
+				t.Errorf("restored site file = %q, %v", got, err)
+			}
+		})
+	}
+}
+
 func TestRestoreCompressionByFileName(t *testing.T) {
 	for _, tt := range []struct{ name, kind string }{
 		{"backup.tar.gz", "gzip"},

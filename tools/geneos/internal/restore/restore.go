@@ -233,7 +233,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 
 		// check for shared directories for given nct and restore if asked to
 		if opts.shared {
-			if slices.Contains(nct.SharedDirectories, path.Join(nct.String(), ctSubdir)) {
+			if slices.Contains(nct.AllSharedDirectories(), path.Join(nct.String(), ctSubdir)) {
 				if ct == nil || ct == nct {
 					if err = restoreShared(stats, files, nct.String()+":!SHARED", hdr, opts, func() error {
 						return writeSharedFile(path.Join(nct.String(), ctSubdir, rest), tr, hdr, opts)

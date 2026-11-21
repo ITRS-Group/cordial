@@ -463,7 +463,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 
 	// then walk the shared directories, if any, for ct checking and
 	// updating contents.
-	for _, s := range ct.SharedDirectories {
+	for _, s := range ct.AllSharedDirectories() {
 		if err := walkDir(
 			i.Host(),
 			i.Host().PathTo(s),

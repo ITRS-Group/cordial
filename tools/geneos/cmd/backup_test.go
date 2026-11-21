@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/internal/cmdtest"
 
@@ -32,6 +33,45 @@ func tarNames(t *testing.T, r io.Reader) map[string]string {
 		}
 		b, _ := io.ReadAll(tr)
 		names[h.Name] = string(b)
+	}
+}
+
+func TestBackupGatewaySiteShared(t *testing.T) {
+	root := cmdtest.Env(t)
+	previous := config.Get[string](config.Global(), "site")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+	config.Set(config.Global(), "site", "")
+	if res := cmdtest.Run(t, cmd.Cmd, "add", "gateway", "gw-site"); res.Err != nil {
+		t.Fatalf("add: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+	for _, test := range []struct{ site, directory string }{
+		{"", "local"},
+		{"Acme Site", "Acme_Site"},
+	} {
+		t.Run(test.directory, func(t *testing.T) {
+			config.Set(config.Global(), "site", test.site)
+			file := filepath.Join(root, "gateway", test.directory, "site.xml")
+			if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(file, []byte(test.directory), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			for _, shared := range []bool{false, true} {
+				args := []string{"backup", "gateway", "gw-site", "-o", "-", "-z", "none"}
+				if shared {
+					args = append(args, "--shared")
+				}
+				res := cmdtest.Run(t, cmd.Cmd, args...)
+				if res.Err != nil {
+					t.Fatalf("backup: %v\n%s", res.Err, res.Stderr)
+				}
+				got, found := tarNames(t, strings.NewReader(res.Stdout))["gateway/"+test.directory+"/site.xml"]
+				if found != shared || (found && got != test.directory) {
+					t.Errorf("shared=%v: site file = %q, present=%v", shared, got, found)
+				}
+			}
+		})
 	}
 }
 
