@@ -23,7 +23,7 @@ func TestGenMarkdownBookRewritesPageLinks(t *testing.T) {
 		}
 	}
 
-	if err := GenMarkdownBook(dir, "COMMANDS.md"); err != nil {
+	if err := GenMarkdownBook(dir, "COMMANDS.md", "This is the introduction."); err != nil {
 		t.Fatal(err)
 	}
 
@@ -32,6 +32,9 @@ func TestGenMarkdownBookRewritesPageLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	content := string(book)
+	if !strings.HasPrefix(content, "# Geneos Commands\n\nThis is the introduction.\n\n") {
+		t.Fatalf("book did not place the preface after the title: %s", content)
+	}
 	if !strings.Contains(content, "[Start](#geneos-start)") {
 		t.Fatalf("book did not rewrite the command page link: %s", content)
 	}

@@ -20,6 +20,7 @@ limitations under the License.
 package main
 
 import (
+	_ "embed"
 	"log/slog"
 	"os"
 
@@ -70,6 +71,9 @@ type docs struct {
 	dir     string
 }
 
+//go:embed _docs/COMMANDS.md
+var commandsPreface string
+
 var doclist = []docs{
 	{cmd.Cmd, "../../docs"},
 }
@@ -95,7 +99,7 @@ func main() {
 			slog.Error("generate command documentation", "directory", d.dir, "error", err)
 			os.Exit(1)
 		}
-		if err := GenMarkdownBook(d.dir, "COMMANDS.md"); err != nil {
+		if err := GenMarkdownBook(d.dir, "COMMANDS.md", commandsPreface); err != nil {
 			slog.Error("generate command book", "directory", d.dir, "error", err)
 			os.Exit(1)
 		}
