@@ -10,6 +10,20 @@ New features and notable capabilities, grouped by version, newest first. Version
 > [!NOTE]
 > Built with Go 1.27.4.
 
+### New capabilities and business value
+
+* **Reduce administration effort:** New versioned Gateway includes can be installed, updated, repaired and removed independently of the Cordial release, while improved profile and Active Dashboard tools simplify recurring management work.
+
+* **Improve operational resilience:** New lifecycle commands for `servicenow2 proxy`, `ims-gateway` and `gdna`, together with checked startup and controlled reloads, make long-running services easier to operate and less dependent on manual process handling.
+
+* **Increase monitoring visibility:** Monitoring Health profiles replace the previous preview framework and provide a consistent view of installed Geneos components, supported by more reliable GDNA coverage reporting.
+
+* **Strengthen incident handling:** ServiceNow and ServiceDesk Plus integrations now provide stricter authentication, correlation and failure reporting, helping ensure accepted incidents and subsequent updates follow established service-management processes.
+
+* **Improve release quality:** A release-wide LLM-assisted review examined workflows, failure handling and user-facing behaviour alongside normal testing. The resulting feedback and fixes are intended to improve stability, reduce avoidable defects, and make issues and recovery steps clearer to users.
+
+Together, these capabilities reduce repetitive work, support more consistent operations, and help organisations use their existing Geneos investment more effectively.
+
 * **Automation and reliability:** `geneos` reports failures consistently and returns a non-zero status when any requested item fails. Significant fixes protect existing files, instance directories and certificate stores after failed operations, restore broken installation workflows, and prevent credential exposure through logs, redirects or unintended configuration expansion.
 
 * **Monitoring Health:** The supplied `health-agent` and `health-gateway` profiles replace Monitor-Of-The-Monitors. Monitoring includes, identifiers, GDNA reports and dashboards use `layer` rather than `level` names. Existing installations need migration; see the [update notes](UPDATENOTES.md#v1310-in-development).
