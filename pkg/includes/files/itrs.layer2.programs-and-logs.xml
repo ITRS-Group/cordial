@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-15 09:17:32 by PeterGalbavy on ITRSLP372-->
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-23 15:24:39 by PeterGalbavy on ITRSLP372-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
 	<managedEntities>
 		<managedEntityGroup name="Layer 2 - Application Baseline">
 			<attribute name="CATEGORY">Application</attribute>
@@ -12,7 +12,7 @@
 			<type name="Layer 2 - Application Baseline">
 				<environment ref="Layer 2 - Application Baseline Defaults"/>
 				<var name="SAMPLER_GROUP">
-					<string>Application Baseline</string>
+					<string>Programs and Logs</string>
 				</var>
 				<sampler ref="Logs"/>
 				<sampler ref="Processes"/>
