@@ -22,7 +22,7 @@ The Geneos Best Practice layers describe the scope and depth of monitoring, from
 The supplied functional includes currently cover Layers 0 to 3.
 
 The standard corpus is versioned independently of Cordial. Its initial version
-is `v1.0.0`, recorded in the source tree's `pkg/includes/VERSION`, and follows semantic versioning.
+is `v2.0.0`, to distinguish it from earlier unpackaged releases, and recorded in the source tree's `pkg/includes/VERSION`, and follows semantic versioning.
 Embedded installation and default include updates use this corpus version,
 not the version of the running `geneos` executable. Holiday snapshots have
 their own source-fetch-date versions.
@@ -63,10 +63,10 @@ Choose a site name representing the company, customer, or client using the Geneo
 ```text
 gateway/
 ├── includes/
-│   ├── itrs.layer0.foundation.xml -> itrs-v1.0.0/itrs.layer0.foundation.xml
+│   ├── itrs.layer0.foundation.xml -> itrs-v2.0.0/itrs.layer0.foundation.xml
 │   ├── acme.trading.xml -> acme-v1.2.3/acme.trading.xml
 │   ├── ...
-│   ├── itrs-v1.0.0/
+│   ├── itrs-v2.0.0/
 │   │   ├── itrs.layer0.foundation.xml
 │   │   └── ...
 │   └── acme-v1.2.3/
@@ -106,7 +106,7 @@ Install the includes embedded in the current `geneos` executable, or install a p
 ```shell
 geneos config set site=acme
 geneos includes install
-geneos includes install /path/to/geneos-includes-v1.0.0.tar.gz
+geneos includes install /path/to/geneos-includes-v2.0.0.tar.gz
 ```
 
 Add `--update` to replace existing top-level include paths with links to the installed version. Obsolete-link cleanup is restricted to that source, and updates refuse to replace a link owned by another source.
@@ -129,8 +129,8 @@ supports only the embedded ITRS source.
 Use the external installer included in the release archive - `scripts/install-includes.sh`. Extract the archive, change into its versioned top-level directory, and run the script with the Geneos installation home as its only positional argument. The script uses the current directory as its source; set `INCLUDES_SOURCE` to use another extracted source directory.
 
 ```shell
-tar -xzf /path/to/geneos-includes-v1.0.0.tar.gz
-cd geneos-includes-v1.0.0
+tar -xzf /path/to/geneos-includes-v2.0.0.tar.gz
+cd geneos-includes-v2.0.0
 ./scripts/install-includes.sh /path/to/geneos
 ```
 
@@ -152,7 +152,7 @@ Installing include files only makes them available on disk. Use the Gateway Setu
 | `geneos includes list`                     | List configured/available includes                          |
 | `geneos includes list --all`               | Include version directories in the listing                  |
 | `geneos includes list --gateway`           | Show include use by Gateway                                 |
-| `geneos includes update --version itrs-v1.0.0` | Point top-level links at a version                          |
+| `geneos includes update --version itrs-v2.0.0` | Point top-level links at a version                          |
 | `geneos includes fix --dry-run`            | Preview repairs for broken include references               |
 | `geneos includes fix`                      | Repair broken references with unique same-name replacements |
 | `geneos includes delete 'itrs-v0.9.*'`         | Delete unused version directories and their links           |
@@ -180,7 +180,7 @@ find "$INCLUDES_DIR" -maxdepth 1 -type l -xtype l -print
 To switch links to an already installed version, first inspect the Gateway setup references and back up any regular files at the link paths. Then repoint links for files present in the selected version:
 
 ```shell
-VERSION=itrs-v1.0.0
+VERSION=itrs-v2.0.0
 INCLUDES_DIR=/path/to/geneos/gateway/includes
 
 for source in "$INCLUDES_DIR/$VERSION"/itrs.*.xml; do

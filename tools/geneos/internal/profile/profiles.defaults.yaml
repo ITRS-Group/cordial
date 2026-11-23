@@ -126,6 +126,7 @@ profiles:
   
   health-agent:
     _short: "Monitoring Health endpoint profile"
+    _endpoint: true
     _description: |
       The `health-agent` profile installs a Monitoring Health
       Self-Announcing Netprobe agent. It is dynamically configured to report
@@ -334,6 +335,7 @@ profiles:
 
   health-gateway:
     _short: "Monitoring Health Gateway Profile"
+    _endpoint: true
     _description: |
       Configuration for the Monitoring Health Gateway, including its
       parameters, includes, and variables. 

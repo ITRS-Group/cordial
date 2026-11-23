@@ -2719,7 +2719,7 @@ The Geneos Best Practice layers describe the scope and depth of monitoring, from
 The supplied functional includes currently cover Layers 0 to 3.
 
 The standard corpus is versioned independently of Cordial. Its initial version
-is `v1.0.0`, recorded in the source tree's `pkg/includes/VERSION`, and follows semantic versioning.
+is `v2.0.0`, to distinguish it from earlier unpackaged releases, and recorded in the source tree's `pkg/includes/VERSION`, and follows semantic versioning.
 Embedded installation and default include updates use this corpus version,
 not the version of the running `geneos` executable. Holiday snapshots have
 their own source-fetch-date versions.
@@ -2760,10 +2760,10 @@ Choose a site name representing the company, customer, or client using the Geneo
 ```text
 gateway/
 ├── includes/
-│   ├── itrs.layer0.foundation.xml -> itrs-v1.0.0/itrs.layer0.foundation.xml
+│   ├── itrs.layer0.foundation.xml -> itrs-v2.0.0/itrs.layer0.foundation.xml
 │   ├── acme.trading.xml -> acme-v1.2.3/acme.trading.xml
 │   ├── ...
-│   ├── itrs-v1.0.0/
+│   ├── itrs-v2.0.0/
 │   │   ├── itrs.layer0.foundation.xml
 │   │   └── ...
 │   └── acme-v1.2.3/
@@ -2803,7 +2803,7 @@ Install the includes embedded in the current `geneos` executable, or install a p
 ```shell
 geneos config set site=acme
 geneos includes install
-geneos includes install /path/to/geneos-includes-v1.0.0.tar.gz
+geneos includes install /path/to/geneos-includes-v2.0.0.tar.gz
 ```
 
 Add `--update` to replace existing top-level include paths with links to the installed version. Obsolete-link cleanup is restricted to that source, and updates refuse to replace a link owned by another source.
@@ -2826,8 +2826,8 @@ supports only the embedded ITRS source.
 Use the external installer included in the release archive - `scripts/install-includes.sh`. Extract the archive, change into its versioned top-level directory, and run the script with the Geneos installation home as its only positional argument. The script uses the current directory as its source; set `INCLUDES_SOURCE` to use another extracted source directory.
 
 ```shell
-tar -xzf /path/to/geneos-includes-v1.0.0.tar.gz
-cd geneos-includes-v1.0.0
+tar -xzf /path/to/geneos-includes-v2.0.0.tar.gz
+cd geneos-includes-v2.0.0
 ./scripts/install-includes.sh /path/to/geneos
 ```
 
@@ -2849,7 +2849,7 @@ Installing include files only makes them available on disk. Use the Gateway Setu
 | `geneos includes list`                     | List configured/available includes                          |
 | `geneos includes list --all`               | Include version directories in the listing                  |
 | `geneos includes list --gateway`           | Show include use by Gateway                                 |
-| `geneos includes update --version itrs-v1.0.0` | Point top-level links at a version                          |
+| `geneos includes update --version itrs-v2.0.0` | Point top-level links at a version                          |
 | `geneos includes fix --dry-run`            | Preview repairs for broken include references               |
 | `geneos includes fix`                      | Repair broken references with unique same-name replacements |
 | `geneos includes delete 'itrs-v0.9.*'`         | Delete unused version directories and their links           |
@@ -2877,7 +2877,7 @@ find "$INCLUDES_DIR" -maxdepth 1 -type l -xtype l -print
 To switch links to an already installed version, first inspect the Gateway setup references and back up any regular files at the link paths. Then repoint links for files present in the selected version:
 
 ```shell
-VERSION=itrs-v1.0.0
+VERSION=itrs-v2.0.0
 INCLUDES_DIR=/path/to/geneos/gateway/includes
 
 for source in "$INCLUDES_DIR/$VERSION"/itrs.*.xml; do
@@ -5135,7 +5135,7 @@ Use the `--list/-l` flag to show the high-level contents from the archive that m
 
 Without either a component type or at least one instance name or pattern the command will do nothing. If given a component type without instance names all matching instances of that component type will be restored. Without a component type but with instances names, all matching instances, regardless of component type, will be restored. To restore all instances use the name `all`. Instance names can use wildcard patterns in shell (or "glob") format. Using the `--shared/-s` flag to restore any shared files and directories only applies to the matching component type if it given.
 
-Those backup archives that contain a `tls/` directory will have the contents restored, which may overwrite existing files.
+Those backup archives that contain a `tls/` directory will have the contents restored, which may overwrite existing files. An instance backup created with `--tls` may contain instance certificates and private keys. It deliberately does not contain the user-wide root or signing certificate and private keys required to create or renew certificates. See [restoring with certificates](#restoring-with-certificates) below.
 
 If an instance name is given in the format `DEST=SRC` then instances in the archive called `SRC` will be restored but renamed `DEST`. In this case `SRC` cannot be a wildcard.
 
@@ -5150,6 +5150,68 @@ The command accepts a combination of filenames and instance name patterns, with 
 To read from STDIN use `-` but then you must also specify the compression type used with the `--decompress/-z` flag. Supported values are `gzip`, `bzip2` and `none`.
 
 When restoring an instance any changes to the paths in the instance configuration will be updated to match the destination host's `geneos` root. No component specific files will be changed, including `gateway.setup.xml` and so on.
+
+## Restoring with certificates
+
+When you restore a backup that contains instance certificates, those instances have their original instance certificates restored. However, the backup does **not** contain:
+
+* The user-wide root CA certificate and private key
+
+* The user-wide signing certificate and private key
+
+This is intentional. Root and signing material is managed separately from instance backups, so private signing keys can be controlled centrally rather than duplicated into backup archives. A backup can still contain public trust roots in the installation `tls/` directory and, with `geneos backup --tls`, instance certificates and private keys.
+
+**When restoring to a fresh system without the original signing bundle:**
+
+`geneos init` warns before initialization. If the restore is continued without a signing bundle, it creates a new local root and signing chain. That chain does not match the chain that signed the restored instance certificates. The restored certificates can continue to be used while they remain valid and trusted, but:
+
+* Certificates subsequently renewed with the new local signer will not be trusted by other servers in the Geneos deployment
+
+**To properly restore with certificate trust:**
+
+**Option 1 (recommended): Import the original signing bundle**
+
+1. On the original or central server where the signing keys are held:
+
+   ```bash
+   geneos tls export --output signing-bundle.pem
+   ```
+
+2. Transfer the exported bundle to the new server
+
+3. When restoring on the new server:
+
+   ```bash
+   geneos init --restore backup.tar.gz --signing-bundle <exported-bundle>
+   ```
+
+   Use `--signing-bundle -` to paste a PEM bundle on standard input. In an interactive terminal, `geneos` prints the paste prompt and accepts the PEM data through the final newline and Ctrl-D. This can be combined with other interactive prompts because prompts and diagnostics are written to standard error.
+
+   Alternatively, restore after acknowledging the warning, then import the signer:
+
+   ```bash
+   geneos init --restore backup.tar.gz
+   geneos tls import --file <exported-bundle>
+   geneos tls renew
+   ```
+
+   `geneos tls renew` runs on the restored server and replaces existing instance certificates using the imported signing key. Select specific component types or instance names when only some certificates need renewing.
+
+**Option 2: Create replacement instance bundles centrally**
+
+If the original signing bundle is unavailable but a trusted central server remains authoritative:
+
+1. On that central/original server, run `geneos tls create` for each restored instance to create an instance certificate bundle.
+
+2. Transfer each bundle to the restored server.
+
+3. Import it for the matching restored instance, for example:
+
+   ```bash
+   geneos tls import TYPE NAME --file <instance-bundle>
+   ```
+
+In a non-interactive session, the restore continues after logging the warning. If no original signing bundle is supplied or imported, use the central replacement-bundle workflow before relying on renewed certificates to be trusted by the rest of the deployment.
 
 ## Usage
 

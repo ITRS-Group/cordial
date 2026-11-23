@@ -6,6 +6,21 @@ import (
 	"testing"
 )
 
+func TestWriteWarningMarkdown(t *testing.T) {
+	var output bytes.Buffer
+	WriteWarningMarkdown(&output, "A certificate warning with a long explanation that should wrap without preserving raw Markdown and an action: `geneos tls export`.")
+
+	got := output.String()
+	for _, want := range []string{"WARNING", "certificate warning", "geneos tls export"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("warning output does not contain %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "[!WARNING]") {
+		t.Errorf("warning contains unrendered Markdown:\n%s", got)
+	}
+}
+
 func TestRenderHelpMarkdownTables(t *testing.T) {
 	input := "Options\n\n" +
 		"| Option | Default | Use |\n" +

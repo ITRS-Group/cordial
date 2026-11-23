@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -196,6 +197,54 @@ geneos init
 		})
 
 		initOptions.Extras.Params = params
+
+		if initOptions.Restore != "" && initOptions.SigningBundle == "" && !initOptions.Insecure {
+			msg := "Restoring without the original signing bundle.\n\n" +
+				"Backups deliberately do not include the user-wide root or signing certificate\n" +
+				"and private keys. Restored instance certificates can continue to be used, but a new\n" +
+				"local signing chain will not be trusted to renew them by other Geneos servers.\n\n" +
+				"To retain the existing trust chain, run `geneos tls export` on the original or\n" +
+				"central server, then provide the exported bundle with `--signing-bundle` (use `-`\n" +
+				"to paste a PEM bundle on stdin).\n\n" +
+				"Alternatively, import the bundle after restore with `geneos tls import`, then use\n" +
+				"`geneos tls renew` on this server to replace the restored instance certificates.\n\n" +
+				"If the signing bundle is unavailable, use `geneos tls create` on the central/original\n" +
+				"server to create replacement instance bundles, then import each one on this server."
+			cmd.WriteWarningMarkdown(os.Stderr, msg)
+			if term.IsTerminal(int(os.Stdin.Fd())) {
+				response, err := config.ReadUserInputLine("Continue the restore without a signing bundle? (y/N): ")
+				if err != nil || strings.ToLower(strings.TrimSpace(response)) != "y" {
+					return fmt.Errorf("restore cancelled")
+				}
+			}
+		}
+
+		// Endpoint profile warnings must also precede Initialise, which creates
+		// local signing material and may initialise profile components.
+		if initOptions.Restore == "" && initOptions.SigningBundle == "" && !initOptions.Insecure {
+			for _, p := range args {
+				pf, profileErr := profile.ConfigForSource(config.Get[string](profile.Profiles, p, config.NoExpand()), profile.Profiles)
+				if profileErr != nil || pf == nil ||
+					!config.Get[bool](pf, config.Join(p, "_endpoint")) {
+					continue
+				}
+
+				msg := fmt.Sprintf("Deploying endpoint profile %q to a fresh installation without a certificate bundle (`--signing-bundle`).\n\n"+
+					"Remote connections will not be verifiable without suitable certificates.\n\n"+
+					"Endpoints require proper certificates and cannot use `tls.verify=false`.\n\n"+
+					"To enable local certificate creation:\n\n"+
+					"- On your central server, use `geneos tls export` to export a signing bundle for use by this instance.\n"+
+					"- Supply it here with `--signing-bundle` (or paste PEM with `--signing-bundle -`).",
+					p)
+				cmd.WriteWarningMarkdown(os.Stderr, msg)
+				if term.IsTerminal(int(os.Stdin.Fd())) {
+					response, readErr := config.ReadUserInputLine("Do you want to continue? (y/N): ")
+					if readErr != nil || strings.ToLower(strings.TrimSpace(response)) != "y" {
+						return fmt.Errorf("deployment cancelled")
+					}
+				}
+			}
+		}
 
 		// the installation directory is initialised once, so that a
 		// directory with an installation is only an error before any

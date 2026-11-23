@@ -162,6 +162,27 @@ func TestInitRestoreMissingBackup(t *testing.T) {
 	}
 }
 
+func TestInitRestoreWarnsWithoutSigningBundle(t *testing.T) {
+	cmdtest.Env(t)
+	tmp := t.TempDir()
+	backup := filepath.Join(tmp, "backup.tar.gz")
+	writeInitArchive(t, backup, map[string]string{
+		"gateway/shared/restored.txt": "shared contents",
+	})
+
+	res := cmdtest.Run(t, cmd.Cmd, "init", "--restore", backup, "--no-install", filepath.Join(tmp, "geneos"))
+	if res.Err != nil {
+		t.Fatalf("init: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+	if !strings.Contains(res.Stderr, "Restoring without the original signing bundle") {
+		t.Fatalf("restore warning missing from stderr:\n%s", res.Stderr)
+	}
+	if !strings.Contains(res.Stderr, "geneos tls renew") ||
+		!strings.Contains(res.Stderr, "geneos tls create") {
+		t.Fatalf("restore warning lacks recovery commands:\n%s", res.Stderr)
+	}
+}
+
 func writeInitArchive(t *testing.T, path string, entries map[string]string, links ...map[string]string) {
 	t.Helper()
 	f, err := os.Create(path)

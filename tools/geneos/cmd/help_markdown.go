@@ -33,6 +33,23 @@ func RenderHelpMarkdown(input string, output io.Writer) string {
 	return renderHelpMarkdownTo(input, helpMarkdownWidth, output)
 }
 
+// WriteWarningMarkdown renders a wrapped GitHub-style warning callout.
+func WriteWarningMarkdown(output io.Writer, input string) {
+	lines := strings.Split(strings.TrimSpace(input), "\n")
+	var warning strings.Builder
+	warning.WriteString("> [!WARNING]\n>\n")
+	for _, line := range lines {
+		warning.WriteString("> ")
+		warning.WriteString(line)
+		warning.WriteByte('\n')
+	}
+	rendered := RenderHelpMarkdown(strings.TrimSpace(warning.String()), output)
+	_, _ = io.WriteString(output, rendered)
+	if !strings.HasSuffix(rendered, "\n") {
+		_, _ = io.WriteString(output, "\n")
+	}
+}
+
 // RenderHelpMarkdownTTY renders Geneos help Markdown for terminal output.
 func RenderHelpMarkdownTTY(input string, width int) string {
 	if width < 1 {
