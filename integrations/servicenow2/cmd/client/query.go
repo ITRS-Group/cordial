@@ -30,6 +30,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
+	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/pkg/rest"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
@@ -111,27 +112,27 @@ func runQuery(ctx context.Context, cf *config.Config, table, query, format strin
 		return nil
 	}
 
-	columns := result.Fields
+	columns := make([]string, len(result.Fields))
+	for i, column := range result.Fields {
+		columns[i] = reporter.EscapeToolkit(column)
+	}
 
 	fmt.Fprintln(out, strings.Join(columns, ","))
 
 	for _, line := range result.Results {
 		var fields []string
-		for _, col := range columns {
+		for _, col := range result.Fields {
 			f := line[col]
-			// escape commas for Toolkit input
-			f = strings.ReplaceAll(f, ",", "\\,")
-			// escape newlines for Toolkit input
-			f = strings.ReplaceAll(f, "\n", "\\n")
+			f = strings.ReplaceAll(reporter.EscapeToolkit(f), ",", "\\,")
 			fields = append(fields, f)
 		}
 		fmt.Fprintln(out, strings.Join(fields, ","))
 	}
 
 	// write headlines for toolkit consumers
-	fmt.Fprintf(out, "<!>table,%s\n", table)
+	fmt.Fprintf(out, "<!>table,%s\n", reporter.EscapeToolkit(table))
 	fmt.Fprintf(out, "<!>results,%d\n", len(result.Results))
-	fmt.Fprintf(out, "<!>query,%s\n", query)
+	fmt.Fprintf(out, "<!>query,%s\n", reporter.EscapeToolkit(query))
 
 	return nil
 }

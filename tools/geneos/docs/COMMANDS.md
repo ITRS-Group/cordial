@@ -5698,6 +5698,8 @@ For newer Netprobes that support multiple dataviews from TOOLKIT scripts, use th
 
 The toolkit output formats only support cell/headline values and cannot be used to set the severity, snooze or user-assignment properties of the returned dataviews and so the options that control those are ignored.
 
+In Toolkit and CSV output, common control characters are rendered as readable escapes such as `\n`, `\r`, and `\t`, backslashes are doubled, and other control characters are discarded.
+
 To help capture diagnostic information the `-x` option can be used to capture matching xpaths without the dataview contents. `-l` can be used to limit the number of dataviews (or xpaths) but the limit is not applied in any defined order.
 
 ## Usage

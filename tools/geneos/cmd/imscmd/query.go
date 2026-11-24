@@ -33,6 +33,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
+	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/pkg/rest"
 )
 
@@ -190,7 +191,7 @@ func runQuery(ctx context.Context, cf *config.Config, opts queryOptions, out io.
 
 	columns := make([]string, len(response.DataTable[0]))
 	for i, col := range response.DataTable[0] {
-		columns[i] = strings.ReplaceAll(col, ".", "_")
+		columns[i] = reporter.EscapeToolkit(strings.ReplaceAll(col, ".", "_"))
 	}
 
 	fmt.Fprintln(out, strings.Join(columns, ","))
@@ -202,10 +203,7 @@ func runQuery(ctx context.Context, cf *config.Config, opts queryOptions, out io.
 			if col < len(line) {
 				f = line[col]
 			}
-			// escape commas for Toolkit input
-			f = strings.ReplaceAll(f, ",", "\\,")
-			// escape newlines for Toolkit input
-			f = strings.ReplaceAll(f, "\n", "\\n")
+			f = strings.ReplaceAll(reporter.EscapeToolkit(f), ",", "\\,")
 			fields = append(fields, f)
 		}
 		fmt.Fprintln(out, strings.Join(fields, ","))
@@ -215,7 +213,7 @@ func runQuery(ctx context.Context, cf *config.Config, opts queryOptions, out io.
 	if imsType == "sdp" {
 		source = "requests"
 	}
-	fmt.Fprintf(out, "<!>source,%s\n", source)
+	fmt.Fprintf(out, "<!>source,%s\n", reporter.EscapeToolkit(source))
 	fmt.Fprintf(out, "<!>incidents,%d\n", len(response.DataTable)-1)
 
 	return nil

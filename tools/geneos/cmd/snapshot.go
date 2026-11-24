@@ -28,6 +28,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos/commands"
+	"github.com/itrs-group/cordial/pkg/reporter"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -250,21 +251,21 @@ func snapshotInstanceToolkit(i geneos.Instance, params ...any) (resp *responses.
 		headlines := dv.HeadlineOrder
 
 		if len(rows) > 0 {
-			fmt.Println(strings.Join(columns, ","))
+			fmt.Println(snapshotToolkitRow(columns))
 		} else {
 			fmt.Println("rowname")
 		}
 		for _, headline := range headlines {
-			fmt.Printf("<!>%s,%s\n", headline, strings.ReplaceAll(dv.Headlines[headline].Value, ",", "\\,"))
+			fmt.Printf("<!>%s,%s\n", snapshotToolkitCell(headline), reporter.EscapeToolkit(dv.Headlines[headline].Value))
 		}
 		if len(rows) == 0 {
 			return
 		}
 		for _, row := range rows {
-			values := []string{strings.ReplaceAll(row, ",", "\\,")}
+			values := []string{snapshotToolkitCell(row)}
 			r := dv.Table[row]
 			for _, column := range columns[1:] {
-				values = append(values, strings.ReplaceAll(r[column].Value, ",", "\\,"))
+				values = append(values, snapshotToolkitCell(r[column].Value))
 			}
 			fmt.Println(strings.Join(values, ","))
 		}
@@ -305,14 +306,14 @@ func snapshotInstanceToolkitMulti(i geneos.Instance, params ...any) (resp *respo
 		rows := dv.RowOrder
 		headlines := dv.HeadlineOrder
 
-		fmt.Println("<dataview>" + dv.Name)
+		fmt.Println("<dataview>" + reporter.EscapeToolkit(dv.Name))
 		if len(rows) > 0 {
-			fmt.Println("<h>" + strings.Join(columns, ","))
+			fmt.Println("<h>" + snapshotToolkitRow(columns))
 		} else {
 			fmt.Println("<h>rowname")
 		}
 		for _, headline := range headlines {
-			fmt.Printf("<!>%s,%s\n", headline, strings.ReplaceAll(dv.Headlines[headline].Value, ",", "\\,"))
+			fmt.Printf("<!>%s,%s\n", snapshotToolkitCell(headline), reporter.EscapeToolkit(dv.Headlines[headline].Value))
 		}
 		if len(rows) == 0 {
 			if i != nil {
@@ -321,13 +322,25 @@ func snapshotInstanceToolkitMulti(i geneos.Instance, params ...any) (resp *respo
 			continue
 		}
 		for _, row := range rows {
-			values := []string{strings.ReplaceAll(row, ",", "\\,")}
+			values := []string{snapshotToolkitCell(row)}
 			r := dv.Table[row]
 			for _, column := range columns[1:] {
-				values = append(values, strings.ReplaceAll(r[column].Value, ",", "\\,"))
+				values = append(values, snapshotToolkitCell(r[column].Value))
 			}
 			fmt.Println(strings.Join(values, ","))
 		}
 	}
 	return
+}
+
+func snapshotToolkitCell(value string) string {
+	return strings.ReplaceAll(reporter.EscapeToolkit(value), ",", "\\,")
+}
+
+func snapshotToolkitRow(values []string) string {
+	escaped := make([]string, len(values))
+	for i, value := range values {
+		escaped[i] = snapshotToolkitCell(value)
+	}
+	return strings.Join(escaped, ",")
 }

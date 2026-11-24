@@ -31,11 +31,44 @@ func snapshotCommandServer(t *testing.T, username, password string) *httptest.Se
 			"xpaths": []string{snapshotCommandTestXPath},
 		})
 	})
+	mux.HandleFunc("/proxy/snapshot/dataview", func(w http.ResponseWriter, r *http.Request) {
+		assertSnapshotAuth(t, r, username, password)
+		_, _ = io.WriteString(w, `{"status":"ok","dataview":{"sample-time":"2026-11-24T02:00:00Z","headlines":{},"table":{"row":{"value":{"value":"line one\nline two\rC:\\temp\tbad\u0000value"}}}}}`)
+	})
 	return httptest.NewServer(mux)
+}
+
+func TestSnapshotToolkitEscapesControlCharacters(t *testing.T) {
+	cmdtest.Env(t)
+	server := snapshotCommandServer(t, "", "")
+	t.Cleanup(server.Close)
+
+	for _, format := range []string{"toolkit", "toolkit-multi"} {
+		t.Run(format, func(t *testing.T) {
+			res := cmdtest.Run(t, cmd.Cmd,
+				"snapshot",
+				"--connect", server.URL+"/proxy",
+				"--format", format,
+				snapshotCommandTestXPath,
+			)
+			if res.Err != nil {
+				t.Fatalf("snapshot --format %s: %v\n%s%s", format, res.Err, res.Stdout, res.Stderr)
+			}
+			if strings.Contains(res.Stdout, "\r") || strings.Contains(res.Stdout, "\u0000") {
+				t.Errorf("output contains raw control characters: %q", res.Stdout)
+			}
+			if want := `line one\nline two\rC:\\temp\tbadvalue`; !strings.Contains(res.Stdout, want) {
+				t.Errorf("output does not contain escaped value %q:\n%s", want, res.Stdout)
+			}
+		})
+	}
 }
 
 func assertSnapshotAuth(t *testing.T, r *http.Request, username, password string) {
 	t.Helper()
+	if username == "" {
+		return
+	}
 	gotUser, gotPassword, ok := r.BasicAuth()
 	if !ok || gotUser != username || gotPassword != password {
 		t.Errorf("BasicAuth = %q, %q, %v; want %q, %q", gotUser, gotPassword, ok, username, password)

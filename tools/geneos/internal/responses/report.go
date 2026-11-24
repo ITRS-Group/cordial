@@ -90,7 +90,11 @@ func (responses GeneralResponses) Report(writer any, options ...Option) (err err
 			}
 		case *csv.Writer:
 			for _, s := range resp.Dataview.Table {
-				w.Write(logger.RedactSlice(s))
+				row := logger.RedactSlice(s)
+				for i := range row {
+					row[i] = reporter.EscapeControl(row[i])
+				}
+				w.Write(row)
 			}
 			w.Flush()
 		case io.Writer:

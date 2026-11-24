@@ -32,6 +32,7 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/itrs-group/cordial/pkg/reporter"
 )
 
 var cfgFile string
@@ -117,15 +118,15 @@ and defined in the configuration file.`,
 		for _, r := range dataview.Table {
 			var row []string
 			for _, c := range r {
-				row = append(row, strings.ReplaceAll(c, ",", "\\,"))
+				row = append(row, strings.ReplaceAll(reporter.EscapeToolkit(c), ",", "\\,"))
 			}
 			fmt.Println(strings.Join(row, ","))
 		}
 		if dataview.Name != "" {
-			fmt.Printf("<!>dataview,%s\n", dataview.Name)
+			fmt.Printf("<!>dataview,%s\n", reporter.EscapeToolkit(dataview.Name))
 		}
 		for _, h := range dataview.Headlines {
-			fmt.Printf("<!>%s,%s\n", h.Name, strings.ReplaceAll(h.Value, ",", "\\,"))
+			fmt.Printf("<!>%s,%s\n", reporter.EscapeToolkit(h.Name), reporter.EscapeToolkit(h.Value))
 		}
 		return
 	},

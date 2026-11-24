@@ -30,7 +30,7 @@ func TestCSVReporterRendersRows(t *testing.T) {
 	if err := r.Prepare(Report{}); err != nil {
 		t.Fatal(err)
 	}
-	r.UpdateTable([]string{"name", "description"}, [][]string{{"gateway", "Demo, west"}})
+	r.UpdateTable([]string{"name", "description"}, [][]string{{"gateway", "Demo, west\nnext\rrow\tC:\\temp\x00"}})
 	if err := r.Render(); err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestCSVReporterRendersRows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := [][]string{{"name", "description"}, {"gateway", "Demo, west"}}
+	want := [][]string{{"name", "description"}, {"gateway", `Demo, west\nnext\rrow\tC:\\temp`}}
 	if !reflect.DeepEqual(rows, want) {
 		t.Fatalf("CSV rows = %#v, want %#v", rows, want)
 	}
@@ -54,12 +54,15 @@ func TestToolkitReporterEscapesUnsupportedCharacters(t *testing.T) {
 	if err := r.Prepare(Report{}); err != nil {
 		t.Fatal(err)
 	}
-	r.AddHeadline("state", "OK")
-	r.UpdateTable([]string{"name", "detail"}, [][]string{{"gateway", "line,one\nline two"}})
+	r.AddHeadline("state", "first\rsecond\tthird\b\f\v\a\x00\x1b\x7f")
+	r.UpdateTable([]string{"name", "detail"}, [][]string{{"gateway", "line,one\nC:\\temp"}})
 	if err := r.Render(); err != nil {
 		t.Fatal(err)
 	}
-	want := "name,detail\ngateway,line one\\nline two\n<!>state,OK\n"
+	want := `name,detail
+gateway,line one\nC:\\temp
+<!>state,first\rsecond\tthird\b\f\v\a
+`
 	if output.String() != want {
 		t.Fatalf("Toolkit output = %q, want %q", output.String(), want)
 	}

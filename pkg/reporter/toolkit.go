@@ -20,6 +20,7 @@ package reporter
 import (
 	"io"
 	"strings"
+	"unicode"
 )
 
 // ToolkitReporter writes reports in the Geneos Toolkit plugin format.
@@ -66,17 +67,53 @@ func (t *ToolkitReporter) AddHeadlines(headlines map[string]string) {
 }
 
 // toolkitCell makes a value safe for Toolkit CSV, which does not
-// support quoting: commas are replaced with spaces and line breaks with
-// escaped newlines.
+// support quoting: commas are replaced with spaces and control characters
+// are escaped or discarded.
 func toolkitCell(cell string) string {
 	return toolkitText(strings.ReplaceAll(cell, ",", " "))
 }
 
-// toolkitText escapes line breaks only, for the value of a headline,
-// which may contain commas as it follows the first comma on the line
+// toolkitText escapes values that may contain commas, such as headline
+// values that follow the first comma on a line.
 func toolkitText(s string) string {
-	s = strings.ReplaceAll(s, "\r", "")
-	return strings.ReplaceAll(s, "\n", "\\n")
+	return EscapeControl(s)
+}
+
+// EscapeControl converts common control characters to readable escapes,
+// doubles backslashes, and discards other Unicode control characters.
+func EscapeControl(s string) string {
+	var out strings.Builder
+	out.Grow(len(s))
+	for _, r := range s {
+		switch r {
+		case '\\':
+			out.WriteString(`\\`)
+		case '\a':
+			out.WriteString(`\a`)
+		case '\b':
+			out.WriteString(`\b`)
+		case '\t':
+			out.WriteString(`\t`)
+		case '\n':
+			out.WriteString(`\n`)
+		case '\v':
+			out.WriteString(`\v`)
+		case '\f':
+			out.WriteString(`\f`)
+		case '\r':
+			out.WriteString(`\r`)
+		default:
+			if !unicode.IsControl(r) {
+				out.WriteRune(r)
+			}
+		}
+	}
+	return out.String()
+}
+
+// EscapeToolkit is retained as the format-specific name for EscapeControl.
+func EscapeToolkit(s string) string {
+	return EscapeControl(s)
 }
 
 func toolkitRow(row []string) string {
