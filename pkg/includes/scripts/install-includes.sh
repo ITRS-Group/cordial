@@ -2,15 +2,43 @@
 set -eu
 
 usage() {
-    printf 'Usage: %s GENEOS_HOME\n' "$0" >&2
+    printf 'Usage: %s ABSOLUTE_DESTINATION_DIRECTORY [SITE_NAME]\n' "$0" >&2
     exit 2
 }
 
-[ "$#" -eq 1 ] || usage
+[ "$#" -ge 1 ] && [ "$#" -le 2 ] || usage
 
-GENEOS_HOME=$1
+INCLUDES_DIR=$1
+while [ "$INCLUDES_DIR" != / ] && [ "${INCLUDES_DIR%/}" != "$INCLUDES_DIR" ]; do
+    INCLUDES_DIR=${INCLUDES_DIR%/}
+done
+case "$INCLUDES_DIR" in
+    /)
+        printf 'Include destination must not be the filesystem root\n' >&2
+        exit 1
+        ;;
+    /*) ;;
+    *) printf 'Include destination must be an absolute path: %s\n' "$1" >&2; exit 1 ;;
+esac
+SITE=${2:-local}
+case "$SITE" in
+    ''|.|..)
+        printf 'Site name must be a single safe path component: %s\n' "$SITE" >&2
+        exit 1
+        ;;
+esac
+if ! printf '%s\n' "$SITE" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+    printf 'Site name must be a single safe path component: %s\n' "$SITE" >&2
+    exit 1
+fi
+case $(printf '%s\n' "$SITE" | tr '[:upper:]' '[:lower:]') in
+    config|include|includes|gateways|shared|gateway_shared|gateway_config|templates)
+        printf 'Site name conflicts with a Gateway directory: %s\n' "$SITE" >&2
+        exit 1
+        ;;
+esac
 SOURCE_DIR=${INCLUDES_SOURCE:-$(pwd -P)}
-INCLUDES_DIR=$GENEOS_HOME/gateway/includes
+CONFIG_DIR=$(dirname "$INCLUDES_DIR")/$SITE
 
 if [ ! -d "$SOURCE_DIR" ]; then
     printf 'Include source directory not found: %s\n' "$SOURCE_DIR" >&2
@@ -58,16 +86,30 @@ fi
 set -- "$VERSION_DIR"/"$SOURCE".*.xml
 [ -f "$1" ] || { printf 'No include files found for source %s\n' "$SOURCE" >&2; exit 1; }
 
+if [ -L "$INCLUDES_DIR" ] || { [ -e "$INCLUDES_DIR" ] && [ ! -d "$INCLUDES_DIR" ]; }; then
+    printf 'Include destination is not a directory: %s\n' "$INCLUDES_DIR" >&2
+    exit 1
+fi
+if [ -d "$SOURCE_DIR/config" ]; then
+    if [ -L "$CONFIG_DIR" ] || { [ -e "$CONFIG_DIR" ] && [ ! -d "$CONFIG_DIR" ]; }; then
+        printf 'Config destination is not a directory: %s\n' "$CONFIG_DIR" >&2
+        exit 1
+    fi
+    if [ -L "$INCLUDES_DIR/config" ] || { [ -e "$INCLUDES_DIR/config" ] && [ ! -d "$INCLUDES_DIR/config" ]; }; then
+        printf 'Old config path is not a directory: %s\n' "$INCLUDES_DIR/config" >&2
+        exit 1
+    fi
+fi
+PARENT_DIR=$(dirname "$INCLUDES_DIR")
+if [ -e "$PARENT_DIR" ] && [ ! -d "$PARENT_DIR" ]; then
+    printf 'Include destination parent is not a directory: %s\n' "$PARENT_DIR" >&2
+    exit 1
+fi
 if [ -e "$INCLUDES_DIR/$VERSION" ] || [ -L "$INCLUDES_DIR/$VERSION" ]; then
     printf 'Version already installed: %s\n' "$INCLUDES_DIR/$VERSION" >&2
     exit 1
 fi
-for directory in "$GENEOS_HOME/gateway" "$INCLUDES_DIR"; do
-    if [ -L "$directory" ] || { [ -e "$directory" ] && [ ! -d "$directory" ]; }; then
-        printf 'Include destination is not a directory: %s\n' "$directory" >&2
-        exit 1
-    fi
-done
+mkdir -p "$INCLUDES_DIR"
 mkdir -p "$INCLUDES_DIR/$VERSION"
 
 copy_old_config() (
@@ -87,7 +129,7 @@ copy_old_config() (
             continue
         fi
         case "$name" in
-            config.*) name="local-$name" ;;
+            config.*) name="$SITE-$name" ;;
         esac
         destination=$destination_dir/$name
         if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
@@ -97,25 +139,16 @@ copy_old_config() (
 )
 
 if [ -d "$SOURCE_DIR/config" ]; then
-    CONFIG_DIR=$GENEOS_HOME/gateway/local
-    if [ -L "$CONFIG_DIR" ] || { [ -e "$CONFIG_DIR" ] && [ ! -d "$CONFIG_DIR" ]; }; then
-        printf 'Config destination is not a directory: %s\n' "$CONFIG_DIR" >&2
-        exit 1
-    fi
     mkdir -p "$CONFIG_DIR"
 
-    if [ -L "$INCLUDES_DIR/config" ] || { [ -e "$INCLUDES_DIR/config" ] && [ ! -d "$INCLUDES_DIR/config" ]; }; then
-        printf 'Old config path is not a directory: %s\n' "$INCLUDES_DIR/config" >&2
-        exit 1
-    fi
     if [ -d "$INCLUDES_DIR/config" ]; then
         copy_old_config "$INCLUDES_DIR/config" "$CONFIG_DIR"
     fi
 
-    for source in "$CONFIG_DIR"/local.*.xml; do
+    for source in "$CONFIG_DIR"/"$SITE".*.xml; do
         [ -e "$source" ] || [ -L "$source" ] || continue
         name=${source##*/}
-        destination="$CONFIG_DIR/local-config.${name#local.}"
+        destination="$CONFIG_DIR/$SITE-config.${name#"$SITE".}"
         if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
             cp -pLn "$source" "$destination"
         fi
@@ -124,7 +157,7 @@ if [ -d "$SOURCE_DIR/config" ]; then
     for source in "$SOURCE_DIR"/config/config.*.xml; do
         [ -f "$source" ] || continue
         name=${source##*/}
-        destination="$CONFIG_DIR/local-$name"
+        destination="$CONFIG_DIR/$SITE-$name"
         if [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
             install -m 0664 "$source" "$destination"
         fi

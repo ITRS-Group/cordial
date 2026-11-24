@@ -116,37 +116,20 @@ Their version is the date the source data was fetched, not the Cordial release
 or archive build date. This snapshot is `v2026.11.20`, recorded in
 the source tree's `pkg/holidays/VERSION`. Month and day are always two digits. Updating documentation
 or rebuilding the archive does not change the snapshot version.
-They are not part of the standard ITRS includes or the files installed by
-`geneos init` or a no-argument `geneos includes install`.
-
-```shell
-geneos include install /path/to/geneos-holiday-includes-v2026.11.20.tar.gz
-```
+They are distributed separately from the standard ITRS includes.
 
 The archive uses the installer-compatible `geneos-includes-v<version>/`
 wrapper, containing a `holidays-v<version>/` directory of `holidays.*.xml`
 files, `scripts/install-includes.sh`, and a `docs/` directory with this guide,
 regional Markdown and PDFs, and the refresh runbook in both formats.
 The archive filename differs from its internal wrapper intentionally; the
-installer validates the contents, not the filename.
+wrapper name is independent of the external archive filename.
 
-Installation creates `gateway/includes/holidays-v<version>/` and missing
-stable links such as `gateway/includes/holidays.layer0.in.xml`. It does
-not add Gateway include references or enable calendars. Existing links are
-preserved unless `--update` is supplied. For later upgrades, use
-`geneos include install --update ARCHIVE` or
-`geneos include update --prefix holidays`. The latter selects the
-newest installed holiday snapshot; add `--version vYYYY.MM.DD`
-to select a different installed version. A full
-`--version holidays-v<version>` remains supported without `--prefix`.
-Updates without either option still select the embedded ITRS corpus version,
-which is versioned separately from Cordial and holidays.
-
-Use `geneos include list --prefix holidays --version` to inspect installed
-holiday versions, and `geneos include delete --prefix holidays` to remove
-unused holiday versions. List and delete default to `--prefix itrs`; use
-`--prefix '*'` for all sources. Installation infers the source from the
-archive unless `--prefix` is explicitly supplied as a source check.
+Installation creates `holidays-v<version>/` below the selected destination and
+missing stable links such as `holidays.layer0.in.xml`. It does not add Gateway
+include references or enable calendars, and existing links are preserved.
+For a later release, install it into the same destination, inspect the versioned
+files and existing links, and change links only after checking Gateway setups.
 
 From the repository root, `make holidays` builds the optional archive into
 `release-<cordial-version>/`, using `pkg/holidays/VERSION` and Docker to package the XML and
@@ -154,27 +137,30 @@ Markdown/PDF documentation. The full release pipeline also publishes this
 archive and includes it in `SHA256SUMS`. The standard include archive remains
 available through `make includes`.
 
-### Installation without the `geneos` command
+### Installation
 
 Extract the archive into a separate directory, change into its top-level
-wrapper, and run the supplied shell installer with your Geneos home:
+wrapper, and run the supplied shell installer with the absolute path to the
+destination include directory:
 
 ```shell
 tar -xzf /path/to/geneos-holiday-includes-v2026.11.20.tar.gz
 cd geneos-includes-v2026.11.20
-sh scripts/install-includes.sh /path/to/geneos
+sh scripts/install-includes.sh /path/to/deployment/gateway/includes
 ```
 
 The shared installer detects the `holidays` source, installs its XML read-only
 into a new version directory, and creates only missing top-level holiday
 links. Existing files, links (including dangling ones), standard ITRS includes
-and site configuration are left alone. There are no configuration templates
-in the holiday archive, so it does not create or migrate site files.
+and local configuration are left alone. There are no configuration templates
+in the holiday archive, so it does not create or migrate configuration files.
+Choose a destination whose files can be referenced using a relative path from
+the Gateway working directory, keeping that relationship inside the Gateway
+deployment so it can be relocated without changing setup-file paths.
 The installer refuses an already-installed version rather than overwriting it.
 It does not add Gateway references, enable calendars or update existing links.
-Use `geneos include install --update ARCHIVE` for managed upgrades and
-Gateway-reference checks. The shell installer assumes a trusted, already
-extracted archive; it does not replace the CLI's archive validation.
+The shell installer assumes a trusted, already-extracted archive. Before
+switching links to a later version, inspect every referencing Gateway setup.
 
 ## Use in Geneos
 
