@@ -702,7 +702,7 @@ func TestStandaloneInstallerMigratesLegacyConfig(t *testing.T) {
 	if err := os.Symlink("config.test.xml", filepath.Join(legacy, "config.link.xml")); err != nil {
 		t.Fatal(err)
 	}
-	command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", root)
+	command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", filepath.Join(root, "gateway", "includes"))
 	command.Env = append(os.Environ(), "INCLUDES_SOURCE="+source)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("standalone install failed: %v\n%s", err, output)
@@ -748,14 +748,14 @@ func TestStandaloneInstallerSourceVersions(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			siteDir := filepath.Join(root, "gateway", "local")
+			siteDir := filepath.Join(root, "gateway", "acme")
 			if err := os.MkdirAll(siteDir, 0755); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(siteDir, "local.test.xml"), []byte("custom"), 0644); err != nil {
+			if err := os.WriteFile(filepath.Join(siteDir, "acme.test.xml"), []byte("custom"), 0644); err != nil {
 				t.Fatal(err)
 			}
-			command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", root)
+			command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", filepath.Join(root, "gateway", "includes"), "acme")
 			command.Env = append(os.Environ(), "INCLUDES_SOURCE="+archive)
 			if output, err := command.CombinedOutput(); err != nil {
 				t.Fatalf("standalone install failed: %v\n%s", err, output)
@@ -764,7 +764,7 @@ func TestStandaloneInstallerSourceVersions(t *testing.T) {
 			if target, err := os.Readlink(link); err != nil || target != version+"/"+source+".test.xml" {
 				t.Fatalf("standalone source link = %q, %v", target, err)
 			}
-			template := filepath.Join(root, "gateway", "local", "local-config.test.xml")
+			template := filepath.Join(root, "gateway", "acme", "acme-config.test.xml")
 			if data, err := os.ReadFile(template); err != nil || string(data) != "custom" {
 				t.Fatalf("standalone site template = %q, %v", data, err)
 			}
@@ -817,7 +817,7 @@ func TestStandaloneHolidayInstallerPreservesExistingFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := func() ([]byte, error) {
-		command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", root)
+		command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", parent)
 		command.Env = append(os.Environ(), "INCLUDES_SOURCE="+archive)
 		return command.CombinedOutput()
 	}
@@ -862,13 +862,64 @@ func TestStandaloneInstallerRejectsInvalidCalendarDate(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(directory, "holidays.test.xml"), nil, 0644); err != nil {
 		t.Fatal(err)
 	}
-	command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", root)
+	command := exec.Command("sh", "../../../pkg/includes/scripts/install-includes.sh", filepath.Join(root, "gateway", "includes"))
 	command.Env = append(os.Environ(), "INCLUDES_SOURCE="+archive)
 	if output, err := command.CombinedOutput(); err == nil {
 		t.Fatalf("invalid calendar date accepted: %s", output)
 	}
 	if _, err := os.Lstat(filepath.Join(root, "gateway")); !os.IsNotExist(err) {
 		t.Fatalf("invalid calendar date changed destination: %v", err)
+	}
+}
+
+func TestStandaloneInstallerValidatesDestination(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("standalone installer requires Unix shell tools")
+	}
+	archive := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(archive, "v1.2.3"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(archive, "v1.2.3", "itrs.test.xml"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name        string
+		destination string
+		prepare     func(string) error
+	}{
+		{"root", "/", nil},
+		{"relative", "gateway/includes", nil},
+		{"invalid-site", filepath.Join(t.TempDir(), "includes"), func(string) error {
+			return nil
+		}},
+		{"file", "", func(path string) error {
+			return os.WriteFile(path, nil, 0644)
+		}},
+		{"symlink", "", func(path string) error {
+			target := t.TempDir()
+			return os.Symlink(target, path)
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			destination := test.destination
+			if destination == "" {
+				destination = filepath.Join(t.TempDir(), "includes")
+				if err := test.prepare(destination); err != nil {
+					t.Fatal(err)
+				}
+			}
+			args := []string{destination}
+			if test.name == "invalid-site" {
+				args = append(args, "../unsafe")
+			}
+			command := exec.Command("sh", append([]string{"../../../pkg/includes/scripts/install-includes.sh"}, args...)...)
+			command.Env = append(os.Environ(), "INCLUDES_SOURCE="+archive)
+			if output, err := command.CombinedOutput(); err == nil {
+				t.Fatalf("invalid destination accepted: %s", output)
+			}
+		})
 	}
 }
 
