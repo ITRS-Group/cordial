@@ -22,12 +22,18 @@ Holiday versions are independent of Cordial and standard includes and record
 the source-fetch date from `pkg/holidays/VERSION`. The current snapshot is
 `v2026.11.20`; zero-padded month/day values and leap-year validity are checked.
 
-Both standard and holiday archives include `scripts/install-includes.sh` for
-installation without `geneos`. It creates a new source-version directory and
-only missing links; it refuses an existing version. It processes site
+Both standard and holiday archives include `scripts/install-includes.sh`. It
+creates a new source-version directory and only missing links, and refuses an
+existing version. It processes site
 configuration only when the extracted archive has a `config/` directory, so
 holiday installation does not create or migrate site templates. Run it from
-the extracted archive wrapper with the Geneos home as its argument.
+the extracted archive wrapper with the absolute destination include directory
+as its argument. For example, pass `/path/to/deployment/gateway/includes`; the
+standard archive writes `local/local-config.*.xml` beside that destination.
+An optional second argument selects another site name, such as `acme`.
+Choose a destination within the Gateway deployment that Gateway setup files
+can reference relatively, so relocating the deployment does not require
+changing setup-file paths.
 
 Configuration templates are installed under `gateway/<site>/<site>-config.*.xml`, next to `gateway/includes`. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment; for example, use `geneos config set site=acme` for Acme Corp. The `-config` infix distinguishes local overrides from functional includes when source and site have the same name. The archive retains its original `config/` and `config.*.xml` names. Templates from different sources share this site directory; use distinct template basenames to avoid sharing a destination.
 
