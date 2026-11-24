@@ -19,7 +19,6 @@ package cmd
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -40,6 +39,22 @@ var snapshotCmdMaxitems int
 var snapshotCmdUsername string
 var snapshotCmdPassword config.Secret
 var snapshotCmdFormat string
+var snapshotCmdConnect snapshotConnect
+var snapshotCmdPasswordWasSet bool
+
+type snapshotConnect string
+
+func (c *snapshotConnect) String() string { return string(*c) }
+
+func (c *snapshotConnect) Set(value string) error {
+	if *c != "" {
+		return fmt.Errorf("--connect may only be specified once")
+	}
+	*c = snapshotConnect(value)
+	return nil
+}
+
+func (c *snapshotConnect) Type() string { return "string" }
 
 func init() {
 	Cmd.AddCommand(snapshotCmd)
@@ -52,6 +67,8 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignment, "userassignment", "U", false, "Request cell user assignment info")
 
 	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username")
+	snapshotCmd.Flags().VarP(&snapshotCmdPassword, "password", "p", "Password (plaintext or ${enc:...})")
+	snapshotCmd.Flags().VarP(&snapshotCmdConnect, "connect", "c", "Connect to a URL or HOST:PORT instead of a configured Gateway")
 	snapshotCmd.Flags().StringVarP(&snapshotCmdFormat, "format", "f", "json", "Output format (json, toolkit, toolkit-multi)")
 
 	snapshotCmd.Flags().IntVarP(&snapshotCmdMaxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
@@ -71,7 +88,7 @@ var snapshotCmd = &cobra.Command{
 	SilenceUsage: true,
 	Annotations: map[string]string{
 		CmdGlobal:                "false",
-		CmdRequireHome:           "true",
+		CmdRequireHome:           "false",
 		CmdWildcardNames:         "true",
 		CmdAllInstancesMustMatch: "true",
 		CmdAuditCommand:          "false",
@@ -88,40 +105,65 @@ var snapshotCmd = &cobra.Command{
 			return fmt.Errorf("snapshots are only valid for gateways")
 		}
 
-		if len(names) == 0 {
-			return fmt.Errorf(`no gateway name(s) supplied. Use a NAME of "all" as an explicit wildcard`)
+		direct := snapshotCmdConnect != ""
+		if direct && len(names) > 0 {
+			return fmt.Errorf("--connect cannot be combined with a Gateway name")
+		}
+		if !direct && len(names) == 0 {
+			return fmt.Errorf(`no gateway name supplied; use --connect to connect directly`)
+		}
+		if len(names) > 1 {
+			return fmt.Errorf("snapshot permits at most one Gateway connection")
 		}
 		if len(params) == 0 {
 			return fmt.Errorf("no dataview xpath(s) supplied")
 		}
 
 		cf := config.Global()
-		if snapshotCmdUsername == "" {
+		usernameSet := cmd.Flags().Changed("username")
+		passwordSet := cmd.Flags().Changed("password")
+		if !usernameSet {
+			if username, ok := os.LookupEnv("ITRS_SNAPSHOT_USERNAME"); ok {
+				snapshotCmdUsername = username
+				usernameSet = true
+			}
+		}
+		if !usernameSet {
 			snapshotCmdUsername = config.Get[string](cf, cf.Join("snapshot", "username"))
 		}
-
-		snapshotCmdPassword = config.Get[config.Secret](cf, cf.Join("snapshot", "password"))
-
-		if snapshotCmdUsername != "" && snapshotCmdPassword == nil {
-			snapshotCmdPassword, err = config.ReadPasswordInput(false, 0)
-			if err != nil {
-				if errors.Is(err, config.ErrNotInteractive) {
-					err = fmt.Errorf("%w and password required", err)
-				}
-				return
+		if !passwordSet {
+			if password, ok := os.LookupEnv("ITRS_SNAPSHOT_PASSWORD"); ok {
+				snapshotCmdPassword = config.ExpandToPassword(password)
+				passwordSet = true
 			}
-			defer clear(snapshotCmdPassword)
 		}
+		if !passwordSet {
+			snapshotCmdPassword = config.Get[config.Secret](cf, cf.Join("snapshot", "password"))
+		}
+		snapshotCmdPasswordWasSet = passwordSet
 
 		var resp responses.GeneralResponses
 
-		switch {
-		case snapshotCmdFormat == "toolkit":
-			resp = instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkit, params)
-		case snapshotCmdFormat == "toolkit-multi":
-			resp = instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkitMulti, params)
-		default:
-			resp = instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, snapshotInstanceJSON, params)
+		if direct {
+			var result *responses.General
+			switch snapshotCmdFormat {
+			case "toolkit":
+				result = snapshotInstanceToolkit(nil, params)
+			case "toolkit-multi":
+				result = snapshotInstanceToolkitMulti(nil, params)
+			default:
+				result = snapshotInstanceJSON(nil, params)
+			}
+			resp = responses.GeneralResponses{snapshotCmdConnect.String(): result}
+		} else {
+			switch {
+			case snapshotCmdFormat == "toolkit":
+				resp = instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkit, params)
+			case snapshotCmdFormat == "toolkit-multi":
+				resp = instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkitMulti, params)
+			default:
+				resp = instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, snapshotInstanceJSON, params)
+			}
 		}
 		return resp.Report(os.Stdout, responses.IndentJSON(true))
 	},
@@ -146,6 +188,9 @@ func snapshotInstanceJSON(i geneos.Instance, params ...any) (resp *responses.Gen
 	values, err := instance.SnapshotDataviews(i, paths,
 		instance.SnapshotUsername(snapshotCmdUsername),
 		instance.SnapshotPassword(snapshotCmdPassword),
+		instance.SnapshotPasswordSet(snapshotCmdPasswordWasSet),
+		instance.SnapshotPrompt(true),
+		instance.SnapshotEndpoint(snapshotCmdConnect.String()),
 		instance.SnapshotScopes(commands.Scope{
 			Value:          snapshotCmdValue,
 			Severity:       snapshotCmdSeverity,
@@ -187,6 +232,9 @@ func snapshotInstanceToolkit(i geneos.Instance, params ...any) (resp *responses.
 	dataviews, err := instance.SnapshotDataviews(i, paths,
 		instance.SnapshotUsername(snapshotCmdUsername),
 		instance.SnapshotPassword(snapshotCmdPassword),
+		instance.SnapshotPasswordSet(snapshotCmdPasswordWasSet),
+		instance.SnapshotPrompt(true),
+		instance.SnapshotEndpoint(snapshotCmdConnect.String()),
 		instance.SnapshotMaxItems(snapshotCmdMaxitems),
 	)
 	if err != nil {
@@ -241,6 +289,9 @@ func snapshotInstanceToolkitMulti(i geneos.Instance, params ...any) (resp *respo
 	dataviews, err := instance.SnapshotDataviews(i, paths,
 		instance.SnapshotUsername(snapshotCmdUsername),
 		instance.SnapshotPassword(snapshotCmdPassword),
+		instance.SnapshotPasswordSet(snapshotCmdPasswordWasSet),
+		instance.SnapshotPrompt(true),
+		instance.SnapshotEndpoint(snapshotCmdConnect.String()),
 		instance.SnapshotMaxItems(snapshotCmdMaxitems),
 	)
 	if err != nil {
@@ -264,7 +315,9 @@ func snapshotInstanceToolkitMulti(i geneos.Instance, params ...any) (resp *respo
 			fmt.Printf("<!>%s,%s\n", headline, strings.ReplaceAll(dv.Headlines[headline].Value, ",", "\\,"))
 		}
 		if len(rows) == 0 {
-			i.Log().Debug("no rows available", slog.String("dataview", dv.Name))
+			if i != nil {
+				i.Log().Debug("no rows available", slog.String("dataview", dv.Name))
+			}
 			continue
 		}
 		for _, row := range rows {
