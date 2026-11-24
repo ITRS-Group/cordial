@@ -357,6 +357,15 @@ var infoCmd = &cobra.Command{
 			rp.AddHeadline("totalVerified", strconv.FormatInt(totalVerified, 10))
 			rp.AddHeadline("totalExpired", strconv.FormatInt(totalExpired, 10))
 			rp.AddHeadline("totalExpiring30days", strconv.FormatInt(totalExpiring30days, 10))
+			var failures []string
+			for _, ci := range certInfos {
+				if ci.Error != nil {
+					failures = append(failures, fmt.Sprintf("%s: %s", ci.Path, ci.Error))
+				}
+			}
+			if len(failures) > 0 {
+				rp.AddHeadline("samplingStatus", strings.Join(failures, "; "))
+			}
 		}
 
 		if err = rp.Render(); err != nil {

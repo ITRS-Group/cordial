@@ -60,7 +60,82 @@ func TestSnapshotToolkitEscapesControlCharacters(t *testing.T) {
 			if want := `line one\nline two\rC:\\temp\tbadvalue`; !strings.Contains(res.Stdout, want) {
 				t.Errorf("output does not contain escaped value %q:\n%s", want, res.Stdout)
 			}
+			if !strings.Contains(res.Stdout, "<!>samplingStatus,OK") {
+				t.Errorf("output does not report successful sampling:\n%s", res.Stdout)
+			}
+			if got := strings.Count(res.Stdout, "<!>samplingStatus,"); got != 1 {
+				t.Errorf("output contains %d samplingStatus headlines, want 1:\n%s", got, res.Stdout)
+			}
 		})
+	}
+}
+
+func TestSnapshotToolkitReportsCommandError(t *testing.T) {
+	cmdtest.Env(t)
+	res := cmdtest.Run(t, cmd.Cmd,
+		"snapshot",
+		"--connect", "ftp://gateway.example",
+		"--format", "toolkit",
+		"--xpaths",
+		snapshotCommandTestXPath,
+	)
+	if res.Err == nil {
+		t.Fatal("snapshot unexpectedly succeeded")
+	}
+	for _, want := range []string{"<!>samplingStatus,", "not supported"} {
+		if !strings.Contains(res.Stdout, want) {
+			t.Errorf("output does not contain %q:\n%s", want, res.Stdout)
+		}
+	}
+}
+
+func TestSnapshotToolkitReportsFlagError(t *testing.T) {
+	cmdtest.Env(t)
+	res := cmdtest.Run(t, cmd.Cmd,
+		"snapshot",
+		"--format", "toolkit",
+		"--limit", "not-a-number",
+		"--xpaths",
+		snapshotCommandTestXPath,
+	)
+	if res.Err == nil {
+		t.Fatal("snapshot unexpectedly succeeded")
+	}
+	if !strings.Contains(res.Stdout, "<!>samplingStatus,invalid argument") {
+		t.Errorf("output does not report flag error:\n%s", res.Stdout)
+	}
+}
+
+func TestSnapshotForwardsUnsupportedXPathPredicates(t *testing.T) {
+	cmdtest.Env(t)
+	const predicate = `[(param("Group")="Gateway Info")]`
+	mux := http.NewServeMux()
+	mux.HandleFunc("/rest/gatewayinfo/timezone", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `{"status":"ok"}`)
+	})
+	mux.HandleFunc("/rest/xpaths/match", func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			Target string `json:"target"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		if !strings.Contains(request.Target, predicate) {
+			t.Errorf("REST target %q does not contain %q", request.Target, predicate)
+		}
+		_, _ = io.WriteString(w, `{"status":"ok","xpaths":[]}`)
+	})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	res := cmdtest.Run(t, cmd.Cmd,
+		"snapshot",
+		"--connect", server.URL,
+		"--xpaths",
+		"//dataview"+predicate,
+	)
+	if res.Err != nil {
+		t.Fatalf("snapshot with predicate: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
 	}
 }
 

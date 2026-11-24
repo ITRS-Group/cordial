@@ -124,7 +124,8 @@ func loopHosts(fn func(*geneos.Host, any) error, w any, showHidden bool, names [
 	}
 	for _, name := range names {
 		if !found[name] {
-			err = cmd.ReportFailure(name, errors.New("unknown host"))
+			detail := fmt.Errorf("%s: %w", name, errors.New("unknown host"))
+			err = errors.Join(err, cmd.ReportFailure(name, errors.New("unknown host")), detail)
 		}
 	}
 	return

@@ -18,6 +18,7 @@ limitations under the License.
 package reporter
 
 import (
+	"fmt"
 	"io"
 	"strings"
 	"unicode"
@@ -116,6 +117,13 @@ func EscapeToolkit(s string) string {
 	return EscapeControl(s)
 }
 
+// WriteToolkitHeadline writes a Toolkit headline with a control-safe name
+// and value.
+func WriteToolkitHeadline(w io.Writer, name, value string) error {
+	_, err := fmt.Fprintf(w, "<!>%s,%s\n", toolkitCell(name), toolkitText(value))
+	return err
+}
+
 func toolkitRow(row []string) string {
 	cells := make([]string, len(row))
 	for i, cell := range row {
@@ -148,7 +156,7 @@ func (t *ToolkitReporter) Render() error {
 		}
 	}
 	for _, name := range t.headlines.order {
-		if _, err := io.WriteString(t.w, "<!>"+toolkitCell(name)+","+toolkitText(t.headlines.values[name])+"\n"); err != nil {
+		if err := WriteToolkitHeadline(t.w, name, t.headlines.values[name]); err != nil {
 			return err
 		}
 	}

@@ -68,6 +68,16 @@ gateway,line one\nC:\\temp
 	}
 }
 
+func TestWriteToolkitHeadlineEscapesNameAndValue(t *testing.T) {
+	var output bytes.Buffer
+	if err := WriteToolkitHeadline(&output, "sampling\rStatus", "line1\nline2\\C:\temp\x00"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := output.String(), "<!>sampling\\rStatus,line1\\nline2\\\\C:\\temp\n"; got != want {
+		t.Fatalf("headline = %q, want %q", got, want)
+	}
+}
+
 func TestColumnReporterRendersAlignedRows(t *testing.T) {
 	var output bytes.Buffer
 	r, err := NewReporter("column", &output)

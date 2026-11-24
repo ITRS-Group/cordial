@@ -166,7 +166,13 @@ var snapshotCmd = &cobra.Command{
 				resp = instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, snapshotInstanceJSON, params)
 			}
 		}
-		return resp.Report(os.Stdout, responses.IndentJSON(true))
+		err = resp.Report(os.Stdout, responses.IndentJSON(true))
+		if snapshotCmdFormat == "toolkit" || snapshotCmdFormat == "toolkit-multi" {
+			if status := resp.SamplingStatus(); status != "OK" {
+				_ = reporter.WriteToolkitHeadline(os.Stdout, "samplingStatus", status)
+			}
+		}
+		return err
 	},
 }
 
@@ -256,7 +262,7 @@ func snapshotInstanceToolkit(i geneos.Instance, params ...any) (resp *responses.
 			fmt.Println("rowname")
 		}
 		for _, headline := range headlines {
-			fmt.Printf("<!>%s,%s\n", snapshotToolkitCell(headline), reporter.EscapeToolkit(dv.Headlines[headline].Value))
+			_ = reporter.WriteToolkitHeadline(os.Stdout, headline, dv.Headlines[headline].Value)
 		}
 		if len(rows) == 0 {
 			return
@@ -313,7 +319,7 @@ func snapshotInstanceToolkitMulti(i geneos.Instance, params ...any) (resp *respo
 			fmt.Println("<h>rowname")
 		}
 		for _, headline := range headlines {
-			fmt.Printf("<!>%s,%s\n", snapshotToolkitCell(headline), reporter.EscapeToolkit(dv.Headlines[headline].Value))
+			_ = reporter.WriteToolkitHeadline(os.Stdout, headline, dv.Headlines[headline].Value)
 		}
 		if len(rows) == 0 {
 			if i != nil {

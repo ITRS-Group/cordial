@@ -244,6 +244,28 @@ func (responses GeneralResponses) writeErrors(opts *options, timings bool) (err 
 	return
 }
 
+// SamplingStatus summarizes response errors in the same labelled form used
+// for console reporting. Ignored and already-reported errors are omitted.
+func (responses GeneralResponses) SamplingStatus(options ...Option) string {
+	opts := evalWriterOptions(options...)
+	return responses.samplingStatus(opts)
+}
+
+func (responses GeneralResponses) samplingStatus(opts *options) string {
+	var failures []string
+	for _, k := range slices.Sorted(maps.Keys(responses)) {
+		r := responses[k]
+		if r.Err == nil || opts.ignored(r.Err) || errors.Is(r.Err, ErrReported) {
+			continue
+		}
+		failures = append(failures, fmt.Sprintf("%s: %s", r.label(k), r.Err))
+	}
+	if len(failures) == 0 {
+		return "OK"
+	}
+	return strings.Join(failures, "; ")
+}
+
 // Report writes a single General response to the writer w controlled by
 // the given options.
 //

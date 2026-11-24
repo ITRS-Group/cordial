@@ -97,6 +97,11 @@ func (responses GeneralResponses) Formatted(w io.Writer, format string, headings
 	// }
 
 	r.AddHeadlines(opts.headlines)
+	if format == "toolkit" {
+		if status := responses.samplingStatus(opts); status != "OK" {
+			r.AddHeadline("samplingStatus", status)
+		}
+	}
 
 	r.UpdateTable(headings, rows)
 	if err = r.Render(); err != nil {

@@ -39,6 +39,7 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/reporter"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -227,9 +228,12 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 		}
 		resp := instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
 		err = resp.Report(listCSVWriter)
+		if status := resp.SamplingStatus(); status != "OK" {
+			_ = reporter.WriteToolkitHeadline(os.Stdout, "samplingStatus", status)
+		}
 
 		// add headlines
-		fmt.Printf("<!>totalCerts,%d\n", len(resp))
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "totalCerts", strconv.Itoa(len(resp)))
 		var expiringWeek, expiringMonth, invalid int
 
 		// TODO do this with more structured data (use responses.Value?)
@@ -251,9 +255,9 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 				invalid++
 			}
 		}
-		fmt.Printf("<!>expiringLT7Days,%d\n", expiringWeek)
-		fmt.Printf("<!>expiringLT30Days,%d\n", expiringMonth)
-		fmt.Printf("<!>invalid,%d\n", invalid)
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "expiringLT7Days", strconv.Itoa(expiringWeek))
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "expiringLT30Days", strconv.Itoa(expiringMonth))
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "invalid", strconv.Itoa(invalid))
 
 	case listCmdCSV:
 		var prequel [][]string
@@ -458,9 +462,12 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 		}
 		resp := instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
 		err = resp.Report(listCSVWriter)
+		if status := resp.SamplingStatus(); status != "OK" {
+			_ = reporter.WriteToolkitHeadline(os.Stdout, "samplingStatus", status)
+		}
 
 		// add headlines
-		fmt.Printf("<!>totalCerts,%d\n", len(resp))
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "totalCerts", strconv.Itoa(len(resp)))
 		var expiringWeek, expiringMonth, invalid int
 		for _, c := range resp {
 			if len(c.Dataview.Table) == 0 {
@@ -480,9 +487,9 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 				invalid++
 			}
 		}
-		fmt.Printf("<!>expiringLT7Days,%d\n", expiringWeek)
-		fmt.Printf("<!>expiringLT30Days,%d\n", expiringMonth)
-		fmt.Printf("<!>invalid,%d\n", invalid)
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "expiringLT7Days", strconv.Itoa(expiringWeek))
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "expiringLT30Days", strconv.Itoa(expiringMonth))
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "invalid", strconv.Itoa(invalid))
 	case listCmdCSV:
 		listCSVWriter := csv.NewWriter(os.Stdout)
 		listCSVWriter.Write([]string{

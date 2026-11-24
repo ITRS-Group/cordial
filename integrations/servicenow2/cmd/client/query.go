@@ -130,9 +130,9 @@ func runQuery(ctx context.Context, cf *config.Config, table, query, format strin
 	}
 
 	// write headlines for toolkit consumers
-	fmt.Fprintf(out, "<!>table,%s\n", reporter.EscapeToolkit(table))
-	fmt.Fprintf(out, "<!>results,%d\n", len(result.Results))
-	fmt.Fprintf(out, "<!>query,%s\n", reporter.EscapeToolkit(query))
+	_ = reporter.WriteToolkitHeadline(out, "table", table)
+	_ = reporter.WriteToolkitHeadline(out, "results", fmt.Sprint(len(result.Results)))
+	_ = reporter.WriteToolkitHeadline(out, "query", query)
 
 	return nil
 }

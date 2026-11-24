@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -105,11 +106,17 @@ geneos aes ls -S gateway -H localhost -c
 				"modtime",
 			})
 
+			var results responses.GeneralResponses
 			if listCmdShared {
-				return aesListSharedCSV(ct, h).Report(w)
+				results = aesListSharedCSV(ct, h)
 			} else {
-				return instance.Do(command.CommandPath(), h, ct, names, aesListInstanceCSV).Report(w)
+				results = instance.Do(command.CommandPath(), h, ct, names, aesListInstanceCSV)
 			}
+			err = results.Report(w)
+			if status := results.SamplingStatus(); status != "OK" {
+				_ = reporter.WriteToolkitHeadline(os.Stdout, "samplingStatus", status)
+			}
+			return err
 		case listCmdCSV:
 			w := csv.NewWriter(os.Stdout)
 			w.Write([]string{

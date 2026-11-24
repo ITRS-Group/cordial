@@ -26,6 +26,7 @@ import (
 	"log/slog"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -35,6 +36,7 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/itrs-group/cordial/pkg/reporter"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -102,6 +104,11 @@ You can do one of the following:
 `, "|", "`"), 76))
 
 func init() {
+	Cmd.SetFlagErrorFunc(func(command *cobra.Command, err error) error {
+		writeToolkitSamplingStatus(command, err)
+		return err
+	})
+
 	cobra.OnInitialize(func() {
 		// initialise standard logging before loading global config
 		logger.Init(packageName)
@@ -333,6 +340,7 @@ var silenced = map[*cobra.Command][2]bool{}
 func silenceReportedRunE(run func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
 	return func(c *cobra.Command, args []string) error {
 		err := run(c, args)
+		writeToolkitSamplingStatus(c, err)
 		if errors.Is(err, ErrReported) {
 			if _, ok := silenced[c]; !ok {
 				silenced[c] = [2]bool{c.SilenceErrors, c.SilenceUsage}
@@ -342,6 +350,71 @@ func silenceReportedRunE(run func(*cobra.Command, []string) error) func(*cobra.C
 		}
 		return err
 	}
+}
+
+func writeToolkitSamplingStatus(command *cobra.Command, err error) {
+	if !toolkitOutputRequested(command) {
+		return
+	}
+	switch {
+	case err == nil:
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "samplingStatus", "OK")
+	case !errors.Is(err, ErrReported):
+		_ = reporter.WriteToolkitHeadline(os.Stdout, "samplingStatus", err.Error())
+	default:
+		status := nonReportedErrorText(err)
+		if status != "" {
+			_ = reporter.WriteToolkitHeadline(os.Stdout, "samplingStatus", status)
+		}
+	}
+}
+
+func toolkitOutputRequested(command *cobra.Command) bool {
+	if flag := command.Flags().Lookup("toolkit"); flag != nil {
+		toolkit, _ := strconv.ParseBool(flag.Value.String())
+		if toolkit {
+			return true
+		}
+	}
+	if flag := command.Flags().Lookup("format"); flag != nil {
+		return flag.Value.String() == "toolkit" || flag.Value.String() == "toolkit-multi"
+	}
+	return false
+}
+
+func nonReportedErrorText(err error) string {
+	if err == nil || errors.Is(err, ErrReported) && err == ErrReported {
+		return ""
+	}
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		var messages []string
+		for _, child := range joined.Unwrap() {
+			if text := nonReportedErrorText(child); text != "" {
+				messages = append(messages, text)
+			}
+		}
+		return strings.Join(messages, "; ")
+	}
+	if errors.Is(err, ErrReported) {
+		return ""
+	}
+	return err.Error()
+}
+
+func toolkitWrappedRun(run func(*cobra.Command, []string)) func(*cobra.Command, []string) {
+	return func(c *cobra.Command, args []string) {
+		run(c, args)
+		writeToolkitSamplingStatus(c, nil)
+	}
+}
+
+var toolkitRunPC = reflect.ValueOf(toolkitWrappedRun(nil)).Pointer()
+
+func wrapToolkitRun(command *cobra.Command) {
+	if command.RunE != nil || command.Run == nil || reflect.ValueOf(command.Run).Pointer() == toolkitRunPC {
+		return
+	}
+	command.Run = toolkitWrappedRun(command.Run)
 }
 
 // reportedRunEPC is the code address of silenceReportedRunE closures,
@@ -394,6 +467,11 @@ geneos restart
 	DisableFlagsInUseLine: true,
 	// SilenceErrors:      true, - this blocks all child errors too, don't uncomment it
 	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
+		defer func() {
+			if err != nil {
+				writeToolkitSamplingStatus(command, err)
+			}
+		}()
 		restoreSilence(command)
 
 		if profilesErr != nil {
@@ -487,6 +565,7 @@ geneos restart
 		// the failures of the items acted on are reported by the
 		// command, so do not repeat them in the error or usage
 		silenceReported(command)
+		wrapToolkitRun(command)
 
 		// check initialisation
 		if command.Annotations[CmdRequireHome] == "true" && geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {

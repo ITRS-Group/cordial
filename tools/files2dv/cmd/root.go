@@ -123,10 +123,10 @@ and defined in the configuration file.`,
 			fmt.Println(strings.Join(row, ","))
 		}
 		if dataview.Name != "" {
-			fmt.Printf("<!>dataview,%s\n", reporter.EscapeToolkit(dataview.Name))
+			_ = reporter.WriteToolkitHeadline(os.Stdout, "dataview", dataview.Name)
 		}
 		for _, h := range dataview.Headlines {
-			fmt.Printf("<!>%s,%s\n", reporter.EscapeToolkit(h.Name), reporter.EscapeToolkit(h.Value))
+			_ = reporter.WriteToolkitHeadline(os.Stdout, h.Name, h.Value)
 		}
 		return
 	},
