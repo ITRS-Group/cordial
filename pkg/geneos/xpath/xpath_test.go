@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -23,6 +24,64 @@ func TestParseXPathRoundTrip(t *testing.T) {
 				t.Errorf("String() = %q, want %q", got, input)
 			}
 		})
+	}
+}
+
+func TestParseXPathPreservesUnsupportedPredicates(t *testing.T) {
+	paths := []string{
+		`//gateway[(param("Group")="Gateway Info")]/directory/probe[(enabled()=true)]`,
+		`//probe[(param("Group")="Netprobe")]/managedEntity[(param("region")="EU")][(@kind="server")]/sampler[(param("Group")="CPU")]/dataview[(param("Group")="Gateway Info")]`,
+		`//dataview[(param("Group")="Gateway Info")]/rows/row[(position()=1)]/cell[(metric("severity")="critical")]`,
+		`//dataview/headlines/cell[(param("Group")="Headline Info")]`,
+		`//dataview[( @complex = concat("a/b", "]") )]`,
+		`//sampler[(custom('a/b'))][(@name="CPU")]/dataview[(param("Group")="Gateway Info")][(@name="Status")]`,
+	}
+	for _, input := range paths {
+		t.Run(input, func(t *testing.T) {
+			parsed, err := Parse(input)
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+			want, err := Parse(parsed.String())
+			if err != nil {
+				t.Fatalf("Parse(String()) error = %v", err)
+			}
+			if got := want.String(); got != parsed.String() {
+				t.Errorf("unsupported predicates were not stable: %q", got)
+			}
+			for _, predicate := range splitPredicates(input) {
+				if !strings.Contains(parsed.String(), predicate) {
+					t.Errorf("String() = %q, missing %q", parsed, predicate)
+				}
+			}
+			encoded, err := json.Marshal(parsed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var forwarded string
+			if err := json.Unmarshal(encoded, &forwarded); err != nil {
+				t.Fatal(err)
+			}
+			for _, predicate := range splitPredicates(input) {
+				if !strings.Contains(forwarded, predicate) {
+					t.Errorf("JSON XPath = %q, missing %q", forwarded, predicate)
+				}
+			}
+		})
+	}
+}
+
+func TestResolveToRemovesLowerLevelUnsupportedPredicates(t *testing.T) {
+	x, err := Parse(`//dataview[(param("Group")="Gateway Info")]/rows/row[(position()=1)]/cell[(metric("severity")="critical")]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := x.ResolveTo(&Dataview{}).String()
+	if !strings.Contains(got, `[(param("Group")="Gateway Info")]`) {
+		t.Errorf("dataview predicate missing: %q", got)
+	}
+	if strings.Contains(got, "position()") || strings.Contains(got, "metric(") {
+		t.Errorf("lower-level predicates retained: %q", got)
 	}
 }
 
