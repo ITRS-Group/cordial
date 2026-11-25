@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"net"
 	"net/http"
@@ -51,7 +52,7 @@ var includesListCmdByInclude bool
 
 func init() {
 	includesCmd.AddCommand(includeListCmd)
-	includeListCmd.Flags().String("prefix", "itrs", "Select the include source prefix, or '*' for all sources")
+	includeListCmd.Flags().String("prefix", "*", "Select the include source prefix, defaults to '*' for all sources")
 
 	includeListCmd.Flags().BoolVarP(&includesListCmdByGateway, "gateway", "g", false, "List include files by gateway usage")
 	includeListCmd.Flags().BoolVarP(&includesListCmdByVersion, "version", "v", false, "List include files by version")
@@ -395,10 +396,13 @@ func listIncludesForPrefix(h *geneos.Host, prefix string, names ...string) (err 
 
 		resps := responses.GeneralResponses{}
 		for path, inc := range includesByPath {
+			log.Debug("processing include", slog.Any("include", inc))
 			if !includeMatchesPrefix(h, inc, prefix) {
+				log.Debug("skipping include due to prefix mismatch", slog.Any("include", inc), slog.String("prefix", prefix))
 				continue
 			}
 			if inc.GatewayLocal && !includesListCmdAll {
+				log.Debug("skipping include because it is local and includesListCmdAll is not set", slog.Any("include", inc))
 				continue
 			}
 			base := h.Base(path)

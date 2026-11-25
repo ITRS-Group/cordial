@@ -112,9 +112,14 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 		archives = slices.DeleteFunc(archives, func(n string) bool {
 			var ctMatch bool
 			if ct.DownloadInfix != "" {
-				ctMatch = strings.Contains(n, ct.DownloadInfix)
+				ctMatch = strings.HasPrefix(n, "geneos-"+ct.DownloadInfix+"-") ||
+					strings.HasPrefix(n, "geneos-"+ct.DownloadInfix) ||
+					strings.HasPrefix(n, ct.DownloadInfix+"-")
 			} else {
-				ctMatch = strings.Contains(n, ct.String())
+				normct := ParseComponent(ct.Name)
+				check := normct.String()
+				ctMatch = strings.HasPrefix(n, check+"-") ||
+					strings.HasPrefix(n, "geneos-"+check+"-")
 			}
 
 			if opts.version != "" {

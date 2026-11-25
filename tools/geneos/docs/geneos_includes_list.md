@@ -62,7 +62,7 @@ geneos includes list [NAMES...] [flags]
   -i, --include[=true|false]      List include files by shared include files
   -l, --long[=true|false]         Long format with extra information
   -n, --no-remote[=true|false]    Exclude remote include files lookups
-      --prefix string             Select the include source prefix, or '*' for all sources (default "itrs")
+      --prefix string             Select the include source prefix, defaults to '*' for all sources (default "*")
       --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -v, --version[=true|false]      List include files by version
 ```

@@ -65,6 +65,13 @@ release: check-version docs
 	done
 	cd release-$(VERSION) && $(SHA256SUM) cordial-$(VERSION).tar.gz geneos-includes-$(INCLUDES_VERSION).tar.gz geneos-holiday-includes-$(HOLIDAYS_VERSION).tar.gz > SHA256SUMS
 
+# Force rebuild by cleaning all cached artifacts and containers
+force-rebuild:
+	# Build for all platforms (includes cross-compilation checks)
+build-all: check-cross
+	@echo "Running cross-platform build checks..."
+	$(MAKE) check-cross
+
 includes:
 	docker build --tag geneos-includes:$(INCLUDES_VERSION) --target geneos-includes .
 	mkdir -p release-$(VERSION)/

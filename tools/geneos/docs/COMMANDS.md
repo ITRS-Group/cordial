@@ -3156,7 +3156,7 @@ geneos includes list [NAMES...] [flags]
   -i, --include[=true|false]      List include files by shared include files
   -l, --long[=true|false]         Long format with extra information
   -n, --no-remote[=true|false]    Exclude remote include files lookups
-      --prefix string             Select the include source prefix, or '*' for all sources (default "itrs")
+      --prefix string             Select the include source prefix, defaults to '*' for all sources (default "*")
       --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -v, --version[=true|false]      List include files by version
 ```
@@ -5676,6 +5676,8 @@ geneos show [flags] [TYPE] [NAME...]
 
 The `snapshot` command fetches one or more dataviews using the Geneos Gateway REST Commands API. The TYPE, if given, must be `gateway`. One Gateway instance can be selected by name, or `--connect`/`-c` can select a URL or `HOST:PORT` directly without a configured Gateway. A snapshot execution can connect to at most one Gateway.
 
+XPath names, managed-entity attributes, sampler types, and cell columns are parsed structurally. Other predicates are retained on their path component and sent to the Gateway unchanged, for example `//dataview[(param("Group")="Gateway Info")]`; the Gateway evaluates those predicates.
+
 A `--connect` URL may include a path to replace the default `/rest` Commands API base path, for example `https://gateway.example/proxy/geneos`. An explicit `http://` or `https://` URL selects that connection mode. For `HOST:PORT`, snapshot tries HTTPS first and falls back to HTTP only if the server does not support TLS. TLS certificate-validation errors are not treated as an HTTP fallback.
 
 Authentication to the Gateway is through a combination of command line flags, environment variables, and configuration parameters. Command line credentials take precedence over `ITRS_SNAPSHOT_USERNAME` and `ITRS_SNAPSHOT_PASSWORD`, which take precedence over global `snapshot.username` and `snapshot.password` values. Per-Gateway values take precedence over those defaults, followed by saved credentials when no username is otherwise available. The `--password`/`-p` flag and `ITRS_SNAPSHOT_PASSWORD` accept plaintext or `${enc:...}` values expanded by the configuration package. The user is only prompted for a password when a username is available but no password was found. As the Gateway may be configured to not require authentication, the absence of a username and password is valid and you will not be prompted for a username if one is not found.
@@ -5699,6 +5701,8 @@ For newer Netprobes that support multiple dataviews from TOOLKIT scripts, use th
 The toolkit output formats only support cell/headline values and cannot be used to set the severity, snooze or user-assignment properties of the returned dataviews and so the options that control those are ignored.
 
 In Toolkit and CSV output, common control characters are rendered as readable escapes such as `\n`, `\r`, and `\t`, backslashes are doubled, and other control characters are discarded.
+
+Toolkit output includes a `samplingStatus` headline. Its value is `OK` on success, or the command error text when sampling fails.
 
 To help capture diagnostic information the `-x` option can be used to capture matching xpaths without the dataview contents. `-l` can be used to limit the number of dataviews (or xpaths) but the limit is not applied in any defined order.
 

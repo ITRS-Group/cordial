@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-23 15:24:39 by PeterGalbavy on ITRSLP372-->
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-24 15:33:30 by PeterGalbavy on ITRSLP372-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
 	<types>
 		<typeGroup name="Layer 3 - Geneos Instances">
@@ -103,6 +103,15 @@
 				</var>
 				<sampler ref="XPaths Absolute"/>
 				<sampler ref="XPaths Relative"/>
+			</type>
+		</typeGroup>
+		<typeGroup name="Layer 3 - Geneos Gateway Info">
+			<type name="Layer 3 - Geneos Gateway Info">
+				<environment ref="Layer 3 - Geneos Info Defaults"/>
+				<sampler ref="Gateway Info - Gateway Info"/>
+				<sampler ref="Gateway Info - Import Export"/>
+				<sampler ref="Gateway Info - ITRS Analytics"/>
+				<sampler ref="Gateway Info - Licence"/>
 			</type>
 		</typeGroup>
 	</types>
@@ -1050,6 +1059,120 @@
 							</additions>
 						</dataview>
 					</dataviews>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="Layer 3 - Geneos Gateway Info">
+				<sampler name="Gateway Info - Gateway Info">
+					<var-group>
+						<data>Gateway Info</data>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> snapshot gateway </data>
+								<var ref="instanceName"/>
+								<data> --format toolkit-multi </data>
+								<var ref="geneosExecHosts"/>
+								<data> &apos;//managedEntity[(@name=&quot;</data>
+								<var ref="instanceName"/>
+								<data> Info&quot;)]/sampler/dataview[(param(&quot;Group&quot;)=&quot;Gateway Info&quot;)]&apos;</data>
+							</samplerScript>
+							<numberOfDataviews>
+								<data>14</data>
+							</numberOfDataviews>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Gateway Info - Import Export">
+					<var-group>
+						<data>Import Export</data>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> snapshot gateway </data>
+								<var ref="instanceName"/>
+								<data> --format toolkit-multi </data>
+								<var ref="geneosExecHosts"/>
+								<data> &apos;//managedEntity[(@name=&quot;</data>
+								<var ref="instanceName"/>
+								<data> Info&quot;)]/sampler/dataview[(param(&quot;Group&quot;)=&quot;Import Export&quot;)]&apos;</data>
+							</samplerScript>
+							<numberOfDataviews>
+								<data>2</data>
+							</numberOfDataviews>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Gateway Info - Licence">
+					<var-group>
+						<data>Licence</data>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> snapshot gateway </data>
+								<var ref="instanceName"/>
+								<data> --format toolkit-multi </data>
+								<var ref="geneosExecHosts"/>
+								<data> &apos;//managedEntity[(@name=&quot;</data>
+								<var ref="instanceName"/>
+								<data> Info&quot;)]/sampler/dataview[(param(&quot;Group&quot;)=&quot;Licence&quot;)]&apos;</data>
+							</samplerScript>
+							<numberOfDataviews>
+								<data>2</data>
+							</numberOfDataviews>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Gateway Info - ITRS Analytics">
+					<var-group>
+						<data>ITRS Analytics</data>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> snapshot gateway </data>
+								<var ref="instanceName"/>
+								<data> --format toolkit-multi </data>
+								<var ref="geneosExecHosts"/>
+								<data> &apos;//managedEntity[(@name=&quot;</data>
+								<var ref="instanceName"/>
+								<data> Info&quot;)]/sampler/dataview[(param(&quot;Group&quot;)=&quot;ITRS Analytics&quot;)]&apos;</data>
+							</samplerScript>
+							<numberOfDataviews>
+								<data>4</data>
+							</numberOfDataviews>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
 				</sampler>
 			</samplerGroup>
 		</samplerGroup>
@@ -2866,9 +2989,6 @@
 					<integer>5</integer>
 				</var>
 			</environment>
-			<environment name="Layer 3 - Geneos Overrides"><!--This environment is an empty placeholder for any user settings required.
-
-Create a copy of this environment, in the same hierarchy, in your main setup file and add variables as required.--></environment>
 		</environmentGroup>
 		<environmentGroup name="Layer 3 - Geneos Gateway Load">
 			<environment name="Layer 3 - Geneos Load Defaults">
@@ -2899,13 +3019,25 @@ Create a copy of this environment, in the same hierarchy, in your main setup fil
 					<integer>300</integer>
 				</var>
 				<var name="NORMAL_SAMPLE">
-					<integer>20</integer>
+					<integer>60</integer>
 				</var>
 				<var name="FAST_SAMPLE">
-					<integer>5</integer>
+					<integer>15</integer>
 				</var>
 			</environment>
-			<environment name="Layer 3 - Geneos Load Overrides"/>
+		</environmentGroup>
+		<environmentGroup name="Layer 3 - Gateway Info">
+			<environment name="Layer 3 - Geneos Info Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>60</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>20</integer>
+				</var>
+			</environment>
 		</environmentGroup>
 	</environments>
 	<staticVars>
