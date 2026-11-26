@@ -23,7 +23,7 @@ build:
 	# Build in Docker container for environment control
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
 
-release: build gdna includes holidays docs
+release: build gdna include holidays docs
 	$(MAKE) base
 	mkdir -p release-$(VERSION)/
 	-docker rm cordial-build-$(VERSION)
@@ -50,7 +50,7 @@ release: build gdna includes holidays docs
 	cd release-$(VERSION) && $(SHA256SUM) cordial-$(VERSION).tar.gz geneos-includes-$(INCLUDES_VERSION).tar.gz geneos-holiday-includes-$(HOLIDAYS_VERSION).tar.gz > SHA256SUMS
 
 # Build components in parallel where possible
-release-fast: build gdna includes holidays docs
+release-fast: build gdna include holidays docs
 	@echo "All prerequisites built. Proceeding with release assembly..."
 	$(MAKE) base
 	mkdir -p release-$(VERSION)/
@@ -96,6 +96,7 @@ last-docs-build:
 	fi
 
 docs: last-docs-build
+	docker build --tag cordial-docs:$(VERSION) --tag cordial-docs --target cordial-docs .
 
 # Diagnostic and cleanup targets - all using Docker containers for environment control
 .PHONY: check-version check-cross check-examples test-images clean force-rebuild build-all
