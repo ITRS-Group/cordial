@@ -31,6 +31,10 @@
 				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
 			</type>
+			<type name="Layer 3 - Geneos Netprobe Extras">
+				<environment ref="Layer 3 - Geneos Defaults"/>
+				<samplerInclude ref="Layer 3 - Geneos Collection Agent Logs"/>
+			</type>
 		</typeGroup>
 		<typeGroup name="Layer 3 - Geneos Gateway Load">
 			<type name="Layer 3 - Geneos Gateway Load">
@@ -98,6 +102,9 @@
 					</plugin>
 				</sampler>
 				<sampler name="Certificates">
+					<!--Certificates sampler is run either once a day 1AM gatewaay local time, or at
+start-up only. In general expiry days only change once a day, but there is still
+a small risk of certificates becoming invalid intraday if a trust chain is broken.-->
 					<var-group>
 						<var ref="SAMPLER_GROUP"/>
 					</var-group>
@@ -950,7 +957,7 @@
 						<var ref="SAMPLER_GROUP"/>
 					</var-group>
 					<sampleInterval>
-						<var ref="NORMAL_SAMPLE"/>
+						<var ref="SLOW_SAMPLE"/>
 					</sampleInterval>
 					<sampleOnStartup>false</sampleOnStartup>
 					<plugin>
@@ -987,7 +994,7 @@
 					</var-group>
 					<displayName>XPaths - Relative</displayName>
 					<sampleInterval>
-						<var ref="NORMAL_SAMPLE"/>
+						<var ref="SLOW_SAMPLE"/>
 					</sampleInterval>
 					<sampleOnStartup>false</sampleOnStartup>
 					<plugin>
@@ -1138,51 +1145,85 @@
 	</samplers>
 	<samplerIncludes>
 		<samplerIncludeGroup name="Layer 3 - Geneos Components">
-			<samplerInclude name="Layer 3 - Geneos Component Logs">
-				<sampler ref="Logs"/>
-				<plugin>
-					<fkm>
-						<files>
-							<file>
-								<source>
-									<processDescriptor ref="Geneos Component Instance"/>
-								</source>
-								<alias>
-									<var ref="instanceType"/>
-									<data> </data>
-									<var ref="instanceName"/>
-									<data> - Main Log</data>
-								</alias>
-							</file>
-							<file>
-								<source>
-									<filename>
-										<var ref="consoleLogFilePath"/>
-									</filename>
-								</source>
-								<alias>
-									<var ref="instanceType"/>
-									<data> </data>
-									<var ref="instanceName"/>
-									<data> - Console Logs</data>
-								</alias>
-							</file>
-						</files>
-					</fkm>
-				</plugin>
-			</samplerInclude>
-			<samplerInclude name="Layer 3 - Geneos Component Process">
-				<sampler ref="Processes"/>
-				<plugin>
-					<processes>
+			<samplerIncludeGroup name="Logs">
+				<samplerInclude name="Layer 3 - Geneos Component Logs">
+					<sampler ref="Logs"/>
+					<plugin>
+						<fkm>
+							<files>
+								<file>
+									<source>
+										<processDescriptor ref="Geneos Component Instance"/>
+									</source>
+									<alias>
+										<var ref="instanceType"/>
+										<data> </data>
+										<var ref="instanceName"/>
+										<data> - Main Log</data>
+									</alias>
+								</file>
+								<file>
+									<source>
+										<filename>
+											<var ref="consoleLogFilePath"/>
+										</filename>
+									</source>
+									<alias>
+										<var ref="instanceType"/>
+										<data> </data>
+										<var ref="instanceName"/>
+										<data> - Console Logs</data>
+									</alias>
+								</file>
+							</files>
+						</fkm>
+					</plugin>
+				</samplerInclude>
+				<samplerInclude name="Layer 3 - Geneos Collection Agent Logs">
+					<sampler ref="Logs"/>
+					<plugin>
+						<fkm>
+							<files>
+								<file>
+									<source>
+										<dynamicFiles>
+											<path>
+												<var ref="caLogFilePath"/>
+											</path>
+											<pattern>
+												<data>
+													<regex>/([^/]+)$</regex>
+												</data>
+											</pattern>
+										</dynamicFiles>
+									</source>
+									<alias>
+										<var ref="instanceType"/>
+										<data> </data>
+										<var ref="instanceName"/>
+										<data> - CA Logs</data>
+									</alias>
+								</file>
+							</files>
+						</fkm>
+					</plugin>
+				</samplerInclude>
+			</samplerIncludeGroup>
+			<samplerIncludeGroup name="Processes">
+				<samplerInclude name="Layer 3 - Geneos Component Process">
+					<sampler ref="Processes"/>
+					<plugin>
 						<processes>
-							<process>
-								<processDescriptor ref="Geneos Component Instance"/>
-							</process>
+							<processes>
+								<process>
+									<processDescriptor ref="Geneos Component Instance"/>
+								</process>
+							</processes>
 						</processes>
-					</processes>
-				</plugin>
-			</samplerInclude>
+					</plugin>
+				</samplerInclude>
+			</samplerIncludeGroup>
+			<samplerIncludeGroup name="Services"/>
 		</samplerIncludeGroup>
 	</samplerIncludes>
 	<commands>
@@ -1747,6 +1788,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -1761,10 +1808,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -1838,6 +1881,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -1852,10 +1901,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -1885,7 +1930,7 @@
 							</if>
 						</block>
 					</rule>
-					<rule name="1 hour">
+					<rule name="lastHour">
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Components&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
@@ -1929,6 +1974,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -1943,10 +1994,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -1976,7 +2023,7 @@
 							</if>
 						</block>
 					</rule>
-					<rule name="1 day">
+					<rule name="today">
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Components&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
@@ -2020,6 +2067,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2034,10 +2087,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -2073,7 +2122,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpu1Min&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
 						</pathAliases>
@@ -2102,6 +2151,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2116,10 +2171,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -2182,6 +2233,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2196,10 +2253,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -2229,7 +2282,7 @@
 							</if>
 						</block>
 					</rule>
-					<rule name="1 hour">
+					<rule name="lastHour">
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpuHour&quot;)]</target>
 						</targets>
@@ -2262,6 +2315,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2276,10 +2335,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -2309,7 +2364,7 @@
 							</if>
 						</block>
 					</rule>
-					<rule name="1 day">
+					<rule name="today">
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpuDay&quot;)]</target>
 						</targets>
@@ -2342,6 +2397,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2356,10 +2417,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -2425,6 +2482,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="updates"/>
 								<dataItem>
@@ -2439,10 +2502,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -2497,6 +2556,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="updates"/>
 								<dataItem>
@@ -2511,10 +2576,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -2535,7 +2596,7 @@
 							</if>
 						</block>
 					</rule>
-					<rule name="1 hour">
+					<rule name="lastHour">
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesHour&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesHour&quot;)]</target>
@@ -2569,6 +2630,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="updates"/>
 								<dataItem>
@@ -2583,10 +2650,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -2607,7 +2670,7 @@
 							</if>
 						</block>
 					</rule>
-					<rule name="1 day">
+					<rule name="today">
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesDay&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesDay&quot;)]</target>
@@ -2641,6 +2704,12 @@
 									</historicalDataItem>
 								</maximum>
 							</set>
+							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
+							<!-- stats and it will always only increase or not change over time.-->
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
 							<set>
 								<var ref="updates"/>
 								<dataItem>
@@ -2655,10 +2724,6 @@
 									<var ref="min"/>
 								</subtract>
 							</set>
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
 							<if>
 								<notEqual>
 									<var ref="max"/>
@@ -2681,100 +2746,35 @@
 					</rule>
 				</ruleGroup>
 			</ruleGroup>
-			<ruleGroup name="Environment History Compute">
-				<rule name="1 hour">
+			<ruleGroup name="Data Quality Compute">
+				<rule name="lastHour">
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Data Quality&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview[(@name=&quot;Data Quality&quot;)]/rows/row/cell[(@column=&quot;lastHour&quot;)]</target>
 					</targets>
 					<priority>10000</priority>
 					<pathAliases>
-						<pathAlias name="period">../cell[(@column=&quot;lastPeriod&quot;)]</pathAlias>
+						<pathAlias name="lastPeriod">../cell[(@column=&quot;lastPeriod&quot;)]</pathAlias>
 					</pathAliases>
 					<block>
-						<set>
-							<var ref="seconds"/>
-							<integer>3600</integer>
-						</set>
 						<set>
 							<var ref="max"/>
 							<maximum>
 								<historicalDataItem>
-									<pathAlias ref="period"/>
+									<pathAlias ref="lastPeriod"/>
 									<property>@value</property>
 									<historyPeriod ref="1 hour"/>
 								</historicalDataItem>
 							</maximum>
 						</set>
 						<set>
-							<var ref="time"/>
-							<dataItem>
-								<pathAlias ref="period"/>
-								<property>@value</property>
-							</dataItem>
-						</set>
-						<set>
-							<var ref="period"/>
-							<dataItem>
-								<pathAlias ref="period"/>
-								<property>@value</property>
-							</dataItem>
-						</set>
-						<if>
-							<notEqual>
-								<var ref="max"/>
-								<var ref="time"/>
-							</notEqual>
-							<transaction>
-								<update>
+							<var ref="unit"/>
+							<stringAfter>
+								<dataItem>
+									<pathAlias ref="lastPeriod"/>
 									<property>@value</property>
-									<string>collecting</string>
-								</update>
-							</transaction>
-							<transaction>
-								<update>
-									<property>@value</property>
-									<format>
-										<string>%d %s</string>
-										<var ref="max"/>
-										<stringAfter>
-											<var ref="period"/>
-											<string> </string>
-										</stringAfter>
-									</format>
-								</update>
-							</transaction>
-						</if>
-					</block>
-				</rule>
-				<rule name="1 day">
-					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Data Quality&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview[(@name=&quot;Data Quality&quot;)]/rows/row/cell[(@column=&quot;lastDay&quot;)]</target>
-					</targets>
-					<priority>10000</priority>
-					<pathAliases>
-						<pathAlias name="period">../cell[(@column=&quot;lastPeriod&quot;)]</pathAlias>
-					</pathAliases>
-					<block>
-						<set>
-							<var ref="seconds"/>
-							<integer>86400</integer>
-						</set>
-						<set>
-							<var ref="max"/>
-							<maximum>
-								<historicalDataItem>
-									<pathAlias ref="period"/>
-									<property>@value</property>
-									<historyPeriod ref="1 day"/>
-								</historicalDataItem>
-							</maximum>
-						</set>
-						<set>
-							<var ref="period"/>
-							<dataItem>
-								<pathAlias ref="period"/>
-								<property>@value</property>
-							</dataItem>
+								</dataItem>
+								<string> </string>
+							</stringAfter>
 						</set>
 						<transaction>
 							<update>
@@ -2782,10 +2782,48 @@
 								<format>
 									<string>%d %s</string>
 									<var ref="max"/>
-									<stringAfter>
-										<var ref="period"/>
-										<string> </string>
-									</stringAfter>
+									<var ref="unit"/>
+								</format>
+							</update>
+						</transaction>
+					</block>
+				</rule>
+				<rule name="today">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Data Quality&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview[(@name=&quot;Data Quality&quot;)]/rows/row/cell[(@column=&quot;today&quot;)]</target>
+					</targets>
+					<priority>10000</priority>
+					<pathAliases>
+						<pathAlias name="lastPeriod">../cell[(@column=&quot;lastPeriod&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="max"/>
+							<maximum>
+								<historicalDataItem>
+									<pathAlias ref="lastPeriod"/>
+									<property>@value</property>
+									<historyPeriod ref="today"/>
+								</historicalDataItem>
+							</maximum>
+						</set>
+						<set>
+							<var ref="unit"/>
+							<stringAfter>
+								<dataItem>
+									<pathAlias ref="lastPeriod"/>
+									<property>@value</property>
+								</dataItem>
+								<string> </string>
+							</stringAfter>
+						</set>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<format>
+									<string>%d %s</string>
+									<var ref="max"/>
+									<var ref="unit"/>
 								</format>
 							</update>
 						</transaction>
@@ -2810,6 +2848,23 @@
 		</environmentGroup>
 		<environmentGroup name="Layer 3 - Geneos Gateway Load">
 			<environment name="Layer 3 - Geneos Load Defaults">
+				<!--For Gateway Load monitoring, the NORMAL and FAST sample have both been
+reduced in frequency to 60 and 15 seconds respectively. These should be aligned
+with the cadence of the stats collection settings on the gateway being monitored
+and the FAST_SAMPLE should be around 1-3x the interval while the NORMAL_SAMPLE
+around 5-10x the interval.
+
+Load monitoring samplers can be computationally expensive when loading stats
+files from very large gateways so be prepared to increase these values further.-->
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>60</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>15</integer>
+				</var>
 				<var name="statsFilePath">
 					<string>stats.xml</string>
 				</var>
@@ -2822,7 +2877,7 @@
 				<var name="gwLoadEnvHistory Columns">
 					<stringList>
 						<string>lastHour</string>
-						<string>lastDay</string>
+						<string>today</string>
 					</stringList>
 				</var>
 				<var name="gwLoadDatabaseColumns">
@@ -2832,15 +2887,6 @@
 						<string>updates1Min</string>
 						<string>updates5Min</string>
 					</stringList>
-				</var>
-				<var name="SLOW_SAMPLE">
-					<integer>300</integer>
-				</var>
-				<var name="NORMAL_SAMPLE">
-					<integer>60</integer>
-				</var>
-				<var name="FAST_SAMPLE">
-					<integer>15</integer>
 				</var>
 			</environment>
 		</environmentGroup>

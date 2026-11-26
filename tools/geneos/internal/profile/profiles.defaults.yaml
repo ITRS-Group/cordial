@@ -230,7 +230,7 @@ profiles:
             - NETPROBE=${config:name}
           variables:
             - type: string
-              name: CALogFilePath
+              name: caLogFilePath
               value: ${joinpath:home:logdir:calogfile}
 
         - for-each: minimal

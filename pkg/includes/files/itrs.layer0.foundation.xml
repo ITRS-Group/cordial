@@ -382,7 +382,6 @@ ORDER BY e.name;</data>
 				<rollingPeriod>
 					<measure>minute</measure>
 					<length>1</length>
-					<maxValues>3</maxValues>
 				</rollingPeriod>
 			</calculationPeriod>
 		</historyPeriod>
@@ -391,7 +390,6 @@ ORDER BY e.name;</data>
 				<rollingPeriod>
 					<measure>minute</measure>
 					<length>5</length>
-					<maxValues>6</maxValues>
 				</rollingPeriod>
 			</calculationPeriod>
 		</historyPeriod>
@@ -400,7 +398,6 @@ ORDER BY e.name;</data>
 				<rollingPeriod>
 					<measure>hour</measure>
 					<length>1</length>
-					<maxValues>13</maxValues>
 				</rollingPeriod>
 			</calculationPeriod>
 		</historyPeriod>
@@ -409,8 +406,14 @@ ORDER BY e.name;</data>
 				<rollingPeriod>
 					<measure>day</measure>
 					<length>1</length>
-					<maxValues>25</maxValues>
 				</rollingPeriod>
+			</calculationPeriod>
+		</historyPeriod>
+		<historyPeriod name="today">
+			<calculationPeriod>
+				<fixedPeriod>
+					<length>day</length>
+				</fixedPeriod>
 			</calculationPeriod>
 		</historyPeriod>
 		<ruleGroup name="Layer 0 - Foundation">
