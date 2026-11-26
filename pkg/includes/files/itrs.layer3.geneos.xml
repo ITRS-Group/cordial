@@ -31,7 +31,7 @@
 				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
 			</type>
-			<type name="Layer 3 - Geneos Netprobe Extras">
+			<type name="Layer 3 - Geneos Netprobe Additions">
 				<environment ref="Layer 3 - Geneos Defaults"/>
 				<samplerInclude ref="Layer 3 - Geneos Collection Agent Logs"/>
 			</type>

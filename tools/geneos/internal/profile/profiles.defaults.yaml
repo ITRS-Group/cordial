@@ -228,6 +228,8 @@ profiles:
           attributes:
             - COMPONENT=Netprobes
             - NETPROBE=${config:name}
+          types:
+            - Layer 3 - Geneos Netprobe Additions
           variables:
             - type: string
               name: caLogFilePath
