@@ -11,7 +11,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	pkggeneos "github.com/itrs-group/cordial/pkg/geneos"
-	"github.com/itrs-group/cordial/pkg/host"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -245,20 +244,10 @@ func processSANManagedEntity(pf *config.Config, h *geneos.Host, entity ManagedEn
 					// Try to determine the role from the gateway setup file
 					role := ""
 					gatewaySetup, err := pkggeneos.ReadGateway(setupParam, pkggeneos.WithGatewayReadHost(h))
-					if err == nil && gatewaySetup.HotStandby != nil && gatewaySetup.HotStandby.Enabled != nil && *gatewaySetup.HotStandby.Enabled {
-						currentHostname := h.Hostname()
-						// Check if this is a primary or secondary gateway with IP address handling
-						if gatewaySetup.HotStandby.Primary != nil {
-							if isMatchingHost(h, currentHostname, gatewaySetup.HotStandby.Primary.Hostname) {
-								role = "primary"
-							}
-						} else if gatewaySetup.HotStandby.Secondary != nil {
-							if isMatchingHost(h, currentHostname, gatewaySetup.HotStandby.Secondary.Hostname) {
-								role = "secondary"
-							}
-						}
+					if err != nil {
+						log.Debug("cannot read gateway setup to determine role", slog.String("setup", setupParam), slog.Any("error", err))
 					} else {
-						role = "standalone"
+						role = hotStandbyRole(h, gatewaySetup.HotStandby)
 					}
 					lookup["role"] = role
 				}
@@ -340,71 +329,87 @@ func splitList(s string) (list []string) {
 	return
 }
 
-// isMatchingHost determines if a configured hostname matches the current host
-// according to the rules specified in the Geneos documentation for hot standby.
-func isMatchingHost(h host.Host, currentHostname, configuredHostname string) bool {
-	// Check if configuredHostname is an IP address
+// hostNamer is the subset of a host needed by isMatchingHost.
+type hostNamer interface {
+	IsLocalhost() bool
+	Hostname() string
+}
+
+// lookupIP and interfaceAddrs are variables so tests can replace them.
+var (
+	lookupIP       = net.LookupIP
+	interfaceAddrs = net.InterfaceAddrs
+)
+
+// isMatchingHost reports whether configuredHostname, taken from a
+// gateway hot standby configuration, refers to host h.
+//
+// If configuredHostname is an IP address then for a local host it is
+// compared to the addresses of the local, non-loopback interfaces and
+// for a remote host to the resolved addresses of the remote host name.
+//
+// Otherwise, if both names include a domain they must match exactly,
+// and if either is a short name then only the parts before the first
+// dot are compared. All name comparisons are case insensitive.
+//
+// The Gateway itself compares against the output of `hostname` and its
+// own interface addresses. For remote hosts we take the shortcut of
+// using the host name configured for the SSH connection, and its
+// addresses as resolved locally, which may differ.
+func isMatchingHost(h hostNamer, configuredHostname string) bool {
+	hostname := h.Hostname()
+
 	if ip := net.ParseIP(configuredHostname); ip != nil {
-		// Case: configuredHostname is an IP address.
-		if !h.IsLocalhost() {
-			// Rule 2: Remote host (not local). Resolve h.Hostname() to IPs and compare.
-			// This simulates the DNS/hosts lookup capability requested.
-			ips, err := net.LookupIP(h.Hostname())
+		if h.IsLocalhost() {
+			addrs, err := interfaceAddrs()
 			if err != nil {
-				log.Warn("failed to resolve host name for remote IP comparison", slog.Any("error", err))
-				// Fallback to direct string comparison if resolution fails
-				return strings.EqualFold(h.Hostname(), configuredHostname)
+				log.Warn("failed to get network interface addresses for matching host", slog.Any("error", err))
+				return false
 			}
-			targetIP := ip.String()
-			for _, entry := range ips {
-				if entry.String() == targetIP {
+			for _, addr := range addrs {
+				if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && ipNet.IP.Equal(ip) {
 					return true
 				}
 			}
-			return false // Host IP not found among resolved addresses
-		} else {
-			// Case: Local host. Check if any local interface owns the IP.
-			addrs, err := net.InterfaceAddrs()
-			if err != nil {
-				log.Warn("failed to get network interface addresses for matching host", slog.Any("error", err))
-				return strings.EqualFold(currentHostname, configuredHostname) // Fallback
-			}
-
-			for _, addr := range addrs {
-				if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-					if ipNet.IP.Equal(ip) {
-						return true // Found a matching local interface IP
-					}
-				}
-			}
-			return false // IP parsed, but not found on any active interface
+			return false
 		}
+
+		// remote host, which may be configured using an IP address
+		if hip := net.ParseIP(hostname); hip != nil {
+			return hip.Equal(ip)
+		}
+		ips, err := lookupIP(hostname)
+		if err != nil {
+			log.Warn("failed to resolve host name for remote IP comparison", slog.String("hostname", hostname), slog.Any("error", err))
+			return false
+		}
+		return slices.ContainsFunc(ips, ip.Equal)
 	}
 
-	// Case: configuredHostname is a hostname (not an IP).
-	// Rule 1: Check for domain to decide comparison rigor.
-	if strings.Contains(configuredHostname, ".") {
-		// Hostname has a domain. Use partial/domain-aware comparison.
-
-		// Extract the base name (before the first dot) from the configured hostname.
-		parts := strings.Split(configuredHostname, ".")
-		configuredBaseName := parts[0]
-
-		if !h.IsLocalhost() {
-			// Remote: The configured hostname matches if the Gateway's full name
-			// is an exact match OR if the Gateway's name matches the configured base name.
-			// This correctly handles: "somehost.somedomain.com" matches "somehost"
-			// but not "somehost.anotherdomain.com" unless the full name matches.
-			return strings.EqualFold(h.Hostname(), configuredHostname) || strings.EqualFold(h.Hostname(), configuredBaseName)
-		} else {
-			// Local: The configured hostname matches if the current name is an exact match
-			// OR if the current name matches the configured base name.
-			return strings.EqualFold(currentHostname, configuredHostname) || strings.EqualFold(currentHostname, configuredBaseName)
-		}
-	} else {
-		// No domain (short name). Use simple name comparison for both local and remote.
-		return strings.EqualFold(h.Hostname(), configuredHostname)
+	hostBase, _, hostHasDomain := strings.Cut(hostname, ".")
+	configuredBase, _, configuredHasDomain := strings.Cut(configuredHostname, ".")
+	if hostHasDomain && configuredHasDomain {
+		return strings.EqualFold(hostname, configuredHostname)
 	}
+	return strings.EqualFold(hostBase, configuredBase)
+}
+
+// hotStandbyRole returns the role of a gateway on host h based on its
+// hot standby configuration. As per the Geneos documentation the
+// primary hostname is checked first, then the secondary, and the first
+// match determines the role. If hot standby is not enabled or neither
+// hostname matches then the gateway runs as "standalone".
+func hotStandbyRole(h hostNamer, hs *pkggeneos.HotStandby) string {
+	if hs == nil || hs.Enabled == nil || !*hs.Enabled {
+		return "standalone"
+	}
+	if hs.Primary != nil && isMatchingHost(h, hs.Primary.Hostname) {
+		return "primary"
+	}
+	if hs.Secondary != nil && isMatchingHost(h, hs.Secondary.Hostname) {
+		return "secondary"
+	}
+	return "standalone"
 }
 
 // filterIgnored removes the instance names, as returned by
