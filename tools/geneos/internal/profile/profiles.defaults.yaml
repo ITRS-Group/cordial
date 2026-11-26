@@ -6,7 +6,7 @@
 # provide a convenient way to pre-configure common deployment scenarios
 # and can be extended or overridden as needed.
 #
-version: {{version}}
+version: v1.31.0-beta2
 
 profiles:
   all:
@@ -173,8 +173,11 @@ profiles:
       types:
         - Layer 1 - Server Health
         - Layer 3 - Geneos Instances
-        - Layer 3 - Geneos Diagnostics
+        - Layer 3 - Geneos Instances Diagnostics
       variables:
+        # note that default variables are also defined in the
+        # `san.setup.xml.gotmpl` template filem and they may be
+        # overridden here if needed
         - type: string
           name: geneosExecPath
           value: ${execpath}
@@ -186,6 +189,7 @@ profiles:
           - ${option:attribute}
         types:
           - Layer 2 - Application Baseline
+          - Layer 3 - Geneos Component
         variables:
           - type: string
             name: instanceName
@@ -202,6 +206,9 @@ profiles:
           - type: string
             name: consoleLogFilePath
             value: ${joinpath:home:type}.txt
+          - type: string
+            name: processInstances
+            value: "(${type} ${config:name},1)"
 
       managed-entities:
         - for-each: gateway
@@ -210,7 +217,6 @@ profiles:
             - COMPONENT=Gateways
             - GATEWAY=${select:gatewayname:name:Unknown}
           types:
-            - Layer 3 - Geneos Gateway
             - Layer 3 - Geneos Gateway Load
           variables:
             - type: string
@@ -222,8 +228,6 @@ profiles:
           attributes:
             - COMPONENT=Netprobes
             - NETPROBE=${config:name}
-          types:
-            - Layer 3 - Geneos Netprobe
           variables:
             - type: string
               name: CALogFilePath
@@ -234,104 +238,78 @@ profiles:
           attributes:
             - COMPONENT=Netprobes
             - NETPROBE=${config:name}
-          types:
-            - Layer 3 - Geneos Netprobe
 
         - for-each: licd
           name: ${config:name} Licence Daemon
           attributes:
             - COMPONENT=Licence Daemon
             - LICENCE_DAEMON=${config:name}
-          types:
-            - Layer 3 - Geneos Licence Daemon
 
         - for-each: webserver
           name: ${config:name} Webserver
           attributes:
             - COMPONENT=Web Dashboard Servers
             - WEB_DASHBOARD_SERVER=${config:name}
-          types:
-            - Layer 3 - Geneos Webserver
 
         - for-each: ac2
           name: ${config:name} Active Console
           attributes:
             - COMPONENT=Active Consoles
             - ACTIVE_CONSOLE=${config:name}
-          types:
-            - Layer 3 - Geneos Active Console
 
         - for-each: ca3
           name: ${config:name} Collection-Agent
           attributes:
             - COMPONENT=Collection-Agents
             - COLLECTION_AGENT=${config:name}
-          types:
-            - Layer 3 - Geneos Collection-Agent
 
         - for-each: fa2
           name: ${config:name} FIX Analyser Netprobe
           attributes:
             - COMPONENT=FIX Analyser Netprobes
             - FIX2_NETPROBE=${config:name}
-          types:
-            - Layer 3 - Geneos FIX Analyser Netprobe
 
         - for-each: fileagent
           name: ${config:name} Fileagent
           attributes:
             - COMPONENT=File Agents
             - FILE_AGENT=${config:name}
-          types:
-            - Layer 3 - Geneos File Agent
 
         - for-each: floating
           name: ${config:name} Floating Netprobe
           attributes:
             - COMPONENT=Floating Netprobes
             - FLOATING_NETPROBE=${config:name}
-          types:
-            - Layer 3 - Geneos Floating Netprobe
 
         - for-each: md-gateway
           name: ${config:name} MD-Gateway
           attributes:
             - COMPONENT=Market-Data Gateways
             - MD_GATEWAY=${config:name}
-          types:
-            - Layer 3 - Geneos Market-Data Gateway
 
         - for-each: netprobe-router
           name: ${config:name} Netprobe-Router
           attributes:
             - COMPONENT=Netprobe-Routers
             - NETPROBE_ROUTER=${config:name}
-          types:
-            - Layer 3 - Geneos Netprobe-Router
 
         - for-each: san
           name: ${config:name} SAN
           attributes:
             - COMPONENT=Self Announcing Netprobes
             - SAN=${config:name}
-          types:
-            - Layer 3 - Geneos Self Announcing Netprobe
 
         - for-each: sso-agent
           name: ${config:name} SSO-Agent
           attributes:
             - COMPONENT=SSO-Agents
             - SSO_AGENT=${config:name}
-          types:
-            - Layer 3 - Geneos SSO-Agent
 
         - for-each: tr-gateway
           name: ${config:name} Trade Gateway
           attributes:
             - COMPONENT=Trade Gateways
             - TR_GATEWAY=${config:name}
-          types:
-            - Layer 3 - Geneos Trade Gateway
 
   health-gateway:
     _short: "Monitoring Health Gateway Profile"

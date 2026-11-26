@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-24 15:33:30 by PeterGalbavy on ITRSLP372-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
 	<types>
 		<typeGroup name="Layer 3 - Geneos Instances">
@@ -17,7 +16,7 @@
 				<sampler ref="Shared Includes"/>
 				<sampler ref="Gateway Includes"/>
 			</type>
-			<type name="Layer 3 - Geneos Diagnostics">
+			<type name="Layer 3 - Geneos Instances Diagnostics">
 				<environment ref="Layer 3 - Geneos Defaults"/>
 				<var name="SAMPLER_GROUP">
 					<string>Geneos Instances</string>
@@ -27,47 +26,7 @@
 			</type>
 		</typeGroup>
 		<typeGroup name="Layer 3 - Geneos Components">
-			<type name="Layer 3 - Geneos Active Console">
-				<environment ref="Layer 3 - Geneos Defaults"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
-			</type>
-			<type name="Layer 3 - Geneos Floating Netprobe">
-				<environment ref="Layer 3 - Geneos Defaults"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
-			</type>
-			<type name="Layer 3 - Geneos Gateway">
-				<environment ref="Layer 3 - Geneos Defaults"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
-			</type>
-			<type name="Layer 3 - Geneos Licence Daemon">
-				<environment ref="Layer 3 - Geneos Defaults"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
-			</type>
-			<type name="Layer 3 - Geneos Netprobe">
-				<environment ref="Layer 3 - Geneos Defaults"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
-			</type>
-			<type name="Layer 3 - Geneos Netprobe-Router">
-				<environment ref="Layer 3 - Geneos Defaults"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
-			</type>
-			<type name="Layer 3 - Geneos Self Announcing Netprobe">
-				<environment ref="Layer 3 - Geneos Defaults"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
-			</type>
-			<type name="Layer 3 - Geneos SSO-Agent">
-				<environment ref="Layer 3 - Geneos Defaults"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
-				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
-			</type>
-			<type name="Layer 3 - Geneos Webserver">
+			<type name="Layer 3 - Geneos Component">
 				<environment ref="Layer 3 - Geneos Defaults"/>
 				<samplerInclude ref="Layer 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Layer 3 - Geneos Component Process"/>
@@ -1302,22 +1261,13 @@
 	</commands>
 	<rules>
 		<ruleGroup name="Layer 3 - Geneos">
-			<ruleGroup name="Layer 3 - Geneos Diagnostics">
-				<default name="Layer 3 - Geneos Diagnostics">
-					<rule>
-						<contexts>
-							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Diagnostics&quot;)]/dataview/rows/row/cell</context>
-							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Diagnostics&quot;)]/dataview/headlines/cell</context>
-						</contexts>
-						<priorityGroup>100</priorityGroup>
-					</rule>
-				</default>
+			<ruleGroup name="Layer 3 - Geneos Instances Diagnostics">
 				<ruleGroup name="Open TCP Ports">
 					<rule name="Status">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;status&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;status&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<equal>
@@ -1366,10 +1316,10 @@
 					</rule>
 					<rule name="Queues Growing">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;txqueue&quot;)]</target>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;rxqueue&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;txqueue&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;rxqueue&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<gt>
@@ -1404,7 +1354,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;AES Files&quot;)]/rows/row/cell[(@column=&quot;crc32&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<equal>
@@ -1435,7 +1385,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<gt>
@@ -1463,7 +1413,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT30Days&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<gt>
@@ -1491,7 +1441,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT7Days&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<gt>
@@ -1519,7 +1469,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;valid&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<notEqual>
@@ -1547,7 +1497,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;remaining&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<lt>
@@ -1603,7 +1553,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Installed Releases&quot;)]/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;latestInstalled&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<notEqual>
@@ -1633,7 +1583,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;tls&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<notEqual>
@@ -1661,7 +1611,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;disabled&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<equal>
@@ -1691,7 +1641,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Running&quot;)]/rows/row/cell[(@column=&quot;version&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<like>
@@ -1720,7 +1670,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Running&quot;)]/rows/row/cell[(@column=&quot;openfiles&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Running&quot;)]/rows/row/cell[(@column=&quot;opensockets&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<block>
 							<if>
 								<gt>
@@ -1749,138 +1699,6 @@
 					</rule>
 				</ruleGroup>
 			</ruleGroup>
-			<ruleGroup name="Layer 3 - Geneos Components">
-				<ruleGroup name="Processes">
-					<default name="GLOBAL Process Default">
-						<rule>
-							<priorityGroup>10000</priorityGroup>
-						</rule>
-					</default>
-					<rule name="Instance Count">
-						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;PROCESSES&quot;)]/dataview/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;instanceCount&quot;)]</target>
-						</targets>
-						<priority>1</priority>
-						<block>
-							<if>
-								<lt>
-									<dataItem>
-										<property>@value</property>
-									</dataItem>
-									<integer>1</integer>
-								</lt>
-								<transaction>
-									<update>
-										<property>state/@severity</property>
-										<severity>critical</severity>
-									</update>
-								</transaction>
-								<if>
-									<gt>
-										<dataItem>
-											<property>@value</property>
-										</dataItem>
-										<integer>1</integer>
-									</gt>
-									<transaction>
-										<delay unit="samples">1</delay>
-										<update>
-											<property>state/@severity</property>
-											<severity>warning</severity>
-										</update>
-									</transaction>
-									<transaction>
-										<update>
-											<property>state/@severity</property>
-											<severity>ok</severity>
-										</update>
-									</transaction>
-								</if>
-							</if>
-						</block>
-					</rule>
-				</ruleGroup>
-				<ruleGroup name="Logs">
-					<rule name="FKM">
-						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Logs&quot;)]/dataview[(@name=&quot;Logs&quot;)]/rows/row/cell[(@column=&quot;status&quot;)]</target>
-						</targets>
-						<priority>5</priority>
-						<block>
-							<if>
-								<like>
-									<dataItem>
-										<property>@value</property>
-									</dataItem>
-									<string>OK</string>
-								</like>
-								<transaction>
-									<update>
-										<property>state/@severity</property>
-										<severity>ok</severity>
-									</update>
-								</transaction>
-								<if>
-									<like>
-										<dataItem>
-											<property>@value</property>
-										</dataItem>
-										<string>NOT_FOUND*</string>
-									</like>
-									<transaction>
-										<update>
-											<property>state/@severity</property>
-											<severity>warning</severity>
-										</update>
-									</transaction>
-									<if>
-										<like>
-											<dataItem>
-												<property>@value</property>
-											</dataItem>
-											<string/>
-										</like>
-										<if>
-											<like>
-												<target>
-													<rowName/>
-												</target>
-												<string>*fail*</string>
-											</like>
-											<transaction>
-												<update>
-													<property>state/@severity</property>
-													<severity>critical</severity>
-												</update>
-											</transaction>
-											<if>
-												<like>
-													<target>
-														<rowName/>
-													</target>
-													<string>*warning*</string>
-												</like>
-												<transaction>
-													<update>
-														<property>state/@severity</property>
-														<severity>warning</severity>
-													</update>
-												</transaction>
-											</if>
-										</if>
-										<transaction>
-											<update>
-												<property>state/@severity</property>
-												<severity>undefined</severity>
-											</update>
-										</transaction>
-									</if>
-								</if>
-							</if>
-						</block>
-					</rule>
-				</ruleGroup>
-			</ruleGroup>
 		</ruleGroup>
 		<ruleGroup name="Layer 3 - Geneos Gateway Load">
 			<ruleGroup name="Load History Compute">
@@ -1900,7 +1718,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Entity-Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
 						</pathAliases>
@@ -1991,7 +1809,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Entity-Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuMin&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
 						</pathAliases>
@@ -2082,7 +1900,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Entity-Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
 						</pathAliases>
@@ -2173,7 +1991,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Entity-Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
 						</pathAliases>
@@ -2335,7 +2153,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpu5Min&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
 						</pathAliases>
@@ -2415,7 +2233,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpuHour&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
 						</pathAliases>
@@ -2495,7 +2313,7 @@
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpuDay&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
 						</pathAliases>
@@ -2578,7 +2396,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updates1Min&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updates1Min&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
 						</pathAliases>
@@ -2650,7 +2468,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updates5Min&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updates5Min&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
 						</pathAliases>
@@ -2722,7 +2540,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesHour&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesHour&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
 						</pathAliases>
@@ -2794,7 +2612,7 @@
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesDay&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesDay&quot;)]</target>
 						</targets>
-						<priority>1</priority>
+						<priority>10000</priority>
 						<pathAliases>
 							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
 						</pathAliases>
@@ -2868,7 +2686,7 @@
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Data Quality&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview[(@name=&quot;Data Quality&quot;)]/rows/row/cell[(@column=&quot;lastHour&quot;)]</target>
 					</targets>
-					<priority>1</priority>
+					<priority>10000</priority>
 					<pathAliases>
 						<pathAlias name="period">../cell[(@column=&quot;lastPeriod&quot;)]</pathAlias>
 					</pathAliases>
@@ -2932,7 +2750,7 @@
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Data Quality&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview[(@name=&quot;Data Quality&quot;)]/rows/row/cell[(@column=&quot;lastDay&quot;)]</target>
 					</targets>
-					<priority>1</priority>
+					<priority>10000</priority>
 					<pathAliases>
 						<pathAlias name="period">../cell[(@column=&quot;lastPeriod&quot;)]</pathAlias>
 					</pathAliases>
@@ -3044,6 +2862,11 @@
 		<processDescriptors>
 			<processDescriptorGroup name="Layer 3 - Geneos Components">
 				<processDescriptor name="Geneos Component Instance">
+					<!--This is a general purpose component process descriptor the relies on variables
+being defined to set the alias and the search strings for processes and logs.
+
+This means that it can only be used once per managed entity, as variables are
+always scoped per managed entity.-->
 					<alias>
 						<var ref="instanceType"/>
 						<data> </data>
@@ -3081,10 +2904,11 @@
 		<dataSet name="Layer 3 - Geneos">
 			<paths>
 				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instance&quot;)]</path>
-				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Diagnostics&quot;)]</path>
-				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Gateway&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances Diagnostics&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Component&quot;)]</path>
 				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]</path>
 				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Gateway Load XPaths&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Gateway Info&quot;)]</path>
 			</paths>
 		</dataSet>
 	</exportedData>

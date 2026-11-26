@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-25 09:19:12 by PeterGalbavy on ITRSLP372-->
 <!-- Gateway-created setup include file for user AzureAD\PeterGalbavy at 127.0.0.1 -->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
 	<samplers>
 		<samplerGroup name="Layer 0 - Foundation">
 			<samplerGroup name="Gateway Info">
 				<sampler name="Entities">
+					<!--This version of the Entities sampler exposes the detail view, which is key to
+having a good set of diagnostics for the configured endpoint monitoring.-->
 					<var-group>
 						<data>Gateway Info</data>
 					</var-group>
@@ -48,6 +49,13 @@
 					</schemas>
 				</sampler>
 				<sampler name="Gateway DateTime">
+					<!--The Gateway DateTime sampler provides a selection of date and times formatted
+to common standards, both for UTC and the gateway local timezone.
+
+Because of the dependency on the intregrated SQLite there is no support for
+IANA named timezones or for those regions that have summer/winter changes.
+The localtime column will correctly show summer/winter changes based on the
+system settings for the gateway.-->
 					<var-group>
 						<data>Gateway Info</data>
 					</var-group>
@@ -209,16 +217,29 @@ ORDER BY 1;</data>
 				</sampler>
 			</samplerGroup>
 			<samplerGroup name="Gateway Validation Tools">
-				<sampler name="Attribute Validation">
-					<!--Create a variable called "requiredAttributes" in your Operating Environment,
-with a type "external config file" and place the name of each attribute on a
-line by itself. Remember that attribute names are case sensitive.
-Blank line are ignored but no other validation is performed.
+				<!--This sampler group contains tools that can be used to validate a gateway
+configuration to match pre-defined best practices.
 
-E.g.:
+At this time the only sampler is "Attribute Validation" which will check all
+managed entities for a configured set of attributes, which is set in a
+variable in the Operating Envionment.-->
+				<sampler name="Attribute Validation">
+					<!--The Attribute Validation sampler checks each managed entity on the gateway
+to ensure that they all have a minimum set of require attribuutes. By default this
+is an empty list.
+
+Create an "external config file" variable called "requiredAttributes" in your
+global Operating Environment and list the name of each attribute, one per line.
+Remember that attribute names are case sensitive. Blank line are ignored
+but no other checks are performed.
+
+For example:
 
 ENVIRONMENT
 APPLICATION-->
+					<var-group>
+						<data>Validation</data>
+					</var-group>
 					<plugin>
 						<Gateway-sql>
 							<tables>
