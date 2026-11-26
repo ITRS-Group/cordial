@@ -205,7 +205,7 @@ profiles:
 
       managed-entities:
         - for-each: gateway
-          name: ${replace:gatewayname:name:/ /_/} Gateway
+          name: ${replace:gatewayname:name:/ /_/} ${role} Gateway
           attributes:
             - COMPONENT=Gateways
             - GATEWAY=${select:gatewayname:name:Unknown}

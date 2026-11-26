@@ -4,11 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"path"
 	"slices"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	pkggeneos "github.com/itrs-group/cordial/pkg/geneos"
+	"github.com/itrs-group/cordial/pkg/host"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -234,6 +237,33 @@ func processSANManagedEntity(pf *config.Config, h *geneos.Host, entity ManagedEn
 			lookup := map[string]string{
 				"type": ct.String(),
 			}
+
+			// Add role information to lookup table for gateway instances
+			if entity.ForEach == "gateway" {
+				setupParam := config.Get[string](i.Config(), "setup")
+				if setupParam != "" {
+					// Try to determine the role from the gateway setup file
+					role := ""
+					gatewaySetup, err := pkggeneos.ReadGateway(setupParam, pkggeneos.WithGatewayReadHost(h))
+					if err == nil && gatewaySetup.HotStandby != nil && gatewaySetup.HotStandby.Enabled != nil && *gatewaySetup.HotStandby.Enabled {
+						currentHostname := h.Hostname()
+						// Check if this is a primary or secondary gateway with IP address handling
+						if gatewaySetup.HotStandby.Primary != nil {
+							if isMatchingHost(h, currentHostname, gatewaySetup.HotStandby.Primary.Hostname) {
+								role = "primary"
+							}
+						} else if gatewaySetup.HotStandby.Secondary != nil {
+							if isMatchingHost(h, currentHostname, gatewaySetup.HotStandby.Secondary.Hostname) {
+								role = "secondary"
+							}
+						}
+					} else {
+						role = "standalone"
+					}
+					lookup["role"] = role
+				}
+			}
+
 			expandOptions := []config.ExpandOption{
 				config.LookupTable(lookup),
 				config.Prefix("joinpath", profile.JoinPathPrefix, lookup),
@@ -308,6 +338,73 @@ func splitList(s string) (list []string) {
 		}
 	}
 	return
+}
+
+// isMatchingHost determines if a configured hostname matches the current host
+// according to the rules specified in the Geneos documentation for hot standby.
+func isMatchingHost(h host.Host, currentHostname, configuredHostname string) bool {
+	// Check if configuredHostname is an IP address
+	if ip := net.ParseIP(configuredHostname); ip != nil {
+		// Case: configuredHostname is an IP address.
+		if !h.IsLocalhost() {
+			// Rule 2: Remote host (not local). Resolve h.Hostname() to IPs and compare.
+			// This simulates the DNS/hosts lookup capability requested.
+			ips, err := net.LookupIP(h.Hostname())
+			if err != nil {
+				log.Warn("failed to resolve host name for remote IP comparison", slog.Any("error", err))
+				// Fallback to direct string comparison if resolution fails
+				return strings.EqualFold(h.Hostname(), configuredHostname)
+			}
+			targetIP := ip.String()
+			for _, entry := range ips {
+				if entry.String() == targetIP {
+					return true
+				}
+			}
+			return false // Host IP not found among resolved addresses
+		} else {
+			// Case: Local host. Check if any local interface owns the IP.
+			addrs, err := net.InterfaceAddrs()
+			if err != nil {
+				log.Warn("failed to get network interface addresses for matching host", slog.Any("error", err))
+				return strings.EqualFold(currentHostname, configuredHostname) // Fallback
+			}
+
+			for _, addr := range addrs {
+				if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+					if ipNet.IP.Equal(ip) {
+						return true // Found a matching local interface IP
+					}
+				}
+			}
+			return false // IP parsed, but not found on any active interface
+		}
+	}
+
+	// Case: configuredHostname is a hostname (not an IP).
+	// Rule 1: Check for domain to decide comparison rigor.
+	if strings.Contains(configuredHostname, ".") {
+		// Hostname has a domain. Use partial/domain-aware comparison.
+
+		// Extract the base name (before the first dot) from the configured hostname.
+		parts := strings.Split(configuredHostname, ".")
+		configuredBaseName := parts[0]
+
+		if !h.IsLocalhost() {
+			// Remote: The configured hostname matches if the Gateway's full name
+			// is an exact match OR if the Gateway's name matches the configured base name.
+			// This correctly handles: "somehost.somedomain.com" matches "somehost"
+			// but not "somehost.anotherdomain.com" unless the full name matches.
+			return strings.EqualFold(h.Hostname(), configuredHostname) || strings.EqualFold(h.Hostname(), configuredBaseName)
+		} else {
+			// Local: The configured hostname matches if the current name is an exact match
+			// OR if the current name matches the configured base name.
+			return strings.EqualFold(currentHostname, configuredHostname) || strings.EqualFold(currentHostname, configuredBaseName)
+		}
+	} else {
+		// No domain (short name). Use simple name comparison for both local and remote.
+		return strings.EqualFold(h.Hostname(), configuredHostname)
+	}
 }
 
 // filterIgnored removes the instance names, as returned by
