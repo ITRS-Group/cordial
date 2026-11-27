@@ -1,6 +1,6 @@
 .markdown-body {
   font-family: "Barlow", "DejaVu Sans", sans-serif;
-  font-size: 11pt;
+  font-size: 10pt;
   line-height: 1.5;
   color: #24292f;
 }
@@ -32,7 +32,7 @@
 }
 
 .markdown-body pre {
-  font-size: 9pt;
+  font-size: 8.5pt;
   line-height: 1.4;
   padding: 10pt;
   background: #f3f5f7;
@@ -80,3 +80,25 @@
 .markdown-body .markdown-alert-important { color: #8250df; }
 .markdown-body .markdown-alert-warning { color: #9a6700; }
 .markdown-body .markdown-alert-caution { color: #cf222e; }
+
+.markdown-body table {
+  display: table;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  table-layout: auto;
+  font-size: 8pt;
+  line-height: 1.35;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  padding: 3pt 5pt;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body table code {
+  font-size: 7.5pt;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

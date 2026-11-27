@@ -282,7 +282,10 @@ RUN set -eux; \
     do \
         name=$(basename "$source" .md); \
         cp "$source" "geneos-includes/$name.md"; \
-        mmdc -p /puppeteer.json -i "$source" -o "/tmp/${name}.mermaid.md"; \
+        sed -i -E \
+            -e 's#\]\((\.\./){3}([^)]*)\)#](https://github.com/ITRS-Group/cordial/blob/main/\2)#g' \
+            "geneos-includes/$name.md"; \
+        mmdc -p /puppeteer.json -i "geneos-includes/$name.md" -o "/tmp/${name}.mermaid.md"; \
         node /app/pdf/mdpdf.cjs "/tmp/${name}.mermaid.md" "geneos-includes/$name.pdf" --border=15mm --gh-style; \
     done; \
     for source in /app/cordial/pkg/holidays/README.md /app/cordial/pkg/holidays/RUNBOOK.md /app/cordial/pkg/holidays/holiday-calendars-*.md; \
