@@ -36,7 +36,8 @@ pipeline {
         REPORTS_TO = "pgalbavy@itrsgroup.com"
     }
     parameters {
-        string(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Branch to scan. Defaults to main if not supplied.')
+        // TODO(DPS-2753): revert default to 'main' before merging; set to the test branch for playground comparison runs.
+        string(name: 'BRANCH_NAME', defaultValue: 'task/dps-2753-blackduck-scans', description: 'Branch to scan.')
         booleanParam(name: 'RELOAD_PARAMS', defaultValue: false, description: 'If set to true, all stages will be skipped.')
     }
     options {
