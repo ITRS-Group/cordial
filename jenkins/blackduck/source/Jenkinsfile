@@ -36,8 +36,9 @@ pipeline {
         REPORTS_TO = "pgalbavy@itrsgroup.com"
     }
     parameters {
-        // TODO(DPS-2753): revert default to 'main' before merging; set to the test branch for playground comparison runs.
-        string(name: 'BRANCH_NAME', defaultValue: 'task/dps-2753-blackduck-scans', description: 'Branch to scan.')
+        // Multibranch jobs set env.BRANCH_NAME to the job's branch; the nightly
+        // single-branch job does not, so it falls back to main.
+        string(name: 'SCAN_BRANCH', defaultValue: env.BRANCH_NAME ?: 'main', description: 'Branch to scan. Defaults to the job branch (multibranch) or main.')
         booleanParam(name: 'RELOAD_PARAMS', defaultValue: false, description: 'If set to true, all stages will be skipped.')
     }
     options {
@@ -50,7 +51,7 @@ pipeline {
             }
             steps {
                 dir("${PROJECT_NAME}") {
-                    git branch: "${BRANCH_NAME}", url: "${REPO_URL}"
+                    git branch: "${params.SCAN_BRANCH}", url: "${REPO_URL}"
                 }
             }
         }
@@ -88,7 +89,7 @@ pipeline {
                             --detect.policy.check.fail.on.severities="BLOCKER,CRITICAL,MAJOR" \
                             --detect.project.group.name=${GROUP_PROJECT} \
                             --detect.project.name=${PROJECT_NAME} \
-                            --detect.project.version.name=${BRANCH_NAME} \
+                            --detect.project.version.name=${SCAN_BRANCH} \
                             --detect.risk.report.pdf.path=${WORKSPACE} \
                             --detect.risk.report.pdf=true \
                             --detect.source.path=${WORKSPACE}/${PROJECT_NAME} \
@@ -125,7 +126,7 @@ pipeline {
                         badge.setColor('red')
 
                         emailext(
-                            subject: "[${blackduckLogs.getOverallStatus()}] Blackduck Source Scan ${PROJECT_NAME}: ${BRANCH_NAME}",
+                            subject: "[${blackduckLogs.getOverallStatus()}] Blackduck Source Scan ${PROJECT_NAME}: ${params.SCAN_BRANCH}",
                             body: "Black Duck found: ${blackduckLogs.getComponents()}\n\nBlack Duck Project: ${blackduckLogs.getProjectBom()}\n\nJenkins Job: ${env.JOB_NAME}\nBuild URL: ${env.BUILD_URL}",
                             attachmentsPattern: '*RiskReport.pdf',
                             to: "${REPORTS_TO}"
