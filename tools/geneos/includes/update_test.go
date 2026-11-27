@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -345,6 +346,9 @@ func TestUpdatePrefixSelection(t *testing.T) {
 			writeTestGatewaySetup(t, h, "<gateway/>")
 			parent := h.PathTo("gateway", "includes")
 			versions := []string{embeddedIncludeVersion(), "holidays-" + holidaycontent.VERSION, "holidays-v2026.01.02", "itrs-v2.0.0", "holidays-v2.0.0", "v2.0.0"}
+			// the embedded version can equal one of the fixed versions
+			slices.Sort(versions)
+			versions = slices.Compact(versions)
 			for _, version := range versions {
 				if err := os.MkdirAll(filepath.Join(parent, version), 0755); err != nil {
 					t.Fatal(err)

@@ -396,7 +396,7 @@ func TestEmbeddedHealthGatewayIncludePriorities(t *testing.T) {
 	}
 	slices.Sort(priorities)
 	// decimal priorities, and not leading zero octal numbers
-	if want := []string{"10000", "1010", "1020", "11000", "500", "510", "520"}; !slices.Equal(priorities, want) {
+	if want := []string{"10000", "1020", "1050", "11000", "500", "520", "550"}; !slices.Equal(priorities, want) {
 		t.Errorf("include priorities = %v, want %v", priorities, want)
 	}
 }

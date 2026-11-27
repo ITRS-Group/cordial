@@ -18,6 +18,8 @@ limitations under the License.
 package minimal
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -94,7 +96,7 @@ func TestExistingLocationsKept(t *testing.T) {
 	}
 
 	i, err := instance.GetWithHost(geneos.LOCAL, &Component, "legacy")
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		t.Fatal(err)
 	}
 	if got, want := i.Home(), filepath.Join(root, "minimal", "minimals", "legacy"); got != want {
@@ -103,7 +105,7 @@ func TestExistingLocationsKept(t *testing.T) {
 
 	// an instance that was configured with the old default is also kept
 	i, err = instance.GetWithHost(geneos.LOCAL, &Component, "oldhome")
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		t.Fatal(err)
 	}
 	config.Set(i.Config(), "home", filepath.Join(root, "netprobe", "netprobes", "oldhome"))

@@ -764,7 +764,7 @@ func TestEmbeddedServerHealthProfiles(t *testing.T) {
 	}
 	if len(sans) != 1 || !slices.Contains(sans[0].Types, "Layer 1 - Server Health") ||
 		!slices.Contains(sans[0].Types, "Layer 3 - Geneos Instances") ||
-		!slices.Contains(sans[0].Types, "Layer 3 - Geneos Diagnostics") {
+		!slices.Contains(sans[0].Types, "Layer 3 - Geneos Instances Diagnostics") {
 		t.Fatalf("Health endpoint does not use the expected layer types: %v", sans)
 	}
 }
@@ -992,6 +992,12 @@ func TestHealthComponentCoverage(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// the Types shared by every entity are set once in the common section
+	var common san.ManagedEntityCommon
+	if err := pf.UnmarshalKey(pf.Join("profiles", "health-agent", "san", "managed-entities-common"), &common, config.NoExpand()); err != nil {
+		t.Fatal(err)
+	}
+
 	covered := make(map[*geneos.Component]bool)
 	for _, entity := range entities {
 		component := geneos.ParseComponent(entity.ForEach)
@@ -1008,7 +1014,7 @@ func TestHealthComponentCoverage(t *testing.T) {
 		}) {
 			t.Errorf("component %q is missing its name or component attribute", entity.ForEach)
 		}
-		if !slices.ContainsFunc(entity.Types, func(name string) bool {
+		if !slices.ContainsFunc(slices.Concat(common.Types, entity.Types), func(name string) bool {
 			return strings.HasPrefix(name, "Layer 3 - Geneos ")
 		}) {
 			t.Errorf("component %q is missing its Geneos Type", entity.ForEach)
