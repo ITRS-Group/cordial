@@ -1,0 +1,142 @@
+@Library('ITRS-shared-pipelines')
+import com.itrsgroup.devops.BlackduckLog
+
+// Nightly Black Duck source scan of cordial.
+//
+// Runs inside the image from ./Dockerfile (JRE + latest Go). The image is
+// rebuilt with --pull, so the scan always uses the latest stable Go without a
+// Jenkins global tool to maintain.
+
+pipeline {
+    agent {
+        dockerfile {
+            dir 'jenkins/blackduck/source'
+            filename 'Dockerfile'
+            label 'JENKINS_SWARM_NODE'
+            additionalBuildArgs '--pull'
+            reuseNode true
+        }
+    }
+    triggers {
+        cron('H 21 * * *')
+    }
+    environment {
+        BLACKDUCK_API_TOKEN = credentials("SaaS_BLACKDUCK_API_TOKEN")
+        BLACKDUCK_URL = "https://itrsgroup.app.blackduck.com"
+        DETECT_SH_URL = "https://detect.blackduck.com/detect10.sh"
+        GO_BIN_PATH = "/usr/local/go/bin/go"
+        // The container runs as the Jenkins agent UID, which has no writable
+        // home inside the image; keep Go and Detect caches in the workspace.
+        HOME = "${WORKSPACE}/.home"
+        GOPATH = "${WORKSPACE}/.home/go"
+        GOCACHE = "${WORKSPACE}/.home/.cache/go-build"
+        GROUP_PROJECT = "Cordial-Source"
+        PROJECT_NAME = "cordial"
+        REPO_URL = "https://github.com/ITRS-Group/cordial.git"
+        REPORTS_TO = "pgalbavy@itrsgroup.com"
+    }
+    parameters {
+        string(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Branch to scan. Defaults to main if not supplied.')
+        booleanParam(name: 'RELOAD_PARAMS', defaultValue: false, description: 'If set to true, all stages will be skipped.')
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+    stages {
+        stage('Checkout') {
+            when {
+                expression { return !params.RELOAD_PARAMS }
+            }
+            steps {
+                dir("${PROJECT_NAME}") {
+                    git branch: "${BRANCH_NAME}", url: "${REPO_URL}"
+                }
+            }
+        }
+        stage('Tidy Go Modules') {
+            when {
+                expression { return !params.RELOAD_PARAMS }
+            }
+            steps {
+                dir("${PROJECT_NAME}") {
+                    sh '''
+                        mkdir -p "${HOME}"
+                        "${GO_BIN_PATH}" version
+                        "${GO_BIN_PATH}" mod tidy
+                    '''
+                }
+            }
+        }
+        stage('Run Black Duck Scan - Source') {
+            when {
+                expression { return !params.RELOAD_PARAMS }
+            }
+            steps {
+                script {
+                    sh 'curl -fsSL -o detect.sh ${DETECT_SH_URL}'
+                    sh 'chmod +x detect.sh'
+                    sh '''
+                        ./detect.sh --blackduck.api.token=${BLACKDUCK_API_TOKEN} \
+                            --blackduck.url=${BLACKDUCK_URL} \
+                            --detect.cleanup=false \
+                            --detect.excluded.detector.types=GIT \
+                            --detect.go.path=${GO_BIN_PATH} \
+                            --detect.go.mod.dependency.types.excluded=UNUSED \
+                            --detect.output.path=blackduck_output \
+                            --detect.parallel.processors=0 \
+                            --detect.policy.check.fail.on.severities="BLOCKER,CRITICAL,MAJOR" \
+                            --detect.project.group.name=${GROUP_PROJECT} \
+                            --detect.project.name=${PROJECT_NAME} \
+                            --detect.project.version.name=${BRANCH_NAME} \
+                            --detect.risk.report.pdf.path=${WORKSPACE} \
+                            --detect.risk.report.pdf=true \
+                            --detect.source.path=${WORKSPACE}/${PROJECT_NAME} \
+                            --detect.timeout="3600" \
+                            --detect.tools=ALL \
+                            --detect.target.type=SOURCE \
+                            2>&1 | tee ${WORKSPACE}/scan_output.txt
+                    '''
+
+                    archiveArtifacts artifacts: '**/status.json', followSymlinks: false
+                    archiveArtifacts artifacts: 'scan_output.txt', followSymlinks: false
+
+                    blackduckLogs = new BlackduckLog(this)
+                    blackduckLogs.readLogs("scan_output.txt")
+
+                    if (blackduckLogs.getExitCode() != "0") {
+                        error("BlackDuck scan failed with status code: ${blackduckLogs.getOverallStatus()}")
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                if (params.RELOAD_PARAMS) {
+                    echo "Skipping post-build actions because RELOAD_PARAMS is true."
+                } else if (binding.hasVariable('blackduckLogs')) {
+                    def badge = addEmbeddableBadgeConfiguration(id: "blackduck", subject: "blackduck")
+                    if (blackduckLogs.getOverallStatus().contains("SUCCESS")) {
+                        badge.setStatus('passing')
+                    } else if (blackduckLogs.getOverallStatus().contains("FAILURE_POLICY_VIOLATION")) {
+                        badge.setStatus('violations')
+                        badge.setColor('red')
+
+                        emailext(
+                            subject: "[${blackduckLogs.getOverallStatus()}] Blackduck Source Scan ${PROJECT_NAME}: ${BRANCH_NAME}",
+                            body: "Black Duck found: ${blackduckLogs.getComponents()}\n\nBlack Duck Project: ${blackduckLogs.getProjectBom()}\n\nJenkins Job: ${env.JOB_NAME}\nBuild URL: ${env.BUILD_URL}",
+                            attachmentsPattern: '*RiskReport.pdf',
+                            to: "${REPORTS_TO}"
+                        )
+                    }
+                } else {
+                    echo "Black Duck scan did not run; no results to report."
+                }
+            }
+        }
+        cleanup {
+            cleanWs()
+        }
+    }
+}

@@ -1,0 +1,77 @@
+pipeline {
+    agent {
+        label 'JENKINS_SWARM_NODE'
+    }
+    triggers {
+        cron('H 21 * * *')
+    }
+    environment {
+        DOCKER_IMAGES = "gdna" // Comma-separated Docker images string
+        DOCKER_REPO_NAME = "itrs-docker"
+        GROUP_PROJECT = "Cordial-Containers"
+        NEXUS_REPO_URL = "nexus.itrsgroup.com"
+        NEXUS = credentials('nexus-mirror')
+        REPORTS_TO = "pgalbavy@itrsgroup.com"
+    }
+    parameters {
+        string(name: 'VERSION', defaultValue: '', description: 'Docker image version. If not supplied, the latest version will be retrieved from Nexus.')
+        booleanParam(name: 'RELOAD_PARAMS', defaultValue: false, description: 'If set to true, all stages will be skipped.')
+    }
+    stages {
+        stage('Run Black Duck Scan - Docker') {
+            when {
+                expression { return !params.RELOAD_PARAMS }
+            }
+            steps {
+                script {
+                    // Split the DOCKER_IMAGES string into an array
+                    def dockerImagesArray = env.DOCKER_IMAGES.split(',')
+
+                    dockerImagesArray.each { image ->
+                        def version = fetchVersionForImage(image)
+                        echo "Processing Docker image: ${image}:${version}"
+                        build(
+                            propagate: false,
+                            job: 'BlackDuckScans/docker-scans',
+                            parameters: [
+                                string(name: 'imageName', value: "${image}:${version}"),
+                                string(name: 'groupName', value: "${GROUP_PROJECT}"),
+                                string(name: 'emailNotification', value: "${REPORTS_TO}"),
+                                string(name: 'versionName', value: "${version}")
+                            ]
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+def fetchVersionForImage(imageName) {
+    if (params.VERSION?.trim()) {
+        return params.VERSION
+    } else {
+        def latestTag = sh(script: """
+            #!/bin/bash
+            set +xe
+
+            repo_url="${NEXUS_REPO_URL}"
+            repo_name="${DOCKER_REPO_NAME}"
+            image_name="${imageName}"
+            curl_flags="-u ${NEXUS_USR}:${NEXUS_PSW}"
+
+            response=\$(curl -s \$curl_flags "https://\$repo_url/service/rest/v1/search?repository=\$repo_name&name=\$image_name")
+            tags_with_dates=\$(echo \$response | jq -r '.items[] | "\\(.version) \\(.assets[].lastModified)"')
+
+            if [ -z "\$tags_with_dates" ]; then
+                echo "No tags found for image \$image_name in repository \$repo_name"
+                exit 1
+            fi
+
+            latest_tag=\$(echo "\$tags_with_dates" | sort -k2 -r | head -n 1 | awk '{print \$1}')
+            echo "\$latest_tag"
+        """, returnStdout: true).trim()
+
+        return latestTag
+    }
+}
