@@ -10,8 +10,9 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
-func TestServerHealthIncludeReferences(t *testing.T) {
-	file, err := Files.Open("files/itrs.layer1.server-health.xml")
+func decodeGateway(t *testing.T, path string) (setup geneosxml.Gateway) {
+	t.Helper()
+	file, err := Files.Open("files/" + path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -19,10 +20,14 @@ func TestServerHealthIncludeReferences(t *testing.T) {
 
 	decoder := xml.NewDecoder(file)
 	decoder.CharsetReader = charset.NewReaderLabel
-	var setup geneosxml.Gateway
 	if err := decoder.Decode(&setup); err != nil {
-		t.Fatal(err)
+		t.Fatalf("decode %s: %v", path, err)
 	}
+	return
+}
+
+func TestServerHealthIncludeReferences(t *testing.T) {
+	setup := decodeGateway(t, "itrs.layer1.server-health.xml")
 	if setup.Types == nil || len(setup.Types.TypeGroups) != 1 || len(setup.Types.TypeGroups[0].Types) != 1 {
 		t.Fatal("server health include must define one type in one type group")
 	}
@@ -34,10 +39,15 @@ func TestServerHealthIncludeReferences(t *testing.T) {
 	if healthType.Environment == nil || healthType.Environment.Name != healthType.Name+" Defaults" {
 		t.Fatalf("type %q has an incorrect default environment: %v", healthType.Name, healthType.Environment)
 	}
-	if setup.ManagedEntities == nil || len(setup.ManagedEntities.ManagedEntityGroups) != 1 {
-		t.Fatal("server health include must define one managed entity group")
+	if setup.ManagedEntities != nil && len(setup.ManagedEntities.ManagedEntityGroups) != 0 {
+		t.Fatal("server health include must not define managed entity groups; they belong in the config template")
 	}
-	managedGroup := setup.ManagedEntities.ManagedEntityGroups[0]
+
+	config := decodeGateway(t, "config.layer1.server-health.xml")
+	if config.ManagedEntities == nil || len(config.ManagedEntities.ManagedEntityGroups) != 1 {
+		t.Fatal("server health config template must define one managed entity group")
+	}
+	managedGroup := config.ManagedEntities.ManagedEntityGroups[0]
 	if managedGroup.Name != healthType.Name || managedGroup.AddTypes == nil ||
 		len(managedGroup.AddTypes.Types) != 1 || managedGroup.AddTypes.Types[0].Type != healthType.Name {
 		t.Fatalf("managed entity group %q does not assign type %q", managedGroup.Name, healthType.Name)

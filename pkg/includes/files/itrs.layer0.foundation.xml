@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-27 09:06:32 by PeterGalbavy on ITRSLP372-->
 <!-- Gateway-created setup include file for user AzureAD\PeterGalbavy at 127.0.0.1 -->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
 	<samplers>
@@ -52,7 +53,7 @@ having a good set of diagnostics for the configured endpoint monitoring.-->
 					<!--The Gateway DateTime sampler provides a selection of date and times formatted
 to common standards, both for UTC and the gateway local timezone.
 
-Because of the dependency on the intregrated SQLite there is no support for
+Because of the dependency on the integrated SQLite there is no support for
 IANA named timezones or for those regions that have summer/winter changes.
 The localtime column will correctly show summer/winter changes based on the
 system settings for the gateway.-->
@@ -222,15 +223,15 @@ configuration to match pre-defined best practices.
 
 At this time the only sampler is "Attribute Validation" which will check all
 managed entities for a configured set of attributes, which is set in a
-variable in the Operating Envionment.-->
+variable in the Operating Environment.-->
 				<sampler name="Attribute Validation">
 					<!--The Attribute Validation sampler checks each managed entity on the gateway
-to ensure that they all have a minimum set of require attribuutes. By default this
+to ensure that they all have a minimum set of required attributes. By default this
 is an empty list.
 
 Create an "external config file" variable called "requiredAttributes" in your
 global Operating Environment and list the name of each attribute, one per line.
-Remember that attribute names are case sensitive. Blank line are ignored
+Remember that attribute names are case sensitive. Blank lines are ignored
 but no other checks are performed.
 
 For example:
@@ -523,7 +524,7 @@ ORDER BY e.name;</data>
 						</if>
 					</block>
 				</rule>
-				<ruleGroup name="Analytics Conection">
+				<ruleGroup name="Analytics Connection">
 					<rule name="connectionStatus">
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-itrsAnalyticsConnection&quot;)]/dataview[(@name=&quot;Summary&quot;)]/rows/row[(@name=&quot;connectionStatus&quot;)]/cell[(@column=&quot;value&quot;)]</target>
@@ -550,40 +551,36 @@ ORDER BY e.name;</data>
 										</dataItem>
 										<string>Ready</string>
 									</notEqual>
-									<block>
+									<if>
+										<equal>
+											<dataItem>
+												<property>state/@severity</property>
+											</dataItem>
+											<severity>warning</severity>
+										</equal>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">30</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>critical</severity>
+											</update>
 										</transaction>
 										<if>
-											<equal>
+											<notEqual>
 												<dataItem>
 													<property>state/@severity</property>
 												</dataItem>
-												<severity>warning</severity>
-											</equal>
+												<severity>critical</severity>
+											</notEqual>
 											<transaction>
-												<delay unit="samples">12</delay>
+												<delay unit="samples">15</delay>
 												<update>
 													<property>state/@severity</property>
-													<severity>critical</severity>
+													<severity>warning</severity>
 												</update>
 											</transaction>
-											<if>
-												<notEqual>
-													<dataItem>
-														<property>state/@severity</property>
-													</dataItem>
-													<severity>critical</severity>
-												</notEqual>
-												<transaction>
-													<update>
-														<property>state/@severity</property>
-														<severity>warning</severity>
-													</update>
-												</transaction>
-											</if>
 										</if>
-									</block>
+									</if>
 									<transaction>
 										<update>
 											<property>state/@severity</property>
@@ -617,9 +614,18 @@ ORDER BY e.name;</data>
 										<integer>0</integer>
 									</gte>
 								</and>
-								<block>
+								<if>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>undefined</severity>
+									</equal>
 									<transaction>
-										<delay unit="samples">12</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
 									</transaction>
 									<if>
 										<equal>
@@ -629,7 +635,7 @@ ORDER BY e.name;</data>
 											<severity>warning</severity>
 										</equal>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">30</delay>
 											<update>
 												<property>state/@severity</property>
 												<severity>critical</severity>
@@ -643,6 +649,7 @@ ORDER BY e.name;</data>
 												<severity>critical</severity>
 											</notEqual>
 											<transaction>
+												<delay unit="samples">15</delay>
 												<update>
 													<property>state/@severity</property>
 													<severity>warning</severity>
@@ -650,7 +657,7 @@ ORDER BY e.name;</data>
 											</transaction>
 										</if>
 									</if>
-								</block>
+								</if>
 								<transaction>
 									<update>
 										<property>state/@severity</property>
@@ -672,60 +679,62 @@ ORDER BY e.name;</data>
 							<pathAlias name="component">../cell[(@column=&quot;component&quot;)]</pathAlias>
 						</pathAliases>
 						<block>
-							<set>
-								<var ref="week"/>
-								<multiply>
+							<block>
+								<set>
+									<var ref="week"/>
 									<multiply>
-										<integer>7</integer>
-										<integer>24</integer>
+										<multiply>
+											<integer>7</integer>
+											<integer>24</integer>
+										</multiply>
+										<integer>60</integer>
 									</multiply>
-									<integer>60</integer>
-								</multiply>
-							</set>
-							<if>
-								<or>
-									<equal>
-										<dataItem>
-											<pathAlias ref="component"/>
-											<property>@value</property>
-										</dataItem>
-										<string>GeneosWebServer</string>
-									</equal>
-									<equal>
-										<dataItem>
-											<pathAlias ref="component"/>
-											<property>@value</property>
-										</dataItem>
-										<string>Gateway</string>
-									</equal>
-								</or>
-								<transaction>
-									<update>
-										<property>state/@severity</property>
-										<severity>undefined</severity>
-									</update>
-								</transaction>
+								</set>
 								<if>
-									<gt>
-										<dataItem>
-											<property>@value</property>
-										</dataItem>
-										<var ref="week"/>
-									</gt>
+									<or>
+										<equal>
+											<dataItem>
+												<pathAlias ref="component"/>
+												<property>@value</property>
+											</dataItem>
+											<string>GeneosWebServer</string>
+										</equal>
+										<equal>
+											<dataItem>
+												<pathAlias ref="component"/>
+												<property>@value</property>
+											</dataItem>
+											<string>Gateway</string>
+										</equal>
+									</or>
 									<transaction>
 										<update>
 											<property>state/@severity</property>
-											<severity>warning</severity>
+											<severity>undefined</severity>
 										</update>
 									</transaction>
-									<transaction>
-										<update>
-											<property>state/@severity</property>
-											<severity>ok</severity>
-										</update>
-									</transaction>
+									<if>
+										<gt>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<var ref="week"/>
+										</gt>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>warning</severity>
+											</update>
+										</transaction>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>ok</severity>
+											</update>
+										</transaction>
+									</if>
 								</if>
-							</if>
+							</block>
 						</block>
 					</rule>
 				</ruleGroup>
@@ -753,9 +762,18 @@ ORDER BY e.name;</data>
 										<integer>0</integer>
 									</gte>
 								</and>
-								<block>
+								<if>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>undefined</severity>
+									</equal>
 									<transaction>
-										<delay unit="samples">12</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
 									</transaction>
 									<if>
 										<equal>
@@ -765,7 +783,7 @@ ORDER BY e.name;</data>
 											<severity>warning</severity>
 										</equal>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">30</delay>
 											<update>
 												<property>state/@severity</property>
 												<severity>critical</severity>
@@ -779,6 +797,7 @@ ORDER BY e.name;</data>
 												<severity>critical</severity>
 											</notEqual>
 											<transaction>
+												<delay unit="samples">15</delay>
 												<update>
 													<property>state/@severity</property>
 													<severity>warning</severity>
@@ -786,7 +805,7 @@ ORDER BY e.name;</data>
 											</transaction>
 										</if>
 									</if>
-								</block>
+								</if>
 								<transaction>
 									<update>
 										<property>state/@severity</property>
@@ -840,7 +859,7 @@ ORDER BY e.name;</data>
 											<severity>warning</severity>
 										</equal>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">30</delay>
 											<update>
 												<property>state/@severity</property>
 												<severity>critical</severity>
@@ -897,40 +916,36 @@ ORDER BY e.name;</data>
 										</dataItem>
 										<string>Connected</string>
 									</notEqual>
-									<block>
+									<if>
+										<equal>
+											<dataItem>
+												<property>state/@severity</property>
+											</dataItem>
+											<severity>warning</severity>
+										</equal>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">30</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>critical</severity>
+											</update>
 										</transaction>
 										<if>
-											<equal>
+											<notEqual>
 												<dataItem>
 													<property>state/@severity</property>
 												</dataItem>
-												<severity>warning</severity>
-											</equal>
+												<severity>critical</severity>
+											</notEqual>
 											<transaction>
-												<delay unit="samples">12</delay>
+												<delay unit="samples">15</delay>
 												<update>
 													<property>state/@severity</property>
-													<severity>critical</severity>
+													<severity>warning</severity>
 												</update>
 											</transaction>
-											<if>
-												<notEqual>
-													<dataItem>
-														<property>state/@severity</property>
-													</dataItem>
-													<severity>critical</severity>
-												</notEqual>
-												<transaction>
-													<update>
-														<property>state/@severity</property>
-														<severity>warning</severity>
-													</update>
-												</transaction>
-											</if>
 										</if>
-									</block>
+									</if>
 									<transaction>
 										<update>
 											<property>state/@severity</property>
@@ -967,40 +982,36 @@ ORDER BY e.name;</data>
 										</dataItem>
 										<string>Connected</string>
 									</notEqual>
-									<block>
+									<if>
+										<equal>
+											<dataItem>
+												<property>state/@severity</property>
+											</dataItem>
+											<severity>warning</severity>
+										</equal>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">30</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>critical</severity>
+											</update>
 										</transaction>
 										<if>
-											<equal>
+											<notEqual>
 												<dataItem>
 													<property>state/@severity</property>
 												</dataItem>
-												<severity>warning</severity>
-											</equal>
+												<severity>critical</severity>
+											</notEqual>
 											<transaction>
-												<delay unit="samples">12</delay>
+												<delay unit="samples">15</delay>
 												<update>
 													<property>state/@severity</property>
-													<severity>critical</severity>
+													<severity>warning</severity>
 												</update>
 											</transaction>
-											<if>
-												<notEqual>
-													<dataItem>
-														<property>state/@severity</property>
-													</dataItem>
-													<severity>critical</severity>
-												</notEqual>
-												<transaction>
-													<update>
-														<property>state/@severity</property>
-														<severity>warning</severity>
-													</update>
-												</transaction>
-											</if>
 										</if>
-									</block>
+									</if>
 									<transaction>
 										<update>
 											<property>state/@severity</property>
@@ -1026,9 +1037,18 @@ ORDER BY e.name;</data>
 									</dataItem>
 									<string>Up</string>
 								</notEqual>
-								<block>
+								<if>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>undefined</severity>
+									</equal>
 									<transaction>
-										<delay unit="samples">12</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
 									</transaction>
 									<if>
 										<equal>
@@ -1038,7 +1058,7 @@ ORDER BY e.name;</data>
 											<severity>warning</severity>
 										</equal>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">30</delay>
 											<update>
 												<property>state/@severity</property>
 												<severity>critical</severity>
@@ -1052,6 +1072,7 @@ ORDER BY e.name;</data>
 												<severity>critical</severity>
 											</notEqual>
 											<transaction>
+												<delay unit="samples">15</delay>
 												<update>
 													<property>state/@severity</property>
 													<severity>warning</severity>
@@ -1059,7 +1080,7 @@ ORDER BY e.name;</data>
 											</transaction>
 										</if>
 									</if>
-								</block>
+								</if>
 								<transaction>
 									<update>
 										<property>state/@severity</property>
@@ -1082,40 +1103,36 @@ ORDER BY e.name;</data>
 									</dataItem>
 									<string/>
 								</notEqual>
-								<block>
+								<if>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>warning</severity>
+									</equal>
 									<transaction>
-										<delay unit="samples">12</delay>
+										<delay unit="samples">30</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>critical</severity>
+										</update>
 									</transaction>
 									<if>
-										<equal>
+										<notEqual>
 											<dataItem>
 												<property>state/@severity</property>
 											</dataItem>
-											<severity>warning</severity>
-										</equal>
+											<severity>critical</severity>
+										</notEqual>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">15</delay>
 											<update>
 												<property>state/@severity</property>
-												<severity>critical</severity>
+												<severity>warning</severity>
 											</update>
 										</transaction>
-										<if>
-											<notEqual>
-												<dataItem>
-													<property>state/@severity</property>
-												</dataItem>
-												<severity>critical</severity>
-											</notEqual>
-											<transaction>
-												<update>
-													<property>state/@severity</property>
-													<severity>warning</severity>
-												</update>
-											</transaction>
-										</if>
 									</if>
-								</block>
+								</if>
 								<transaction>
 									<update>
 										<property>state/@severity</property>
@@ -1153,40 +1170,36 @@ ORDER BY e.name;</data>
 										</dataItem>
 										<string>YES</string>
 									</notEqual>
-									<block>
+									<if>
+										<equal>
+											<dataItem>
+												<property>state/@severity</property>
+											</dataItem>
+											<severity>warning</severity>
+										</equal>
 										<transaction>
-											<delay unit="samples">3</delay>
+											<delay unit="samples">30</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>critical</severity>
+											</update>
 										</transaction>
 										<if>
-											<equal>
+											<notEqual>
 												<dataItem>
 													<property>state/@severity</property>
 												</dataItem>
-												<severity>warning</severity>
-											</equal>
+												<severity>critical</severity>
+											</notEqual>
 											<transaction>
-												<delay unit="samples">12</delay>
+												<delay unit="samples">15</delay>
 												<update>
 													<property>state/@severity</property>
-													<severity>critical</severity>
+													<severity>warning</severity>
 												</update>
 											</transaction>
-											<if>
-												<notEqual>
-													<dataItem>
-														<property>state/@severity</property>
-													</dataItem>
-													<severity>critical</severity>
-												</notEqual>
-												<transaction>
-													<update>
-														<property>state/@severity</property>
-														<severity>warning</severity>
-													</update>
-												</transaction>
-											</if>
 										</if>
-									</block>
+									</if>
 									<transaction>
 										<update>
 											<property>state/@severity</property>
@@ -1240,6 +1253,9 @@ ORDER BY e.name;</data>
 						</block>
 					</rule>
 					<rule name="gracePeriodRemaining">
+						<!--While the Gateway is in its licence grace period, warning when fewer than
+3 days of disconnected time remain and critical when less than 1 day remains.
+Outside the grace period the severity is undefined.-->
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-licenceUsage&quot;)]/dataview/rows/row[(@name=&quot;gracePeriodRemaining&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
 						</targets>
@@ -1248,68 +1264,61 @@ ORDER BY e.name;</data>
 							<pathAlias name="gracePeriodMode">../../row[(@name=&quot;gracePeriodMode&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
 						</pathAliases>
 						<block>
-							<set>
-								<var ref="gracePeriodMode"/>
-								<dataItem>
-									<pathAlias ref="gracePeriodMode"/>
-									<property>@value</property>
-								</dataItem>
-							</set>
-							<if>
-								<equal>
+							<block>
+								<set>
 									<var ref="gracePeriodMode"/>
-									<string>NO</string>
-								</equal>
-								<transaction>
-									<update>
-										<property>state/@severity</property>
-										<severity>undefined</severity>
-									</update>
-								</transaction>
+									<dataItem>
+										<pathAlias ref="gracePeriodMode"/>
+										<property>@value</property>
+									</dataItem>
+								</set>
 								<if>
-									<lt>
-										<dataItem>
-											<property>@value</property>
-										</dataItem>
-										<integer>3</integer>
-									</lt>
+									<equal>
+										<var ref="gracePeriodMode"/>
+										<string>NO</string>
+									</equal>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>undefined</severity>
+										</update>
+									</transaction>
 									<if>
-										<equal>
+										<lt>
 											<dataItem>
-												<property>state/@severity</property>
+												<property>@value</property>
 											</dataItem>
-											<severity>warning</severity>
-										</equal>
+											<integer>1</integer>
+										</lt>
 										<transaction>
-											<delay>10080</delay>
 											<update>
 												<property>state/@severity</property>
 												<severity>critical</severity>
 											</update>
 										</transaction>
 										<if>
-											<notEqual>
+											<lt>
 												<dataItem>
-													<property>state/@severity</property>
+													<property>@value</property>
 												</dataItem>
-												<severity>critical</severity>
-											</notEqual>
+												<integer>3</integer>
+											</lt>
 											<transaction>
 												<update>
 													<property>state/@severity</property>
 													<severity>warning</severity>
 												</update>
 											</transaction>
+											<transaction>
+												<update>
+													<property>state/@severity</property>
+													<severity>ok</severity>
+												</update>
+											</transaction>
 										</if>
 									</if>
-									<transaction>
-										<update>
-											<property>state/@severity</property>
-											<severity>ok</severity>
-										</update>
-									</transaction>
 								</if>
-							</if>
+							</block>
 						</block>
 					</rule>
 				</ruleGroup>
@@ -1350,7 +1359,7 @@ over time is good but should not hide a critical for missing monitoring of endpo
 											<severity>warning</severity>
 										</equal>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">30</delay>
 											<update>
 												<property>state/@severity</property>
 												<severity>critical</severity>
@@ -1415,7 +1424,7 @@ over time is good but should not hide a critical for missing monitoring of endpo
 											<severity>warning</severity>
 										</equal>
 										<transaction>
-											<delay unit="samples">12</delay>
+											<delay unit="samples">30</delay>
 											<update>
 												<property>state/@severity</property>
 												<severity>critical</severity>
@@ -1467,7 +1476,7 @@ over time is good but should not hide a critical for missing monitoring of endpo
 										<severity>warning</severity>
 									</equal>
 									<transaction>
-										<delay unit="samples">12</delay>
+										<delay unit="samples">30</delay>
 										<update>
 											<property>state/@severity</property>
 											<severity>critical</severity>
@@ -1625,7 +1634,7 @@ confirmed behaviour.-->
 								<severity>warning</severity>
 							</equal>
 							<transaction>
-								<delay unit="samples">12</delay>
+								<delay unit="samples">15</delay>
 								<update>
 									<property>state/@severity</property>
 									<severity>critical</severity>

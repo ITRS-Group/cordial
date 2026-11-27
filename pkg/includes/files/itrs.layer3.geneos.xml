@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-27 09:06:32 by PeterGalbavy on ITRSLP372-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
 	<types>
 		<typeGroup name="Layer 3 - Geneos Instances">
@@ -102,9 +103,10 @@
 					</plugin>
 				</sampler>
 				<sampler name="Certificates">
-					<!--Certificates sampler is run either once a day 1AM gatewaay local time, or at
-start-up only. In general expiry days only change once a day, but there is still
-a small risk of certificates becoming invalid intraday if a trust chain is broken.-->
+					<!--The Certificates sampler runs when it starts and then once a day at 01:00
+Gateway local time, instead of at a regular interval. Expiry days only change
+once a day, but there is still a small risk of a certificate becoming invalid
+during the day, for example if a trust chain is broken.-->
 					<var-group>
 						<var ref="SAMPLER_GROUP"/>
 					</var-group>
@@ -354,6 +356,12 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 					</dataviews>
 				</sampler>
 				<sampler name="Data Quality">
+					<!--The Data Quality sampler reads the DataQuality messages from the Gateway
+log file named by the logFilePath variable and tracks the lastPeriod and
+lifetime values of each metric. The Netprobe must be able to read that file.
+
+There is no default. Set logFilePath on each Gateway load managed entity to
+the full path of the monitored Gateway's log file.-->
 					<var-group>
 						<var ref="SAMPLER_GROUP"/>
 					</var-group>
@@ -389,7 +397,7 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 								<trackers>
 									<tracker name="Data Age Stats">
 										<filename>
-											<var ref="_gatewayLogFile"/>
+											<var ref="logFilePath"/>
 										</filename>
 										<rewind>
 											<data>true</data>
@@ -1028,6 +1036,11 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 				</sampler>
 			</samplerGroup>
 			<samplerGroup name="Layer 3 - Geneos Gateway Info">
+				<!--These samplers use the geneos snapshot command to copy the Gateway Info
+dataviews from the Gateway named by the instanceName variable. They select the
+dataviews on the managed entity named "<instanceName> Info" by their Group
+parameter. The geneos command must be able to connect to the REST Commands API
+of that Gateway, with credentials if it requires them.-->
 				<sampler name="Gateway Info - Gateway Info">
 					<var-group>
 						<data>Gateway Info</data>
@@ -1180,6 +1193,10 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 					</plugin>
 				</samplerInclude>
 				<samplerInclude name="Layer 3 - Geneos Collection Agent Logs">
+					<!--Monitors the Collection Agent log of a Netprobe as FKM dynamic files. Set
+the caLogFilePath variable on the managed entity to the log file path, which may
+include wildcards. The pattern captures the file name part of each matching
+path.-->
 					<sampler ref="Logs"/>
 					<plugin>
 						<fkm>
@@ -1339,7 +1356,7 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 										</notEqual>
 									</and>
 									<transaction>
-										<delay unit="samples">2</delay>
+										<delay unit="samples">15</delay>
 										<update>
 											<property>state/@severity</property>
 											<severity>warning</severity>
@@ -1372,7 +1389,7 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									<integer>0</integer>
 								</gt>
 								<transaction>
-									<delay unit="samples">2</delay>
+									<delay unit="samples">15</delay>
 									<update>
 										<property>state/@severity</property>
 										<severity>warning</severity>
@@ -1424,7 +1441,6 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 					<rule name="Invalid Certs Headline">
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
 						</targets>
 						<priority>10000</priority>
 						<block>
@@ -1723,7 +1739,7 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									<integer>0</integer>
 								</gt>
 								<transaction>
-									<delay unit="samples">2</delay>
+									<delay unit="samples">15</delay>
 									<update>
 										<property>state/@severity</property>
 										<severity>warning</severity>
@@ -1788,12 +1804,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The CPU time column (time or totalTime) is the total CPU time, in seconds,
+used since the Gateway started collecting statistics, so it only ever increases
+or stays the same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -1850,7 +1868,7 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Entity-Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuMin&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
 						</targets>
 						<priority>10000</priority>
 						<pathAliases>
@@ -1881,12 +1899,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The CPU time column (time or totalTime) is the total CPU time, in seconds,
+used since the Gateway started collecting statistics, so it only ever increases
+or stays the same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -1974,12 +1994,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The CPU time column (time or totalTime) is the total CPU time, in seconds,
+used since the Gateway started collecting statistics, so it only ever increases
+or stays the same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2067,12 +2089,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The CPU time column (time or totalTime) is the total CPU time, in seconds,
+used since the Gateway started collecting statistics, so it only ever increases
+or stays the same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2151,12 +2175,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The CPU time column (time or totalTime) is the total CPU time, in seconds,
+used since the Gateway started collecting statistics, so it only ever increases
+or stays the same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2233,12 +2259,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The CPU time column (time or totalTime) is the total CPU time, in seconds,
+used since the Gateway started collecting statistics, so it only ever increases
+or stays the same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2315,12 +2343,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The CPU time column (time or totalTime) is the total CPU time, in seconds,
+used since the Gateway started collecting statistics, so it only ever increases
+or stays the same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2397,12 +2427,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The CPU time column (time or totalTime) is the total CPU time, in seconds,
+used since the Gateway started collecting statistics, so it only ever increases
+or stays the same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="time"/>
 								<dataItem>
@@ -2482,12 +2514,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The updates column is the total number of database updates since the
+Gateway started collecting statistics, so it only ever increases or stays the
+same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="updates"/>
 								<dataItem>
@@ -2556,12 +2590,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The updates column is the total number of database updates since the
+Gateway started collecting statistics, so it only ever increases or stays the
+same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="updates"/>
 								<dataItem>
@@ -2630,12 +2666,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The updates column is the total number of database updates since the
+Gateway started collecting statistics, so it only ever increases or stays the
+same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="updates"/>
 								<dataItem>
@@ -2704,12 +2742,14 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 									</historicalDataItem>
 								</maximum>
 							</set>
-							<!-- time is the total amount of CPU seconds since the gateway started collecting-->
-							<!-- stats and it will always only increase or not change over time.-->
-							<!-- if the current valkue and the maximum in the history period are different-->
-							<!-- then the stats have been reset and the history period is not valid. As there-->
-							<!-- is no way to reset the history period directly, this rule just ignores the-->
-							<!-- numbers until they catch-up again. -->
+							<!--The updates column is the total number of database updates since the
+Gateway started collecting statistics, so it only ever increases or stays the
+same.
+
+If the current value differs from the maximum in the history period then the
+statistics have been reset and the history period is not valid. As there is no
+way to reset the history period directly, the rule shows "collecting" until the
+history catches up again.-->
 							<set>
 								<var ref="updates"/>
 								<dataItem>
@@ -2848,14 +2888,19 @@ a small risk of certificates becoming invalid intraday if a trust chain is broke
 		</environmentGroup>
 		<environmentGroup name="Layer 3 - Geneos Gateway Load">
 			<environment name="Layer 3 - Geneos Load Defaults">
-				<!--For Gateway Load monitoring, the NORMAL and FAST sample have both been
-reduced in frequency to 60 and 15 seconds respectively. These should be aligned
-with the cadence of the stats collection settings on the gateway being monitored
-and the FAST_SAMPLE should be around 1-3x the interval while the NORMAL_SAMPLE
-around 5-10x the interval.
+				<!--For Gateway Load monitoring, NORMAL_SAMPLE and FAST_SAMPLE are increased to
+60 and 15 seconds respectively. Align them with the statistics collection
+interval of the Gateway being monitored: FAST_SAMPLE should be about 1-3 times
+that interval and NORMAL_SAMPLE about 5-10 times.
 
-Load monitoring samplers can be computationally expensive when loading stats
-files from very large gateways so be prepared to increase these values further.-->
+Load monitoring samplers can be computationally expensive when reading the
+statistics files of very large Gateways, so be prepared to increase these
+values further.
+
+The statsFilePath and logFilePath variables are deliberately not defined here.
+Variables in a Type's environment take precedence over those set on a managed
+entity, so a default here would hide the per-entity values. Set both on each
+Gateway load managed entity.-->
 				<var name="SLOW_SAMPLE">
 					<integer>300</integer>
 				</var>
@@ -2864,9 +2909,6 @@ files from very large gateways so be prepared to increase these values further.-
 				</var>
 				<var name="FAST_SAMPLE">
 					<integer>15</integer>
-				</var>
-				<var name="statsFilePath">
-					<string>stats.xml</string>
 				</var>
 				<var name="gwLoadHistoryColumns">
 					<stringList>
@@ -2890,7 +2932,7 @@ files from very large gateways so be prepared to increase these values further.-
 				</var>
 			</environment>
 		</environmentGroup>
-		<environmentGroup name="Layer 3 - Gateway Info">
+		<environmentGroup name="Layer 3 - Geneos Gateway Info">
 			<environment name="Layer 3 - Geneos Info Defaults">
 				<var name="SLOW_SAMPLE">
 					<integer>300</integer>
@@ -2908,11 +2950,11 @@ files from very large gateways so be prepared to increase these values further.-
 		<processDescriptors>
 			<processDescriptorGroup name="Layer 3 - Geneos Components">
 				<processDescriptor name="Geneos Component Instance">
-					<!--This is a general purpose component process descriptor the relies on variables
-being defined to set the alias and the search strings for processes and logs.
+					<!--This is a general purpose component process descriptor that relies on
+variables to set the alias and the search strings for processes and logs.
 
-This means that it can only be used once per managed entity, as variables are
-always scoped per managed entity.-->
+As variables are always scoped per managed entity, it can only be used once
+per managed entity.-->
 					<alias>
 						<var ref="instanceType"/>
 						<data> </data>
@@ -2928,13 +2970,15 @@ always scoped per managed entity.-->
 						</searchString>
 					</ID>
 					<start>
-						<data>/usr/local/bin/geneos start </data>
+						<var ref="geneosExecPath"/>
+						<data> start </data>
 						<var ref="instanceType"/>
 						<data> </data>
 						<var ref="instanceName"/>
 					</start>
 					<stop>
-						<data>/usr/local/bin/geneos stop </data>
+						<var ref="geneosExecPath"/>
+						<data> stop </data>
 						<var ref="instanceType"/>
 						<data> </data>
 						<var ref="instanceName"/>
@@ -2949,9 +2993,8 @@ always scoped per managed entity.-->
 	<exportedData>
 		<dataSet name="Layer 3 - Geneos">
 			<paths>
-				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instance&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances&quot;)]</path>
 				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Instances Diagnostics&quot;)]</path>
-				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Component&quot;)]</path>
 				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Gateway Load&quot;)]</path>
 				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Gateway Load XPaths&quot;)]</path>
 				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 3 - Geneos Gateway Info&quot;)]</path>
@@ -2966,7 +3009,8 @@ always scoped per managed entity.-->
 		<var name="geneosExecHosts">
 			<string>-H localhost</string>
 		</var>
-		<!-- Keep a single space when no command config argument is required. -->
+		<!--Keep a single space when no command configuration argument is required. An
+empty value can produce a malformed command line.-->
 		<var name="geneosExecConfigPath">
 			<string> </string>
 		</var>

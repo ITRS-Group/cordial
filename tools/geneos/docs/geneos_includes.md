@@ -14,7 +14,7 @@ The Geneos Best Practice layers describe the scope and depth of monitoring, from
 | --- | --- |
 | **0 - Foundation** | Shared Gateway configuration and monitoring-platform services, such as authentication, severity definitions and configuration validation. |
 | **1 - Infrastructure** | Server health: CPU, memory, disk, hardware and network monitoring. The supplied include calls this `Server Health`. |
-| **2 - Application Baseline** | Common monitoring building blocks for applications, including processes, logs and Windows services. |
+| **2 - Application Baseline** | Common monitoring building blocks for applications, including processes, logs, Windows services and database health. |
 | **3 - Applications** | Application-specific monitoring that builds on the baseline where appropriate, such as Geneos instance, component and Gateway-load monitoring. |
 | **4 - End-to-End** | Monitoring complete service paths across application and infrastructure boundaries. |
 | **5 - Business Activity** | Monitoring business transactions, activity and outcomes rather than only the underlying technology. |
@@ -37,12 +37,46 @@ The prefix is the include **source**, independently of the deployment's site. Us
 | `itrs.layer0.foundation.xml` | Gateway information, license/severity views, and configuration validation tools. |
 | `itrs.layer1.server-health.xml` | Server health monitoring for CPU, disk, hardware, and network interfaces. |
 | `itrs.layer2.programs-and-logs.xml` | Shared `Logs`, `Processes`, and Windows Services samplers for the Application Baseline. |
+| `itrs.layer2.database-health.xml` | SQL Toolkit Baseline and Extended types, samplers and database connections for MySQL, MariaDB, Oracle, PostgreSQL, SQL Server, SAP ASE and IBM Db2. No rules. |
 | `itrs.layer3.geneos.xml` | Geneos instance, component, and Gateway-load monitoring types, samplers, rules, and commands. |
 | `config.layer0.authentication.xml` | Authentication roles and policies plus example local users/groups; review and replace example identities before use. |
 | `config.layer0.foundation.xml` | Empty Gateway setup template for local foundation settings. |
-| `config.layer1.server-health.xml` | Gateway setup template for server health configuration and overrides. |
-| `config.layer2.programs-and-logs.xml` | Gateway setup template for Layer 2 Application Baseline configuration. |
+| `config.layer1.server-health.xml` | `Layer 1 - Server Health` managed-entity group with attributes and the type, plus an empty `Layer 1 - Server Health Local` override environment. |
+| `config.layer2.programs-and-logs.xml` | `Layer 2 - Application Baseline` managed-entity group with attributes and the type, plus an empty `Layer 2 - Application Baseline Local` override environment. |
+| `config.layer2.database-health.xml` | Empty Gateway setup template for local database connection environments and overrides. |
 | `config.layer3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Layer 3 Geneos. |
+
+Each functional include has a matching configuration template. The template is where site settings go, and its `Local` environment overrides the defaults in the read-only include:
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "system-ui, -apple-system, Segoe UI, sans-serif", "fontSize": "14px", "lineColor": "#6b7280"}}}%%
+flowchart LR
+    classDef site fill:#e8f1fb,stroke:#5b8def,color:#111827
+    classDef itrs fill:#f3f4f6,stroke:#9ca3af,color:#111827
+
+    subgraph siteg["Site files, editable (acme/)"]
+        C0("config.layer0.*")
+        C1("config.layer1.*")
+        C2("config.layer2.*")
+        C3("config.layer3.*")
+    end
+    subgraph itrsg["Functional includes, read-only (itrs-vX.Y.Z/)"]
+        L0("layer0 Foundation")
+        L1("layer1 Server Health")
+        L2("layer2 Programs, Logs, Database")
+        L3("layer3 Geneos")
+    end
+
+    C0 -- overrides --> L0
+    C1 -- overrides --> L1
+    C2 -- overrides --> L2
+    C3 -- overrides --> L3
+
+    class C0,C1,C2,C3 site
+    class L0,L1,L2,L3 itrs
+    style siteg fill:none,stroke:#9ca3af,stroke-dasharray:4 3
+    style itrsg fill:none,stroke:#9ca3af,stroke-dasharray:4 3
+```
 
 Holiday calendars are a separate optional corpus under the `holidays` source,
 distributed as `geneos-holiday-includes-vYYYY.MM.DD.tar.gz`.
@@ -78,7 +112,7 @@ The links let Gateway setups use a stable path while the target version changes.
 >
 > - The site name determines the Gateway configuration include directory and filename prefix.
 >
-> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+> - With `geneos`, spaces become underscores in paths; `scripts/install-includes.sh` rejects them. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
 >
 > - If no site name is set, the directory and prefix are `local`.
 >

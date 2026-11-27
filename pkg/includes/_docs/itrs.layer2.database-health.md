@@ -10,7 +10,7 @@ replication or high-availability features.
 
 The include supplies reusable Types, samplers, database connections, and
 connection variables. It deliberately does not contain a Managed Entity
-hierarchy, database credentials, or rules. Keep the functional include
+hierarchy, database credentials, or rules; its rule group is empty. Keep the functional include
 read-only and put Gateway-specific configuration in
 `config.layer2.database-health.xml` or the local Gateway setup.
 
@@ -19,7 +19,7 @@ For the example site name `acme`, the files are installed as:
 | File | Purpose |
 | --- | --- |
 | `gateway/includes/itrs.layer2.database-health.xml` | Upgradeable database monitoring definitions |
-| `gateway/acme/acme-config.layer2.database-health.xml` | Site-specific environments and overrides |
+| `gateway/acme/acme-config.layer2.database-health.xml` | Site-specific environments and overrides - empty by default |
 
 If no site name is configured, the site directory and file prefix are `local`.
 The functional file is replaced during an include update; the site
@@ -165,6 +165,17 @@ Each database has a baseline Type and an optional extended Type.
 | <code>Layer&nbsp;2&nbsp;-&nbsp;SAP&nbsp;ASE&nbsp;-&nbsp;Baseline</code> | <code>Layer&nbsp;2&nbsp;-&nbsp;SAP&nbsp;ASE&nbsp;-&nbsp;Extended</code> | SAP ASE inventory, connection, and space health; optional process-wait detail |
 | <code>Layer&nbsp;2&nbsp;-&nbsp;IBM&nbsp;Db2&nbsp;-&nbsp;Baseline</code> | <code>Layer&nbsp;2&nbsp;-&nbsp;IBM&nbsp;Db2&nbsp;-&nbsp;Extended</code> | Db2 member, connection, lock, and tablespace health; optional log, buffer-pool, and HADR detail |
 
+Each Type adds one SQL Toolkit sampler from the `Layer 2 - Database Health`
+sampler group: `MySQL-Baseline`, `MySQL-Extended`, `MariaDB-Baseline`,
+`MariaDB-Extended`, `Oracle-Baseline`, `Oracle-Extended`,
+`PostgreSQL-Baseline`, `PostgreSQL-Extended`, `SQL-Server-Baseline`,
+`SQL-Server-Extended`, `SAP-ASE-Baseline`, `SAP-ASE-Extended`,
+`IBM-Db2-Baseline` and `IBM-Db2-Extended`. The Type variable `SAMPLER_GROUP`
+places both samplers for a database under one display group, such as
+`MySQL Health` or `IBM Db2 Health`. The include also defines the exported
+data set `Layer 2 - Database Health`, covering the samplers of all fourteen
+Types.
+
 Start with the Baseline Type. Enable the Extended Type only when the target
 supports the queries, the account has the required permissions, and the extra
 topology or diagnostic visibility is operationally useful. Some extended
@@ -173,8 +184,10 @@ applicable" on one role and "missing expected member" on another.
 
 ## Connection Variables
 
-All Types include a product-specific defaults Environment. The defaults contain
-sample intervals and connection values except `DB_PASSWORD`. Attach a local
+All Types include a product-specific defaults Environment, named
+`Layer 2 - <database> Defaults` in the `Layer 2 - <database>` environment
+group, for example `Layer 2 - MySQL Defaults`. The defaults contain sample
+intervals and connection values except `DB_PASSWORD`. Attach a local
 Environment to override the values needed by the target database.
 
 | Database | Connection variables |
@@ -193,9 +206,30 @@ file through `INTERFACE`. Oracle, SAP ASE, and IBM Db2 connectivity therefore
 depends on the corresponding client configuration being correct for the
 Netprobe.
 
+The default connection values are:
+
+| Database | `DB_SERVER` | `DB_PORT` | `DB_NAME` | Other |
+| --- | --- | --- | --- | --- |
+| MySQL | `127.0.0.1` | `3306` | `mysql` | |
+| MariaDB | `127.0.0.1` | `3306` | `mysql` | |
+| Oracle Database | - | - | `ORCL` | |
+| PostgreSQL | `localhost` | `5432` | `postgres` | |
+| SQL Server | `localhost` | `1433` | `master` | |
+| SAP ASE | - | - | `master` | `INTERFACE` = `SYBASE` |
+| IBM Db2 | - | - | `SAMPLE` | |
+
+`DB_USER` defaults to `geneos_monitor` for every database.
+
 `DB_SERVER` is the address of the database as seen from the Netprobe; it is
 not necessarily the address of the Netprobe itself. Every connection is
 configured to close after its queries complete.
+
+The connections are defined in the `Layer 2 - Database Health` database
+connection group as `Layer 2 - <database> Connection`, for example
+`Layer 2 - SQL Server Connection`. The MariaDB connection uses the SQL Toolkit
+MySQL connection type. The PostgreSQL, SQL Server and SAP ASE connections set
+the application name `Geneos`, and the SQL Server and SAP ASE connections do
+not use Windows authentication.
 
 ### Replacing a Database Connection
 
@@ -230,7 +264,8 @@ database services rather than collecting unrestricted diagnostic detail.
 ## What the Samplers Collect
 
 The Baseline and Extended Types create separate dataviews for the named query
-sets below. Availability is demonstrated by a successful connection and
+sets below. Each query produces a dataview named after the query, shown in
+bold, with headlines enabled. Availability is demonstrated by a successful connection and
 fresh query result; the result does not prove that every application database
 or transaction is healthy.
 
@@ -375,7 +410,7 @@ The extended sampler collects:
     SHOW SLAVE STATUS
     ```
 
-* **Aggregate Performance Schema wait summary.**
+* **Wait summary:** aggregate Performance Schema waits.
 
     ```sql
     SELECT EVENT_NAME, COUNT_STAR, SUM_TIMER_WAIT
@@ -472,7 +507,7 @@ The extended sampler collects:
     ORDER BY inst_id
     ```
 
-* **Data Guard transport and apply state.**
+* **Data Guard transport and apply.**
 
     ```sql
     SELECT inst_id, process, status, thread#, sequence#, delay_mins
@@ -558,7 +593,7 @@ The extended sampler collects:
     ORDER BY application_name
     ```
 
-* **WAL receiver state.**
+* **WAL receiver.**
 
     ```sql
     SELECT status, sender_host, sender_port, received_tli,
@@ -625,7 +660,7 @@ The baseline sampler collects:
     FROM sys.databases
     ```
 
-* **Transaction-log capacity.**
+* **Transaction log capacity.**
 
     ```sql
     SELECT DB_NAME() AS database_name, total_log_size_in_bytes,
@@ -647,7 +682,7 @@ The baseline sampler collects:
 
 The extended sampler collects:
 
-* **Local Availability Group replica state.**
+* **Availability replica state:** local Availability Group replica state.
 
     ```sql
     SELECT ag.name AS availability_group,
@@ -659,7 +694,7 @@ The extended sampler collects:
     WHERE ars.is_local = 1
     ```
 
-* **Local Availability Group database state.**
+* **Availability database state:** local Availability Group database state.
 
     ```sql
     SELECT ag.name AS availability_group,
@@ -770,7 +805,7 @@ The baseline sampler collects:
     ORDER BY MEMBER
     ```
 
-* **Connection states by member.**
+* **Connection states:** connection states by member.
 
     ```sql
     SELECT COORD_MEMBER, APPLICATION_STATE, COUNT(*) AS connections
@@ -779,7 +814,7 @@ The baseline sampler collects:
     ORDER BY COORD_MEMBER, APPLICATION_STATE
     ```
 
-* **Tablespace capacity and state.**
+* **Tablespace capacity:** tablespace capacity and state.
 
     ```sql
     SELECT MEMBER, TBSP_NAME, TBSP_STATE, TBSP_TYPE,
@@ -790,7 +825,7 @@ The baseline sampler collects:
 
 The extended sampler collects:
 
-* **Transaction-log use.**
+* **Transaction log:** transaction-log use.
 
     ```sql
     SELECT MEMBER, TOTAL_LOG_USED_KB, TOTAL_LOG_AVAILABLE_KB
@@ -798,7 +833,7 @@ The extended sampler collects:
     ORDER BY MEMBER
     ```
 
-* **Buffer-pool activity.**
+* **Buffer pools:** buffer-pool activity.
 
     ```sql
     SELECT MEMBER, BP_NAME, POOL_DATA_P_READS,
@@ -874,6 +909,32 @@ Useful starting points include:
 
 * use sustained conditions, hysteresis, and maintenance windows to avoid
   flapping.
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "system-ui, -apple-system, Segoe UI, sans-serif", "fontSize": "14px", "lineColor": "#6b7280", "primaryColor": "#f3f4f6", "primaryBorderColor": "#9ca3af", "primaryTextColor": "#111827"}}}%%
+stateDiagram-v2
+    direction LR
+    classDef undefined fill:#6b7280,stroke:#4b5563,color:#ffffff
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warning fill:#f2b01e,stroke:#b7791f,color:#1f2937
+    classDef critical fill:#c62828,stroke:#8e1b1b,color:#ffffff
+
+    [*] --> Undefined
+    Undefined --> Warning: not ok, directly
+    Undefined --> Ok: ok, directly
+    Ok --> Warning: not ok for N samples
+    Warning --> Critical: not ok for M more
+    Warning --> Ok: ok
+    Critical --> Ok: ok
+
+    class Undefined undefined
+    class Ok ok
+    class Warning warning
+    class Critical critical
+```
+
+>[!NOTE]
+>When rules are added, they should follow the severity pattern shown above, so that delays and escalation behave the same as in the other layers.
 
 Treat query errors, missing required data, and stale samples as unknown or
 failure conditions, not as zero. Do not apply universal cache-hit, wait-time,

@@ -27,7 +27,6 @@
 					<roleProperty>ReadOnly</roleProperty>
 				</roleProperties>
 				<user disabled="true" name="GWSharing">
-					<!--PW geneos-->
 					<fullName>Gateway Sharing Account</fullName>
 					<password>
 						<encodedPassword>XXX</encodedPassword>
