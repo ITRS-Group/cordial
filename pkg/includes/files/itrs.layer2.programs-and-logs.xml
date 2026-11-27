@@ -313,22 +313,24 @@ An empty count is undefined. Rows with "#" in their name are ignored.-->
 			<ruleGroup name="Logs">
 				<rule name="logStatus">
 					<!--Sets the severity of the status cell of FKM samplers in the Application
-Baseline type. OK is ok. NOT_FOUND becomes warning after 15 samples and critical
-after a further 45 samples, as a file may reappear. When the status is empty,
-rows with "fail" in their name are critical and rows with "warning" in their
-name are warning. Any other status is undefined.-->
+Baseline type, for the file rows only. The status values are "" (undefined),
+OK (ok), WARNING* (warning after 15 samples) and FAIL* (warning after 15
+samples, then critical after a further 45 samples). A cell whose severity is
+undefined, such as after a restart, goes directly to warning for WARNING* and
+FAIL*. Any other status is left unchanged. Key rows, which
+have "#" in their name, are not targeted, as their severity is set by the key.-->
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Application Baseline&quot;)][(param(&quot;PluginName&quot;)=&quot;FKM&quot;)]/dataview/rows/row/cell[(@column=&quot;status&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Application Baseline&quot;)][(param(&quot;PluginName&quot;)=&quot;FKM&quot;)]/dataview/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;status&quot;)]</target>
 					</targets>
 					<priority>10000</priority>
 					<block>
 						<if>
-							<like>
+							<equal>
 								<dataItem>
 									<property>@value</property>
 								</dataItem>
 								<string>OK</string>
-							</like>
+							</equal>
 							<transaction>
 								<update>
 									<property>state/@severity</property>
@@ -336,33 +338,38 @@ name are warning. Any other status is undefined.-->
 								</update>
 							</transaction>
 							<if>
-								<like>
+								<equal>
 									<dataItem>
 										<property>@value</property>
 									</dataItem>
-									<string>NOT_FOUND*</string>
-								</like>
+									<string/>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
 								<if>
-									<equal>
+									<like>
 										<dataItem>
-											<property>state/@severity</property>
+											<property>@value</property>
 										</dataItem>
-										<severity>warning</severity>
-									</equal>
-									<transaction>
-										<delay unit="samples">45</delay>
-										<update>
-											<property>state/@severity</property>
-											<severity>critical</severity>
-										</update>
-									</transaction>
+										<string>WARNING*</string>
+									</like>
 									<if>
-										<notEqual>
+										<equal>
 											<dataItem>
 												<property>state/@severity</property>
 											</dataItem>
-											<severity>critical</severity>
-										</notEqual>
+											<severity>undefined</severity>
+										</equal>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>warning</severity>
+											</update>
+										</transaction>
 										<transaction>
 											<delay unit="samples">15</delay>
 											<update>
@@ -371,48 +378,58 @@ name are warning. Any other status is undefined.-->
 											</update>
 										</transaction>
 									</if>
-								</if>
-								<if>
-									<like>
-										<dataItem>
-											<property>@value</property>
-										</dataItem>
-										<string/>
-									</like>
 									<if>
 										<like>
-											<target>
-												<rowName/>
-											</target>
-											<string>*fail*</string>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<string>FAIL*</string>
 										</like>
-										<transaction>
-											<update>
-												<property>state/@severity</property>
-												<severity>critical</severity>
-											</update>
-										</transaction>
 										<if>
-											<like>
-												<target>
-													<rowName/>
-												</target>
-												<string>*warning*</string>
-											</like>
+											<equal>
+												<dataItem>
+													<property>state/@severity</property>
+												</dataItem>
+												<severity>undefined</severity>
+											</equal>
 											<transaction>
 												<update>
 													<property>state/@severity</property>
 													<severity>warning</severity>
 												</update>
 											</transaction>
+											<if>
+												<equal>
+													<dataItem>
+														<property>state/@severity</property>
+													</dataItem>
+													<severity>warning</severity>
+												</equal>
+												<transaction>
+													<delay unit="samples">45</delay>
+													<update>
+														<property>state/@severity</property>
+														<severity>critical</severity>
+													</update>
+												</transaction>
+												<if>
+													<notEqual>
+														<dataItem>
+															<property>state/@severity</property>
+														</dataItem>
+														<severity>critical</severity>
+													</notEqual>
+													<transaction>
+														<delay unit="samples">15</delay>
+														<update>
+															<property>state/@severity</property>
+															<severity>warning</severity>
+														</update>
+													</transaction>
+												</if>
+											</if>
 										</if>
 									</if>
-									<transaction>
-										<update>
-											<property>state/@severity</property>
-											<severity>undefined</severity>
-										</update>
-									</transaction>
 								</if>
 							</if>
 						</if>

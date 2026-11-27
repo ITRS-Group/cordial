@@ -170,12 +170,12 @@ stateDiagram-v2
 ```
 
 >[!NOTE]
->`processInstances` follows this pattern, with N of 15 samples and M of 45. `logStatus` applies it to `NOT_FOUND` only, and has no "directly" step because `undefined` is one of its normal results.
+>`processInstances` follows this pattern, with N of 15 samples and M of 45. `logStatus` applies it to `WARNING*` and `FAIL*` status values, and an empty status is `undefined`.
 
 | Rule | Target | OK | Warning | Critical | Undefined | Why |
 | ---- | ------ | -- | ------- | -------- | --------- | --- |
 | `processInstances` | `instanceCount` of each `Processes` sampler row in the Type, without `#` in its name | Count within range | Count outside range for 15 samples, or directly from `undefined` | A further 45 samples at warning | Empty count | An application process that is not running, or running too many times, shows the application is down or misbehaving. |
-| `logStatus` | `status` of FKM samplers in the `Layer 2 - Application Baseline` Type | `OK` | `NOT_FOUND*` for 15 samples, or empty status on a row whose name contains `warning` | `NOT_FOUND*` for a further 45 samples, or empty status on a row whose name contains `fail` | Any other status | A missing monitored log file means that file is not being watched, and rows flagged as warning or fail signal problems in the logs. |
+| `logStatus` | `status` of each file row of FKM samplers in the `Layer 2 - Application Baseline` Type, without `#` in its name | `OK` | `WARNING*` for 15 samples, or directly from `undefined`; `FAIL*` for 15 samples, or directly from `undefined` | `FAIL*` for a further 45 samples at warning | Empty status. Any other status is left unchanged | The status of a monitored log file follows the worst key that has matched in it, so a warning or failure in the logs is escalated if it persists. Key rows, which have `#` in their name, are not targeted, as their severity is set by the key. |
 
 >[!NOTE]
 >The "Why" column is inferred from the rule names, their behaviour and common monitoring practice, not from original design notes.
