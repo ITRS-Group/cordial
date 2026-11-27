@@ -50,7 +50,7 @@ func initialise(h *geneos.Host, ct *geneos.Component, override bool) (err error)
 	if err := geneos.WriteTemplates(h, ct, override); err != nil {
 		return err
 	}
-	return includes.Update(h, "", false)
+	return includes.Initialise(h)
 }
 
 // Component TODO: Describe its purpose and intended use.
@@ -136,11 +136,17 @@ var Component = geneos.Component{
 		path.Join(name, "templates"),
 	},
 	SharedDirectories: []string{
-		path.Join(name, "config"),
+		// legacy shared directories for backward compatibility
 		path.Join(name, "gateway_shared"),
 		path.Join(name, "gateway_config"),
+
+		// current standard shared directories
+		path.Join(name, "config"),
 		path.Join(name, "includes"),
 		path.Join(name, "shared"),
+	},
+	AdditionalSharedDirectories: func() []string {
+		return []string{path.Join(name, geneos.SiteName())}
 	},
 
 	ApplyProfile: applyProfile,

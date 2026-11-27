@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"slices"
 	"strings"
 
@@ -35,8 +36,6 @@ var includesFixCmd = &cobra.Command{
 		cmd.CmdRequireHome:          "true",
 		cmd.CmdWildcardNames:        "true",
 		cmd.CmdNonInstanceArgsError: "true",
-		cmd.CmdAuditCommand:         "never",
-		cmd.CmdAuditActions:         "never",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		var (
@@ -69,7 +68,9 @@ func Fix(h *geneos.Host, dryRun bool, names ...string) error {
 	}
 	var (
 		candidates = make(map[string][]string)
+		preferred  = make(map[string][]string)
 		seen       = make(map[string]bool)
+		seenActive = make(map[string]bool)
 		selected   = make(map[string]bool)
 		root       = h.PathTo("gateway")
 		setups     []includeFixSetup
@@ -79,6 +80,7 @@ func Fix(h *geneos.Host, dryRun bool, names ...string) error {
 	addCandidate := func(filename string) error {
 		var (
 			info     fs.FileInfo
+			linkInfo fs.FileInfo
 			resolved string
 			key      string
 			err      error
@@ -102,6 +104,17 @@ func Fix(h *geneos.Host, dryRun bool, names ...string) error {
 		if !seen[key] {
 			seen[key] = true
 			candidates[h.Base(filename)] = append(candidates[h.Base(filename)], filename)
+		}
+		linkInfo, err = h.Lstat(filename)
+		if err != nil {
+			return err
+		}
+		if linkInfo.Mode()&fs.ModeSymlink != 0 && h.Dir(h.Clean(filename)) == h.Clean(h.Join(root, "includes")) {
+			activeKey := key
+			if !seenActive[activeKey] {
+				seenActive[activeKey] = true
+				preferred[h.Base(filename)] = append(preferred[h.Base(filename)], filename)
+			}
 		}
 		return nil
 	}
@@ -175,6 +188,7 @@ func Fix(h *geneos.Host, dryRun bool, names ...string) error {
 			})
 		}
 	}
+	maps.Copy(candidates, preferred)
 	for _, setup := range setups {
 		if !selected[instance.IDString(setup.gateway)] {
 			continue
@@ -264,12 +278,26 @@ func fixGatewayIncludes(h *geneos.Host, setup includeFixSetup, candidates map[st
 	if dryRun {
 		return nil
 	}
-	if _, err := instance.WriteGatewaySetupBytes(setup.gateway, edited); err != nil {
+	backup, err := instance.WriteGatewaySetupBytes(setup.gateway, edited)
+	auditIncludeFix(setup.gateway, setup.path, backup, changes, err)
+	if err != nil {
 		return err
 	}
 	if configChanged {
+		configChanges := make(map[string]string)
+		for _, location := range locations {
+			if _, changed := fixIncludeConfig(includes, map[string]string{location: changes[location]}); changed {
+				configChanges[location] = changes[location]
+			}
+		}
 		config.Set(cf, "includes", updatedIncludes)
-		return instance.Write(setup.gateway, instance.NoRebuild(), instance.NoReload()).Err
+		err := instance.Write(setup.gateway, instance.NoRebuild(), instance.NoReload()).Err
+		format := cf.ConfigType()
+		if format == "" {
+			format = instance.ConfigFileType()
+		}
+		auditIncludeFix(setup.gateway, instance.ComponentFilepath(setup.gateway, format), "", configChanges, err)
+		return err
 	}
 	return nil
 }
@@ -374,11 +402,8 @@ func fixIncludeLocation(h *geneos.Host, home, location string, candidates map[st
 }
 
 // siteConfigReplacement returns the site configuration file that
-// replaces filename, a file in the old `gateway/includes/config`
-// directory, or an empty string if there is no replacement. A
-// replacement is the file `gateway/<site>/<name>` with any `config.`
-// prefix replaced by the site name, and only if it exists with exactly
-// the same content as filename.
+// replaces an old config-directory or site-named file, but only when
+// its contents match. Originals are retained.
 func siteConfigReplacement(h *geneos.Host, filename string) (string, error) {
 	legacy, err := h.Abs(h.PathTo("gateway", "includes", "config"))
 	if err != nil {
@@ -393,13 +418,24 @@ func siteConfigReplacement(h *geneos.Host, filename string) (string, error) {
 		return "", nil
 	}
 	relative = h.ToSlash(relative)
-	if relative == ".." || strings.HasPrefix(relative, "../") {
-		return "", nil
-	}
 	site := geneos.SiteName()
+	oldSite := false
+	if relative == ".." || strings.HasPrefix(relative, "../") {
+		relative, err = h.Rel(h.PathTo("gateway", site), abs)
+		if err != nil {
+			return "", err
+		}
+		relative = h.ToSlash(relative)
+		if relative == ".." || strings.HasPrefix(relative, "../") || !strings.HasPrefix(h.Base(relative), site+".") {
+			return "", nil
+		}
+		oldSite = true
+	}
 	base := h.Base(relative)
-	if strings.HasPrefix(base, "config.") {
-		base = site + strings.TrimPrefix(base, "config")
+	if oldSite {
+		base = site + "-config" + strings.TrimPrefix(base, site)
+	} else if strings.HasPrefix(base, "config.") {
+		base = site + "-" + base
 	}
 	replacement, err := h.Abs(h.Join(h.PathTo("gateway", site), h.Dir(relative), base))
 	if err != nil {

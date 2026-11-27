@@ -24,8 +24,10 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -143,6 +145,23 @@ var deployCmd = &cobra.Command{
 		if command.Flags().Changed("archive") && deployCmdArchive == "" {
 			return fmt.Errorf("--archive must not be empty")
 		}
+
+		// GUARDRAIL 1: Check for conflicting GENEOS_HOME if -D is provided
+		if command.Flag("geneos").Changed && deployCmdGeneosHome != "" {
+			existingRoot := geneos.LocalRoot()
+			if existingRoot != "" && existingRoot != deployCmdGeneosHome {
+				msg := fmt.Sprintf("An existing GENEOS_HOME installation was found at %q, but this deployment targets %q.\n\nTo use a different installation, unset GENEOS_HOME or move/remove the existing installation.",
+					existingRoot, deployCmdGeneosHome)
+				WriteWarningMarkdown(os.Stderr, msg)
+				if isTerminal := term.IsTerminal(int(os.Stdin.Fd())); isTerminal {
+					response, err := config.ReadUserInputLine("Do you want to continue? (y/N): ")
+					if err != nil || strings.ToLower(strings.TrimSpace(response)) != "y" {
+						return fmt.Errorf("deployment cancelled")
+					}
+				}
+			}
+		}
+
 		ct, names, params, err := FetchArgs(command)
 		if err != nil {
 			return err
@@ -201,8 +220,49 @@ var deployCmd = &cobra.Command{
 			name = fmt.Sprintf("%s:%s@%s", pkgct, local, h)
 		}
 
+		// Track if this is a fresh install (we're about to call Initialise)
+		freshInstall := h.IsLocalhost() && geneos.LocalRoot() == ""
+
+		// This guard must run before Initialise, which creates local signing
+		// material and can prompt for the installation root.
+		if freshInstall && !deployCmdInsecure &&
+			deployCmdInstanceBundle == "" && deployCmdSigningBundle == "" {
+			shouldWarn := !ct.IsA("profile")
+			if ct.IsA("profile") {
+				pf, profileErr := profile.ConfigForSource(config.Get[string](profile.Profiles, name, config.NoExpand()), profile.Profiles)
+				shouldWarn = profileErr == nil && pf != nil &&
+					config.Get[bool](pf, config.Join(name, "_endpoint"))
+			}
+			if shouldWarn {
+				subject := ct.Name
+				if ct.IsA("profile") {
+					subject = fmt.Sprintf("endpoint profile %q", name)
+				}
+				msg := fmt.Sprintf("Deploying %s to a fresh installation without a certificate bundle (`--certs-bundle` or `--signing-bundle`).\n\n"+
+					"Remote connections will not be verifiable without suitable certificates.\n\n", subject)
+				if ct.IsA("profile") {
+					msg += "Endpoints require proper certificates and cannot use `tls.verify=false`.\n\n" +
+						"To enable local certificate creation:\n\n" +
+						"- On your central server, use `geneos tls export` to export a signing bundle for use by this instance.\n" +
+						"- Alternatively, use `geneos tls create` on the central server to create an instance bundle, then supply it here with `--certs-bundle`."
+				} else {
+					msg += "If this is a client component (such as a Netprobe or router), you can set `tls.verify=false` in its configuration.\n\n" +
+						"For endpoints (such as a Gateway), enable local certificate creation:\n\n" +
+						"- On your central server, use `geneos tls export` to export a signing bundle for local use.\n" +
+						"- Alternatively, use `geneos tls create` on the central server to create an instance bundle, then supply it here with `--certs-bundle`."
+				}
+				WriteWarningMarkdown(os.Stderr, msg)
+				if term.IsTerminal(int(os.Stdin.Fd())) {
+					response, readErr := config.ReadUserInputLine("Do you want to continue? (y/N): ")
+					if readErr != nil || strings.ToLower(strings.TrimSpace(response)) != "y" {
+						return fmt.Errorf("deployment cancelled")
+					}
+				}
+			}
+		}
+
 		// if no local root ...
-		if h.IsLocalhost() && geneos.LocalRoot() == "" {
+		if freshInstall {
 			err = geneos.Initialise(command.CommandPath(), h,
 				// top-level options
 				geneos.UseRoot(deployCmdGeneosHome),
@@ -232,6 +292,7 @@ var deployCmd = &cobra.Command{
 
 		if ct.IsA("profile") {
 			deployCmdExtras.Params = params
+
 			return profile.DeployProfile(h, name,
 				profile.WithArchive(deployCmdArchive),
 				profile.WithBase(deployCmdBase),

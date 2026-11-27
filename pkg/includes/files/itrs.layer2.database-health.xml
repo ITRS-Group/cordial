@@ -1,0 +1,1380 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-23 09:47:16 by PeterGalbavy on ITRSLP372-->
+<!--Database health monitoring for Geneos 7.x SQL Toolkit-supported databases.
+Attach the appropriate Type to a logical Managed Entity. Repeating a database
+sample requires a separate Managed Entity because the same sampler cannot be
+attached more than once to one entity.-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
+	<types>
+		<typeGroup name="Layer 2 - Database Health">
+			<typeGroup name="MySQL">
+				<type name="Layer 2 - MySQL - Baseline">
+					<environment ref="Layer 2 - MySQL Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>MySQL Health</string>
+					</var>
+					<sampler ref="MySQL-Baseline"/>
+				</type>
+				<type name="Layer 2 - MySQL - Extended">
+					<environment ref="Layer 2 - MySQL Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>MySQL Health</string>
+					</var>
+					<sampler ref="MySQL-Extended"/>
+				</type>
+			</typeGroup>
+			<typeGroup name="MariaDB">
+				<type name="Layer 2 - MariaDB - Baseline">
+					<environment ref="Layer 2 - MariaDB Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>MariaDB Health</string>
+					</var>
+					<sampler ref="MariaDB-Baseline"/>
+				</type>
+				<type name="Layer 2 - MariaDB - Extended">
+					<environment ref="Layer 2 - MariaDB Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>MariaDB Health</string>
+					</var>
+					<sampler ref="MariaDB-Extended"/>
+				</type>
+			</typeGroup>
+			<typeGroup name="Oracle">
+				<type name="Layer 2 - Oracle - Baseline">
+					<environment ref="Layer 2 - Oracle Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>Oracle Health</string>
+					</var>
+					<sampler ref="Oracle-Baseline"/>
+				</type>
+				<type name="Layer 2 - Oracle - Extended">
+					<environment ref="Layer 2 - Oracle Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>Oracle Health</string>
+					</var>
+					<sampler ref="Oracle-Extended"/>
+				</type>
+			</typeGroup>
+			<typeGroup name="PostgreSQL">
+				<type name="Layer 2 - PostgreSQL - Baseline">
+					<environment ref="Layer 2 - PostgreSQL Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>PostgreSQL Health</string>
+					</var>
+					<sampler ref="PostgreSQL-Baseline"/>
+				</type>
+				<type name="Layer 2 - PostgreSQL - Extended">
+					<environment ref="Layer 2 - PostgreSQL Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>PostgreSQL Health</string>
+					</var>
+					<sampler ref="PostgreSQL-Extended"/>
+				</type>
+			</typeGroup>
+			<typeGroup name="SQL Server">
+				<type name="Layer 2 - SQL Server - Baseline">
+					<environment ref="Layer 2 - SQL Server Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>SQL Server Health</string>
+					</var>
+					<sampler ref="SQL-Server-Baseline"/>
+				</type>
+				<type name="Layer 2 - SQL Server - Extended">
+					<environment ref="Layer 2 - SQL Server Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>SQL Server Health</string>
+					</var>
+					<sampler ref="SQL-Server-Extended"/>
+				</type>
+			</typeGroup>
+			<typeGroup name="SAP ASE">
+				<type name="Layer 2 - SAP ASE - Baseline">
+					<environment ref="Layer 2 - SAP ASE Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>SAP ASE Health</string>
+					</var>
+					<sampler ref="SAP-ASE-Baseline"/>
+				</type>
+				<type name="Layer 2 - SAP ASE - Extended">
+					<environment ref="Layer 2 - SAP ASE Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>SAP ASE Health</string>
+					</var>
+					<sampler ref="SAP-ASE-Extended"/>
+				</type>
+			</typeGroup>
+			<typeGroup name="IBM Db2">
+				<type name="Layer 2 - IBM Db2 - Baseline">
+					<environment ref="Layer 2 - IBM Db2 Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>IBM Db2 Health</string>
+					</var>
+					<sampler ref="IBM-Db2-Baseline"/>
+				</type>
+				<type name="Layer 2 - IBM Db2 - Extended">
+					<environment ref="Layer 2 - IBM Db2 Defaults"/>
+					<var name="SAMPLER_GROUP">
+						<string>IBM Db2 Health</string>
+					</var>
+					<sampler ref="IBM-Db2-Extended"/>
+				</type>
+			</typeGroup>
+		</typeGroup>
+	</types>
+	<samplers>
+		<samplerGroup name="Layer 2 - Database Health">
+			<samplerGroup name="MySQL">
+				<sampler name="MySQL-Baseline">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>System information</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL VARIABLES
+WHERE Variable_name IN
+  (&apos;version&apos;, &apos;version_comment&apos;, &apos;server_uuid&apos;, &apos;server_id&apos;,
+   &apos;read_only&apos;, &apos;super_read_only&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Connections and failures</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL STATUS
+WHERE Variable_name IN
+  (&apos;Uptime&apos;, &apos;Threads_connected&apos;, &apos;Threads_running&apos;,
+   &apos;Max_used_connections&apos;, &apos;Connections&apos;, &apos;Aborted_connects&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Connection limit</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL VARIABLES
+WHERE Variable_name IN (&apos;max_connections&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>InnoDB contention</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL STATUS
+WHERE Variable_name IN
+  (&apos;Innodb_buffer_pool_read_requests&apos;, &apos;Innodb_buffer_pool_reads&apos;,
+   &apos;Innodb_row_lock_waits&apos;, &apos;Innodb_row_lock_time&apos;,
+   &apos;Slow_queries&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Schema inventory</data>
+									</name>
+									<sql>
+										<data>SELECT SCHEMA_NAME, DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
+FROM information_schema.SCHEMATA
+ORDER BY SCHEMA_NAME</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - MySQL Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>30</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="MySQL-Extended">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>Group replication members</data>
+									</name>
+									<sql>
+										<data>SELECT MEMBER_ID, MEMBER_HOST, MEMBER_PORT, MEMBER_ROLE, MEMBER_STATE
+FROM performance_schema.replication_group_members</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Replica status</data>
+									</name>
+									<sql>
+										<data>SHOW REPLICA STATUS</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Lock waits</data>
+									</name>
+									<sql>
+										<data>SELECT REQUESTING_ENGINE_LOCK_ID,
+       COUNT(*) AS waiters
+FROM performance_schema.data_lock_waits
+GROUP BY REQUESTING_ENGINE_LOCK_ID
+ORDER BY waiters DESC</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - MySQL Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>60</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="MariaDB">
+				<sampler name="MariaDB-Baseline">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>System information</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL VARIABLES
+WHERE Variable_name IN
+  (&apos;version&apos;, &apos;version_comment&apos;, &apos;server_id&apos;, &apos;read_only&apos;,
+   &apos;wsrep_on&apos;, &apos;wsrep_provider&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Connections and failures</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL STATUS
+WHERE Variable_name IN
+  (&apos;Uptime&apos;, &apos;Threads_connected&apos;, &apos;Threads_running&apos;,
+   &apos;Max_used_connections&apos;, &apos;Connections&apos;, &apos;Aborted_connects&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Connection limit</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL VARIABLES
+WHERE Variable_name IN (&apos;max_connections&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>InnoDB contention</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL STATUS
+WHERE Variable_name IN
+  (&apos;Innodb_buffer_pool_read_requests&apos;, &apos;Innodb_buffer_pool_reads&apos;,
+   &apos;Innodb_row_lock_waits&apos;, &apos;Innodb_row_lock_time&apos;,
+   &apos;Slow_queries&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Galera status</data>
+									</name>
+									<sql>
+										<data>SHOW GLOBAL STATUS
+WHERE Variable_name IN
+  (&apos;wsrep_cluster_status&apos;, &apos;wsrep_cluster_size&apos;, &apos;wsrep_connected&apos;,
+   &apos;wsrep_ready&apos;, &apos;wsrep_local_state_comment&apos;)</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - MariaDB Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>30</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="MariaDB-Extended">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>Replica status</data>
+									</name>
+									<sql>
+										<data>SHOW SLAVE STATUS</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Wait summary</data>
+									</name>
+									<sql>
+										<data>SELECT EVENT_NAME, COUNT_STAR, SUM_TIMER_WAIT
+FROM performance_schema.events_waits_summary_global_by_event_name
+WHERE COUNT_STAR &gt; 0
+ORDER BY SUM_TIMER_WAIT DESC
+LIMIT 20</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - MariaDB Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>60</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="Oracle">
+				<sampler name="Oracle-Baseline">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>System information</data>
+									</name>
+									<sql>
+										<data>SELECT &apos;instance_name&apos; AS name, instance_name AS value FROM v$instance
+UNION ALL
+SELECT &apos;version&apos;, version FROM v$instance
+UNION ALL
+SELECT &apos;startup_time&apos;, TO_CHAR(startup_time, &apos;YYYY-MM-DD HH24:MI:SS&apos;) FROM v$instance
+UNION ALL
+SELECT &apos;uptime_seconds&apos;, TO_CHAR(ROUND((SYSDATE - startup_time) * 86400),
+                                 &apos;FM9999999999999990&apos;) FROM v$instance
+UNION ALL
+SELECT &apos;cluster_database_mode&apos;, parallel FROM v$instance
+UNION ALL
+SELECT &apos;instance_role&apos;, instance_role FROM v$instance
+UNION ALL
+SELECT &apos;status&apos;, status FROM v$instance</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Instance state</data>
+									</name>
+									<sql>
+										<data>SELECT instance_name, host_name, status, database_status, active_state,
+       instance_role, logins, shutdown_pending
+FROM v$instance</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Resource headroom</data>
+									</name>
+									<sql>
+										<data>SELECT resource_name, current_utilization, max_utilization, limit_value
+FROM v$resource_limit
+WHERE resource_name IN (&apos;processes&apos;, &apos;sessions&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Tablespace capacity</data>
+									</name>
+									<sql>
+										<data>SELECT tablespace_name, used_space, tablespace_size, used_percent
+FROM dba_tablespace_usage_metrics</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Session contention</data>
+									</name>
+									<sql>
+										<data>SELECT &apos;user_sessions&apos; AS metric,
+       COUNT(*) AS sessions,
+       COUNT(CASE WHEN status = &apos;ACTIVE&apos; THEN 1 END) AS active_sessions,
+       COUNT(CASE WHEN blocking_session IS NOT NULL THEN 1 END) AS blocked_sessions
+FROM v$session
+WHERE type = &apos;USER&apos;</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - Oracle Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>30</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Oracle-Extended">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>Pluggable database state</data>
+									</name>
+									<sql>
+										<data>SELECT name, open_mode, restricted, recovery_status
+FROM v$pdbs</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>RAC instances</data>
+									</name>
+									<sql>
+										<data>SELECT inst_id, instance_name, host_name, status, database_status,
+       active_state, instance_role
+FROM gv$instance
+ORDER BY inst_id</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Data Guard transport and apply</data>
+									</name>
+									<sql>
+										<data>SELECT inst_id, process, status, thread#, sequence#, delay_mins
+FROM gv$managed_standby
+WHERE process IN (&apos;RFS&apos;, &apos;LNS&apos;, &apos;MRP0&apos;)
+ORDER BY inst_id, process</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - Oracle Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>60</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="PostgreSQL">
+				<sampler name="PostgreSQL-Baseline">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>System information</data>
+									</name>
+									<sql>
+										<data>SELECT &apos;version&apos; AS name, current_setting(&apos;server_version&apos;) AS value
+UNION ALL
+SELECT &apos;database&apos;, current_database()
+UNION ALL
+SELECT &apos;cluster_name&apos;, current_setting(&apos;cluster_name&apos;)
+UNION ALL
+SELECT &apos;startup_time&apos;, pg_postmaster_start_time()::text
+UNION ALL
+SELECT &apos;uptime_seconds&apos;,
+       floor(extract(epoch FROM clock_timestamp() - pg_postmaster_start_time()))::text
+UNION ALL
+SELECT &apos;in_recovery&apos;, pg_is_in_recovery()::text
+UNION ALL
+SELECT &apos;wal_level&apos;, current_setting(&apos;wal_level&apos;)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Database activity and errors</data>
+									</name>
+									<sql>
+										<data>SELECT datname, numbackends, xact_commit, xact_rollback,
+       deadlocks, temp_bytes, stats_reset
+FROM pg_stat_database
+WHERE datname IS NOT NULL
+ORDER BY datname</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Activity and contention</data>
+									</name>
+									<sql>
+										<data>SELECT &apos;client_backends&apos; AS metric,
+       COUNT(*) AS connections,
+       COUNT(*) FILTER (WHERE state = &apos;active&apos;) AS active,
+       COUNT(*) FILTER (WHERE wait_event_type = &apos;Lock&apos;) AS lock_waiters,
+       COUNT(*) FILTER (WHERE state = &apos;idle in transaction&apos;) AS idle_in_transaction,
+       COALESCE(MAX(EXTRACT(EPOCH FROM (clock_timestamp() - xact_start)))
+         FILTER (WHERE xact_start IS NOT NULL), 0) AS oldest_transaction_seconds
+FROM pg_stat_activity
+WHERE backend_type = &apos;client backend&apos;
+  AND pid &lt;&gt; pg_backend_pid()</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Connection limit</data>
+									</name>
+									<sql>
+										<data>SELECT &apos;connection_limit&apos; AS metric,
+       current_setting(&apos;max_connections&apos;)::integer AS max_connections</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - PostgreSQL Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>30</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="PostgreSQL-Extended">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>Streaming replicas</data>
+									</name>
+									<sql>
+										<data>SELECT application_name, client_addr, state, sync_state,
+       pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS replay_lag_bytes
+FROM pg_stat_replication
+ORDER BY application_name</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>WAL receiver</data>
+									</name>
+									<sql>
+										<data>SELECT status, sender_host, sender_port, received_tli,
+       latest_end_lsn, latest_end_time
+FROM pg_stat_wal_receiver</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Statement statistics</data>
+									</name>
+									<sql>
+										<data>SELECT queryid, calls, total_exec_time, mean_exec_time
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT 20</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - PostgreSQL Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>60</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="SQL Server">
+				<sampler name="SQL-Server-Baseline">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>System information</data>
+									</name>
+									<sql>
+										<data>SELECT info.name, info.value
+FROM (VALUES
+  (&apos;server_name&apos;, CONVERT(nvarchar(128), SERVERPROPERTY(&apos;ServerName&apos;))),
+  (&apos;version&apos;, CONVERT(nvarchar(128), SERVERPROPERTY(&apos;ProductVersion&apos;))),
+  (&apos;product_level&apos;, CONVERT(nvarchar(128), SERVERPROPERTY(&apos;ProductLevel&apos;))),
+  (&apos;update_level&apos;, CONVERT(nvarchar(128), SERVERPROPERTY(&apos;ProductUpdateLevel&apos;))),
+  (&apos;edition&apos;, CONVERT(nvarchar(128), SERVERPROPERTY(&apos;Edition&apos;))),
+  (&apos;failover_clustered&apos;, CONVERT(nvarchar(128), SERVERPROPERTY(&apos;IsClustered&apos;))),
+  (&apos;availability_groups_enabled&apos;, CONVERT(nvarchar(128), SERVERPROPERTY(&apos;IsHadrEnabled&apos;))),
+  (&apos;hadr_manager_status&apos;, CONVERT(nvarchar(128), SERVERPROPERTY(&apos;HadrManagerStatus&apos;)))
+) AS info(name, value)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Startup and uptime</data>
+									</name>
+									<sql>
+										<data>SELECT &apos;startup_time&apos; AS name,
+       CONVERT(nvarchar(128), sqlserver_start_time, 126) AS value
+FROM sys.dm_os_sys_info
+UNION ALL
+SELECT &apos;uptime_seconds&apos;,
+       CONVERT(nvarchar(128), (ms_ticks - sqlserver_start_time_ms_ticks) / 1000)
+FROM sys.dm_os_sys_info</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Database state</data>
+									</name>
+									<sql>
+										<data>SELECT name, state_desc, user_access_desc, is_read_only,
+       recovery_model_desc, log_reuse_wait_desc
+FROM sys.databases</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Transaction log capacity</data>
+									</name>
+									<sql>
+										<data>SELECT DB_NAME() AS database_name, total_log_size_in_bytes,
+       used_log_space_in_bytes, used_log_space_in_percent
+FROM sys.dm_db_log_space_usage</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Running and blocked requests</data>
+									</name>
+									<sql>
+										<data>SELECT &apos;requests&apos; AS metric,
+       COUNT(*) AS request_count,
+       COUNT(CASE WHEN blocking_session_id &lt;&gt; 0 THEN 1 END) AS blocked_requests,
+       COALESCE(MAX(total_elapsed_time), 0) AS longest_elapsed_ms
+FROM sys.dm_exec_requests
+WHERE session_id &lt;&gt; @@SPID
+  AND database_id = DB_ID()</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - SQL Server Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>30</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="SQL-Server-Extended">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>Availability replica state</data>
+									</name>
+									<sql>
+										<data>SELECT ag.name AS availability_group,
+       ar.replica_server_name, ars.role_desc, ars.operational_state_desc,
+       ars.connected_state_desc, ars.synchronization_health_desc
+FROM sys.availability_groups AS ag
+JOIN sys.availability_replicas AS ar ON ar.group_id = ag.group_id
+JOIN sys.dm_hadr_availability_replica_states AS ars ON ars.replica_id = ar.replica_id
+WHERE ars.is_local = 1</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Availability database state</data>
+									</name>
+									<sql>
+										<data>SELECT ag.name AS availability_group,
+       ar.replica_server_name, d.name AS database_name,
+       drs.synchronization_state_desc, drs.synchronization_health_desc,
+       drs.database_state_desc
+FROM sys.dm_hadr_database_replica_states AS drs
+JOIN sys.availability_replicas AS ar ON ar.replica_id = drs.replica_id
+JOIN sys.availability_groups AS ag ON ag.group_id = drs.group_id
+JOIN sys.databases AS d ON d.database_id = drs.database_id
+WHERE drs.is_local = 1</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Wait statistics</data>
+									</name>
+									<sql>
+										<data>SELECT wait_type, waiting_tasks_count, wait_time_ms
+FROM sys.dm_os_wait_stats
+WHERE waiting_tasks_count &gt; 0
+ORDER BY wait_time_ms DESC</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - SQL Server Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>60</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="SAP ASE">
+				<sampler name="SAP-ASE-Baseline">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>System information</data>
+									</name>
+									<sql>
+										<data>SELECT &apos;server_name&apos; AS name, @@servername AS value
+UNION ALL
+SELECT &apos;version&apos;, LEFT(@@version, 255)
+UNION ALL
+SELECT &apos;maximum_connections&apos;, CONVERT(varchar(20), @@max_connections)</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Database inventory</data>
+									</name>
+									<sql>
+										<data>SELECT name, dbid, status, status2, status3, crdate
+FROM master..sysdatabases
+ORDER BY dbid</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Connection pressure</data>
+									</name>
+									<sql>
+										<data>SELECT COUNT(*) AS connections,
+       SUM(CASE WHEN blocked &lt;&gt; 0 THEN 1 ELSE 0 END) AS blocked_sessions
+FROM master..sysprocesses
+WHERE spid &lt;&gt; @@spid</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Database space</data>
+									</name>
+									<sql>
+										<data>EXEC master..sp_spaceused</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - SAP ASE Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>30</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="SAP-ASE-Extended">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>Process waits</data>
+									</name>
+									<sql>
+										<data>SELECT w.WaitEventID, e.Description,
+       COUNT(*) AS waiting_processes,
+       SUM(w.WaitTime) AS total_wait_time
+FROM master..monProcessWaits AS w
+JOIN master..monWaitEventInfo AS e
+  ON e.WaitEventID = w.WaitEventID
+GROUP BY w.WaitEventID, e.Description
+ORDER BY SUM(w.WaitTime) DESC</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - SAP ASE Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>60</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="IBM Db2">
+				<sampler name="IBM-Db2-Baseline">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>System information</data>
+									</name>
+									<sql>
+										<data>SELECT INST_NAME, SERVICE_LEVEL, BLD_LEVEL, FIXPACK_NUM
+FROM TABLE(SYSPROC.ENV_GET_INST_INFO()) AS instance_info</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Member and database state</data>
+									</name>
+									<sql>
+										<data>SELECT MEMBER, DB_STATUS, DB_ACTIVATION_STATE, DB_CONN_TIME,
+       APPLS_CUR_CONS, APPLS_IN_DB2, NUM_LOCKS_WAITING, LAST_BACKUP
+FROM TABLE(MON_GET_DATABASE(-2)) AS database_metrics
+ORDER BY MEMBER</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Connection states</data>
+									</name>
+									<sql>
+										<data>SELECT COORD_MEMBER, APPLICATION_STATE, COUNT(*) AS connections
+FROM TABLE(MON_GET_CONNECTION(NULL, -2, 0)) AS connection_metrics
+GROUP BY COORD_MEMBER, APPLICATION_STATE
+ORDER BY COORD_MEMBER, APPLICATION_STATE</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Tablespace capacity</data>
+									</name>
+									<sql>
+										<data>SELECT MEMBER, TBSP_NAME, TBSP_STATE, TBSP_TYPE,
+       TBSP_TOTAL_SIZE_KB, TBSP_USED_SIZE_KB, TBSP_USABLE_SIZE_KB
+FROM TABLE(MON_GET_TABLESPACE(&apos;&apos;, -2)) AS tablespace_metrics
+ORDER BY MEMBER, TBSP_NAME</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - IBM Db2 Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>30</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="IBM-Db2-Extended">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<sql-toolkit>
+							<queries>
+								<query>
+									<name>
+										<data>Transaction log</data>
+									</name>
+									<sql>
+										<data>SELECT MEMBER, TOTAL_LOG_USED_KB, TOTAL_LOG_AVAILABLE_KB
+FROM TABLE(MON_GET_TRANSACTION_LOG(-2)) AS transaction_log
+ORDER BY MEMBER</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>Buffer pools</data>
+									</name>
+									<sql>
+										<data>SELECT MEMBER, BP_NAME, POOL_DATA_P_READS,
+       POOL_ASYNC_DATA_READS, POOL_DATA_WRITES
+FROM TABLE(MON_GET_BUFFERPOOL(&apos;&apos;, -2)) AS buffer_pool
+ORDER BY MEMBER, BP_NAME</data>
+									</sql>
+								</query>
+								<query>
+									<name>
+										<data>HADR state</data>
+									</name>
+									<sql>
+										<data>SELECT STANDBY_ID, HADR_ROLE, HADR_STATE, HADR_CONNECT_STATUS,
+       PRIMARY_MEMBER_HOST, STANDBY_MEMBER_HOST, HADR_SYNCMODE
+FROM TABLE(MON_GET_HADR(-2)) AS hadr
+ORDER BY STANDBY_ID</data>
+									</sql>
+								</query>
+							</queries>
+							<connectionVariable>
+								<databaseConnection ref="Layer 2 - IBM Db2 Connection"/>
+							</connectionVariable>
+							<showHeadlines>true</showHeadlines>
+							<queryTimeout>
+								<data>60</data>
+							</queryTimeout>
+						</sql-toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+		</samplerGroup>
+	</samplers>
+	<rules>
+		<ruleGroup name="Layer 2 - Database Health"/>
+	</rules>
+	<environments>
+		<!--The default environments intentionally omit password variables. Add the
+matching DB_PASSWORD variable to the attached user-writable environment using
+an encrypted or external password value. The static connections reference
+those variables by name.-->
+		<environmentGroup name="Layer 2 - MySQL">
+			<environment name="Layer 2 - MySQL Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+				<var name="DB_SERVER">
+					<string>127.0.0.1</string>
+				</var>
+				<var name="DB_NAME">
+					<string>mysql</string>
+				</var>
+				<var name="DB_PORT">
+					<integer>3306</integer>
+				</var>
+				<var name="DB_USER">
+					<string>geneos_monitor</string>
+				</var>
+			</environment>
+		</environmentGroup>
+		<environmentGroup name="Layer 2 - MariaDB">
+			<environment name="Layer 2 - MariaDB Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+				<var name="DB_SERVER">
+					<string>127.0.0.1</string>
+				</var>
+				<var name="DB_NAME">
+					<string>mysql</string>
+				</var>
+				<var name="DB_PORT">
+					<integer>3306</integer>
+				</var>
+				<var name="DB_USER">
+					<string>geneos_monitor</string>
+				</var>
+			</environment>
+		</environmentGroup>
+		<environmentGroup name="Layer 2 - Oracle">
+			<environment name="Layer 2 - Oracle Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+				<var name="DB_NAME">
+					<string>ORCL</string>
+				</var>
+				<var name="DB_USER">
+					<string>geneos_monitor</string>
+				</var>
+			</environment>
+		</environmentGroup>
+		<environmentGroup name="Layer 2 - PostgreSQL">
+			<environment name="Layer 2 - PostgreSQL Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+				<var name="DB_SERVER">
+					<string>localhost</string>
+				</var>
+				<var name="DB_NAME">
+					<string>postgres</string>
+				</var>
+				<var name="DB_PORT">
+					<integer>5432</integer>
+				</var>
+				<var name="DB_USER">
+					<string>geneos_monitor</string>
+				</var>
+			</environment>
+		</environmentGroup>
+		<environmentGroup name="Layer 2 - SQL Server">
+			<environment name="Layer 2 - SQL Server Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+				<var name="DB_SERVER">
+					<string>localhost</string>
+				</var>
+				<var name="DB_NAME">
+					<string>master</string>
+				</var>
+				<var name="DB_PORT">
+					<integer>1433</integer>
+				</var>
+				<var name="DB_USER">
+					<string>geneos_monitor</string>
+				</var>
+			</environment>
+		</environmentGroup>
+		<environmentGroup name="Layer 2 - SAP ASE">
+			<environment name="Layer 2 - SAP ASE Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+				<var name="INTERFACE">
+					<string>SYBASE</string>
+				</var>
+				<var name="DB_NAME">
+					<string>master</string>
+				</var>
+				<var name="DB_USER">
+					<string>geneos_monitor</string>
+				</var>
+			</environment>
+		</environmentGroup>
+		<environmentGroup name="Layer 2 - IBM Db2">
+			<environment name="Layer 2 - IBM Db2 Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+				<var name="DB_NAME">
+					<string>SAMPLE</string>
+				</var>
+				<var name="DB_USER">
+					<string>geneos_monitor</string>
+				</var>
+			</environment>
+		</environmentGroup>
+	</environments>
+	<staticVars>
+		<databaseConnections>
+			<databaseConnectionGroup name="Layer 2 - Database Health">
+				<!--To change connection options, copy the complete connection into a higher
+priority include and redefine it with the identical group and connection
+name. The MariaDB connection uses the MySQL connection type.-->
+				<databaseConnection name="Layer 2 - MySQL Connection">
+					<database>
+						<mysql>
+							<var-serverName>
+								<var ref="DB_SERVER"/>
+							</var-serverName>
+							<var-databaseName>
+								<var ref="DB_NAME"/>
+							</var-databaseName>
+							<var-port>
+								<var ref="DB_PORT"/>
+							</var-port>
+						</mysql>
+					</database>
+					<var-userName>
+						<var ref="DB_USER"/>
+					</var-userName>
+					<password>
+						<var ref="DB_PASSWORD"/>
+					</password>
+					<closeConnectionAfterQuery>
+						<data>true</data>
+					</closeConnectionAfterQuery>
+				</databaseConnection>
+				<databaseConnection name="Layer 2 - MariaDB Connection">
+					<database>
+						<mysql>
+							<var-serverName>
+								<var ref="DB_SERVER"/>
+							</var-serverName>
+							<var-databaseName>
+								<var ref="DB_NAME"/>
+							</var-databaseName>
+							<var-port>
+								<var ref="DB_PORT"/>
+							</var-port>
+						</mysql>
+					</database>
+					<var-userName>
+						<var ref="DB_USER"/>
+					</var-userName>
+					<password>
+						<var ref="DB_PASSWORD"/>
+					</password>
+					<closeConnectionAfterQuery>
+						<data>true</data>
+					</closeConnectionAfterQuery>
+				</databaseConnection>
+				<databaseConnection name="Layer 2 - Oracle Connection">
+					<database>
+						<oracle>
+							<var-databaseName>
+								<var ref="DB_NAME"/>
+							</var-databaseName>
+						</oracle>
+					</database>
+					<var-userName>
+						<var ref="DB_USER"/>
+					</var-userName>
+					<password>
+						<var ref="DB_PASSWORD"/>
+					</password>
+					<closeConnectionAfterQuery>
+						<data>true</data>
+					</closeConnectionAfterQuery>
+				</databaseConnection>
+				<databaseConnection name="Layer 2 - PostgreSQL Connection">
+					<database>
+						<PostgreSQL>
+							<var-serverName>
+								<var ref="DB_SERVER"/>
+							</var-serverName>
+							<var-databaseName>
+								<var ref="DB_NAME"/>
+							</var-databaseName>
+							<var-port>
+								<var ref="DB_PORT"/>
+							</var-port>
+							<var-applicationName>
+								<data>Geneos</data>
+							</var-applicationName>
+						</PostgreSQL>
+					</database>
+					<var-userName>
+						<var ref="DB_USER"/>
+					</var-userName>
+					<password>
+						<var ref="DB_PASSWORD"/>
+					</password>
+					<closeConnectionAfterQuery>
+						<data>true</data>
+					</closeConnectionAfterQuery>
+				</databaseConnection>
+				<databaseConnection name="Layer 2 - SQL Server Connection">
+					<database>
+						<sqlServer>
+							<var-serverName>
+								<var ref="DB_SERVER"/>
+							</var-serverName>
+							<var-databaseName>
+								<var ref="DB_NAME"/>
+							</var-databaseName>
+							<var-port>
+								<var ref="DB_PORT"/>
+							</var-port>
+							<var-applicationName>
+								<data>Geneos</data>
+							</var-applicationName>
+							<useWindowsAuthentication>
+								<data>false</data>
+							</useWindowsAuthentication>
+						</sqlServer>
+					</database>
+					<var-userName>
+						<var ref="DB_USER"/>
+					</var-userName>
+					<password>
+						<var ref="DB_PASSWORD"/>
+					</password>
+					<closeConnectionAfterQuery>
+						<data>true</data>
+					</closeConnectionAfterQuery>
+				</databaseConnection>
+				<databaseConnection name="Layer 2 - SAP ASE Connection">
+					<database>
+						<sybase>
+							<var-interfaceEntry>
+								<var ref="INTERFACE"/>
+							</var-interfaceEntry>
+							<var-databaseName>
+								<var ref="DB_NAME"/>
+							</var-databaseName>
+							<var-applicationName>
+								<data>Geneos</data>
+							</var-applicationName>
+							<useWindowsAuthentication>
+								<data>false</data>
+							</useWindowsAuthentication>
+						</sybase>
+					</database>
+					<var-userName>
+						<var ref="DB_USER"/>
+					</var-userName>
+					<password>
+						<var ref="DB_PASSWORD"/>
+					</password>
+					<closeConnectionAfterQuery>
+						<data>true</data>
+					</closeConnectionAfterQuery>
+				</databaseConnection>
+				<databaseConnection name="Layer 2 - IBM Db2 Connection">
+					<database>
+						<db2>
+							<var-databaseName>
+								<var ref="DB_NAME"/>
+							</var-databaseName>
+						</db2>
+					</database>
+					<var-userName>
+						<var ref="DB_USER"/>
+					</var-userName>
+					<password>
+						<var ref="DB_PASSWORD"/>
+					</password>
+					<closeConnectionAfterQuery>
+						<data>true</data>
+					</closeConnectionAfterQuery>
+				</databaseConnection>
+			</databaseConnectionGroup>
+		</databaseConnections>
+	</staticVars>
+	<exportedData>
+		<dataSet name="Layer 2 - Database Health">
+			<paths>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - MySQL - Baseline&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - MySQL - Extended&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - MariaDB - Baseline&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - MariaDB - Extended&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Oracle - Baseline&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Oracle - Extended&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - PostgreSQL - Baseline&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - PostgreSQL - Extended&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - SQL Server - Baseline&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - SQL Server - Extended&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - SAP ASE - Baseline&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - SAP ASE - Extended&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - IBM Db2 - Baseline&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - IBM Db2 - Extended&quot;)]</path>
+			</paths>
+		</dataSet>
+	</exportedData>
+</gateway>

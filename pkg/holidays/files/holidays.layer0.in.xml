@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.1-261009/gateway.xsd">
+    <!-- Full-day local-time overrides. Annual dates (DD/MM) precede dated exceptions (DD/MM/YYYY).
+See holiday-calendars-in.md for Indian bank and exchange coverage and source confidence.
+Confidence varies by calendar and source format; it is not a guarantee of accuracy or completeness. -->
+	<activeTimes>
+		<activeTimeGroup name="Layer 0 - Holidays">
+			<activeTimeGroup name="Layer 0 - IN - India">
+                <!-- Indian city bank calendars precede the NSE cash-market exchange calendar.
+These are not national or state public-holiday calendars. Each uses Asia/Kolkata.
+Confidence: Medium for RBI HTML; High for NSE JSON dates, Medium for its HTML session note. -->
+				<activeTime name="Holidays - IN Chennai - Bank">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable RBI HTML; regional-office filters, date columns and holiday classifications require interpretation.
+
+Sources:
+- https://www.rbi.org.in/Scripts/HolidayMatrixDisplay.aspx
+
+Notes:
+Timezone: Asia/Kolkata. Coverage: 2026 only; no annually recurring dates.
+RBI regional office: Chennai; drRegionalOffice=16, drMonth=0, drYear=2026.
+Every captured dated row is classified by RBI as a holiday under the
+Negotiable Instruments Act. The listed 1 April bank-account closing day
+retains that classification. This does not establish RTGS closures.
+Composite holiday labels can name observances from other jurisdictions;
+the regional-office filter, not every name in a label, determines scope.
+Routine weekends and office-access or shortened-hours notes are not encoded. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Kolkata</Asia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - IN Mumbai - Bank">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable RBI HTML; regional-office filters, date columns and holiday classifications require interpretation.
+
+Sources:
+- https://www.rbi.org.in/Scripts/HolidayMatrixDisplay.aspx
+
+Notes:
+Timezone: Asia/Kolkata. Coverage: 2026 only; no annually recurring dates.
+RBI regional office: Mumbai; drRegionalOffice=28, drMonth=0, drYear=2026.
+Every captured dated row is classified by RBI as a holiday under the
+Negotiable Instruments Act. The listed 1 April bank-account closing day
+retains that classification. This does not establish RTGS closures.
+Composite holiday labels can name observances from other jurisdictions;
+the regional-office filter, not every name in a label, determines scope.
+Routine weekends and office-access or shortened-hours notes are not encoded. -->
+					<scheduledPeriod><date>15/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Kolkata</Asia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - IN New Delhi - Bank">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable RBI HTML; regional-office filters, date columns and holiday classifications require interpretation.
+
+Sources:
+- https://www.rbi.org.in/Scripts/HolidayMatrixDisplay.aspx
+
+Notes:
+Timezone: Asia/Kolkata. Coverage: 2026 only; no annually recurring dates.
+RBI regional office: New Delhi; drRegionalOffice=30, drMonth=0, drYear=2026.
+Every captured dated row is classified by RBI as a holiday under the
+Negotiable Instruments Act. The listed 1 April bank-account closing day
+retains that classification. This does not establish RTGS closures.
+Composite holiday labels can name observances from other jurisdictions;
+the regional-office filter, not every name in a label, determines scope.
+Routine weekends and office-access or shortened-hours notes are not encoded. -->
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Kolkata</Asia></timezone>
+				</activeTime>
+				<activeTime name="Holidays - IN NSE Cash - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: High for dated records from the official machine-readable JSON feed; Medium for the official HTML Muhurat-trading exception.
+
+Sources:
+- https://www.nseindia.com/api/holiday-master?type=trading
+- https://www.nseindia.com/resources/exchange-communication-holidays
+
+Notes:
+Timezone: Asia/Kolkata. Coverage: 2026 only; no annually recurring dates.
+NSE JSON segment: CM (cash market), not currency or commodity derivatives.
+8 November 2026 is excluded: the JSON marks Diwali Laxmi Pujan with an
+asterisk and the official holiday page confirms Muhurat trading that day.
+The remaining published cash-market holidays are full-day overrides.
+No additional weekend closures, settlement-only days or future years are inferred. -->
+					<scheduledPeriod><date>15/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<timezone><Asia>Kolkata</Asia></timezone>
+				</activeTime>
+			</activeTimeGroup>
+		</activeTimeGroup>
+	</activeTimes>
+</gateway>

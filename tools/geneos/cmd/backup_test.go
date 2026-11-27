@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/internal/cmdtest"
 
@@ -33,6 +34,134 @@ func tarNames(t *testing.T, r io.Reader) map[string]string {
 		b, _ := io.ReadAll(tr)
 		names[h.Name] = string(b)
 	}
+}
+
+func TestBackupGatewaySiteShared(t *testing.T) {
+	root := cmdtest.Env(t)
+	previous := config.Get[string](config.Global(), "site")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+	config.Set(config.Global(), "site", "")
+	if res := cmdtest.Run(t, cmd.Cmd, "add", "gateway", "gw-site"); res.Err != nil {
+		t.Fatalf("add: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+	for _, test := range []struct{ site, directory string }{
+		{"", "local"},
+		{"Acme Site", "Acme_Site"},
+	} {
+		t.Run(test.directory, func(t *testing.T) {
+			config.Set(config.Global(), "site", test.site)
+			file := filepath.Join(root, "gateway", test.directory, "site.xml")
+			if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(file, []byte(test.directory), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			for _, shared := range []bool{false, true} {
+				args := []string{"backup", "gateway", "gw-site", "-o", "-", "-z", "none"}
+				if shared {
+					args = append(args, "--shared")
+				}
+				res := cmdtest.Run(t, cmd.Cmd, args...)
+				if res.Err != nil {
+					t.Fatalf("backup: %v\n%s", res.Err, res.Stderr)
+				}
+				got, found := tarNames(t, strings.NewReader(res.Stdout))["gateway/"+test.directory+"/site.xml"]
+				if found != shared || (found && got != test.directory) {
+					t.Errorf("shared=%v: site file = %q, present=%v", shared, got, found)
+				}
+			}
+		})
+	}
+}
+
+func TestBackupSharedSymlinks(t *testing.T) {
+	root := cmdtest.Env(t)
+	if res := cmdtest.Run(t, cmd.Cmd, "add", "gateway", "gw-links"); res.Err != nil {
+		t.Fatalf("add: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+	dir := filepath.Join(root, "gateway", "includes")
+	versionDir := filepath.Join(dir, "itrs-v0.0.1")
+	if err := os.MkdirAll(versionDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(versionDir, "itrs.custom.xml")
+	if err := os.WriteFile(target, []byte("primary include"), 0o664); err != nil {
+		t.Fatal(err)
+	}
+	links := map[string]string{
+		"itrs.custom.xml":   "itrs-v0.0.1/itrs.custom.xml",
+		"itrs.absolute.xml": target,
+		"itrs.dangling.xml": "itrs-v0.0.1/missing.xml",
+	}
+	for name, link := range links {
+		if err := os.Symlink(link, filepath.Join(dir, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	res := cmdtest.Run(t, cmd.Cmd, "backup", "gateway", "gw-links", "--shared", "-o", "-", "-z", "none")
+	if res.Err != nil {
+		t.Fatalf("backup: %v\n%s", res.Err, res.Stderr)
+	}
+	gotLinks := map[string]string{}
+	tr := tar.NewReader(strings.NewReader(res.Stdout))
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if header.Typeflag == tar.TypeSymlink {
+			gotLinks[header.Name] = header.Linkname
+		}
+	}
+	for name, want := range map[string]string{
+		"itrs.custom.xml":   "itrs-v0.0.1/itrs.custom.xml",
+		"itrs.absolute.xml": "itrs-v0.0.1/itrs.custom.xml",
+		"itrs.dangling.xml": "itrs-v0.0.1/missing.xml",
+	} {
+		if got := gotLinks["gateway/includes/"+name]; got != want {
+			t.Errorf("archived symlink %s = %q, want %q", name, got, want)
+		}
+	}
+	if got := tarNames(t, strings.NewReader(res.Stdout))["gateway/includes/itrs-v0.0.1/itrs.custom.xml"]; got != "primary include" {
+		t.Errorf("archived target contents = %q", got)
+	}
+	t.Run("restore command round trip", func(t *testing.T) {
+		archive := filepath.Join(t.TempDir(), "backup.tar")
+		if err := os.WriteFile(archive, []byte(res.Stdout), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		for name := range links {
+			if err := os.Remove(filepath.Join(dir, name)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		result := cmdtest.Run(t, cmd.Cmd, "restore", "--shared", archive)
+		if result.Err != nil {
+			t.Fatalf("restore: %v\n%s%s", result.Err, result.Stdout, result.Stderr)
+		}
+		for name, want := range map[string]string{
+			"itrs.custom.xml":   "itrs-v0.0.1/itrs.custom.xml",
+			"itrs.absolute.xml": "itrs-v0.0.1/itrs.custom.xml",
+			"itrs.dangling.xml": "itrs-v0.0.1/missing.xml",
+		} {
+			if got, err := os.Readlink(filepath.Join(dir, name)); err != nil || got != want {
+				t.Errorf("restored %s = %q, %v; want %q", name, got, err, want)
+			}
+		}
+	})
+	t.Run("reject outside target", func(t *testing.T) {
+		if err := os.Symlink(t.TempDir(), filepath.Join(dir, "external")); err != nil {
+			t.Fatal(err)
+		}
+		res := cmdtest.Run(t, cmd.Cmd, "backup", "gateway", "gw-links", "--shared", "-o", "-", "-z", "none")
+		if res.Err == nil || !strings.Contains(res.Err.Error(), "outside") {
+			t.Errorf("backup error = %v, want unsafe external symlink error", res.Err)
+		}
+	})
 }
 
 func TestBackup(t *testing.T) {

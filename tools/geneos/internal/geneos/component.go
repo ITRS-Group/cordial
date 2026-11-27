@@ -170,7 +170,8 @@ type Component struct {
 	Directories []string
 
 	// Shared directories for each component
-	SharedDirectories []string
+	SharedDirectories           []string
+	AdditionalSharedDirectories func() []string
 
 	// Templates are any templates for the component. Each Template has
 	// a filename and default content
@@ -224,6 +225,14 @@ func (ct *Component) String() (name string) {
 		return ""
 	}
 	return ct.Name
+}
+
+func (ct *Component) AllSharedDirectories() []string {
+	directories := slices.Clone(ct.SharedDirectories)
+	if ct.AdditionalSharedDirectories != nil {
+		directories = append(directories, ct.AdditionalSharedDirectories()...)
+	}
+	return directories
 }
 
 // MarshalJSON returns the JSON encoding of ct. If ct is nil then return

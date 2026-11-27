@@ -67,3 +67,5 @@ tools/ims-gateway/ims-gateway
 utils/docs/docs
 *.xml_*.history
 gdna/gdna-test.yaml
+.last-docs-timestamp
+.last-docs-date

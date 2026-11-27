@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -254,5 +255,36 @@ func TestInitialiseInitialisesEachHost(t *testing.T) {
 	}
 	if want := []string{"localhost:" + first, "second:" + second}; !slices.Equal(calls, want) {
 		t.Errorf("Initialise was called for %v, want %v", calls, want)
+	}
+}
+
+func TestInitialiseWritesAllComponentTemplates(t *testing.T) {
+	useTestComponents(t)
+	root := filepath.Join(t.TempDir(), "geneos")
+	h := newNamedTestHost("fresh", root)
+	components := []*Component{
+		{Name: "initfirst", Initialise: WriteTemplates, Templates: []Templates{{Filename: "first.xml", Content: []byte("first template")}}},
+		{Name: "initsecond", Initialise: WriteTemplates, Templates: []Templates{{Filename: "second.xml", Content: []byte("second template")}}},
+		{Name: "initthird"},
+	}
+	for _, ct := range components {
+		ct.Register(nil)
+		t.Cleanup(func() {
+			delete(registeredComponents, ct.Name)
+			delete(initDirs, ct.Name)
+		})
+	}
+
+	if err := Initialise("init", h, UseRoot(root), Insecure(true)); err != nil {
+		t.Fatal(err)
+	}
+	for _, ct := range components {
+		for _, template := range ct.Templates {
+			path := h.PathTo(ct, "templates", template.Filename)
+			got, err := os.ReadFile(path)
+			if err != nil || string(got) != string(template.Content) {
+				t.Errorf("template %s = %q, %v; want %q", path, got, err, template.Content)
+			}
+		}
 	}
 }

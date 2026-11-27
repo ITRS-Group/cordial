@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.1-261009/gateway.xsd">
+    <!-- Full-day local-time overrides. Annual dates (DD/MM) precede dated exceptions (DD/MM/YYYY).
+See holiday-calendars-sa.md for South America coverage and source confidence.
+Confidence varies by calendar and source format; it is not a guarantee of accuracy or completeness. -->
+	<activeTimes>
+		<activeTimeGroup name="Layer 0 - Holidays">
+			<activeTimeGroup name="Layer 0 - SA - Brazil">
+                <!-- Brazil calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-sa.md. -->
+				<activeTime name="Holidays - BR B3 Listed Equities - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable exchange calendar;
+market-specific footnotes and full-day closures require interpretation.
+
+Sources:
+- https://www.b3.com.br/en_us/solutions/platforms/puma-trading-system/for-members-and-traders/trading-calendar/holidays/ (B3 market calendar)
+
+Notes:
+The public holiday calendar is not encoded. Use the B3 calendar only for
+listed equities, not as a substitute for public holidays.
+
+Timezone: America/Sao_Paulo. Listed equity closures only; not a public
+holiday, FX or settlement calendar.
+
+Santiago, Bogotá and Buenos Aires are also candidates for South America if those
+markets are monitored; no calendars are encoded for them. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>20/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/12/2026</date><override>true</override></scheduledPeriod>
+					<timezone><America>Sao_Paulo</America></timezone>
+				</activeTime>
+			</activeTimeGroup>
+		</activeTimeGroup>
+	</activeTimes>
+</gateway>

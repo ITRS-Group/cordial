@@ -4,12 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"path"
 	"path/filepath"
 	"slices"
 	"strings"
-
-	goversion "github.com/hashicorp/go-version"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	geneosxml "github.com/itrs-group/cordial/pkg/geneos"
@@ -47,6 +46,7 @@ func updateIncludeLinks(h *geneos.Host, version string, override, missingOnly bo
 		info, statErr := h.Lstat(newname)
 		if statErr == nil {
 			if missingOnly {
+				fmt.Println("Skipping existing include path", newname)
 				continue
 			}
 			if info.Mode()&fs.ModeSymlink != 0 {
@@ -59,13 +59,17 @@ func updateIncludeLinks(h *geneos.Host, version string, override, missingOnly bo
 			if !override {
 				return fmt.Errorf("include path %q already exists and replacement is disabled", newname)
 			}
-			if err = h.Remove(newname); err != nil {
+			err = h.Remove(newname)
+			auditIncludeFile(h, "remove", newname, err)
+			if err != nil {
 				return fmt.Errorf("failed to remove existing include path %q: %w", newname, err)
 			}
 		} else if !errors.Is(statErr, fs.ErrNotExist) {
 			return fmt.Errorf("failed to inspect include path %q: %w", newname, statErr)
 		}
-		if err = h.Symlink(oldname, newname); err != nil {
+		err = h.Symlink(oldname, newname)
+		auditIncludeFile(h, "symlink", newname, err, slog.String("target", oldname))
+		if err != nil {
 			return fmt.Errorf("failed to create symlink %q -> %q: %w", newname, oldname, err)
 		}
 		fmt.Println("Updated symlink", newname, "->", oldname)
@@ -200,17 +204,41 @@ func unusedIncludeVersionLinks(h *geneos.Host, directory string, protectDirector
 }
 
 func preflightIncludeLinks(h *geneos.Host, currentVersion string, replacements []string) ([]string, error) {
+	source, _, err := parseIncludeVersion(currentVersion)
+	if err != nil {
+		return nil, err
+	}
 	parent := h.PathTo("gateway", "includes")
 	entries, err := h.ReadDir(parent)
 	if err != nil {
 		return nil, err
+	}
+	for _, replacement := range replacements {
+		link := h.Join(parent, replacement)
+		info, err := h.Lstat(link)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to inspect include path %q: %w", link, err)
+		}
+		if info.Mode()&fs.ModeSymlink == 0 {
+			continue
+		}
+		target, err := resolveIncludePath(h, link, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve include link %q: %w", link, err)
+		}
+		if owner, _, err := parseIncludeVersion(path.Base(path.Dir(target))); err == nil && owner != source {
+			return nil, fmt.Errorf("cannot update source %q: include link %q belongs to source %q; no include links were changed", source, link, owner)
+		}
 	}
 	var obsoleteLinks []string
 	for _, entry := range entries {
 		if !entry.IsDir() || entry.Name() == currentVersion {
 			continue
 		}
-		if _, err := goversion.NewVersion(entry.Name()); err != nil {
+		if owner, _, err := parseIncludeVersion(entry.Name()); err != nil || owner != source {
 			continue
 		}
 		links, reference, err := unusedIncludeVersionLinks(h, h.Join(parent, entry.Name()), false, replacements...)
@@ -227,7 +255,9 @@ func preflightIncludeLinks(h *geneos.Host, currentVersion string, replacements [
 
 func removeIncludeLinks(h *geneos.Host, links []string) error {
 	for _, link := range links {
-		if err := h.Remove(link); err != nil {
+		err := h.Remove(link)
+		auditIncludeFile(h, "remove", link, err)
+		if err != nil {
 			return fmt.Errorf("failed to remove include link %q: %w", link, err)
 		}
 		fmt.Println("Removed unused include link", link)

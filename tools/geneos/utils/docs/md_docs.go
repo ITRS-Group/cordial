@@ -33,7 +33,8 @@ import (
 var markdownLinkPattern = regexp.MustCompile(`\]\(([^)]+)\)`)
 
 // GenMarkdownBook combines generated command pages into one linked document.
-func GenMarkdownBook(dir, filename string) error {
+// A preface, when supplied, is inserted after the book title.
+func GenMarkdownBook(dir, filename string, preface ...string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -48,6 +49,12 @@ func GenMarkdownBook(dir, filename string) error {
 
 	var book bytes.Buffer
 	book.WriteString("# Geneos Commands\n\n")
+	if len(preface) > 0 {
+		if text := strings.TrimSpace(preface[0]); text != "" {
+			book.WriteString(text)
+			book.WriteString("\n\n")
+		}
+	}
 	for _, entry := range entries {
 		if _, ok := pages[entry.Name()]; !ok {
 			continue

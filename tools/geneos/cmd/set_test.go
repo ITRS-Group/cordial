@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -277,6 +278,124 @@ func TestSetAndUnsetProfileRebuildFlags(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestProfileSavedSourceAndRebuildPolicy(t *testing.T) {
+	root := cmdtest.Env(t)
+	dir := t.TempDir()
+	source := filepath.Join(dir, "custom.yaml")
+	override := filepath.Join(dir, "override.yaml")
+	writeProfile := func(path, label string) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte("profiles:\n  custom:\n    gateway:\n      - name: custom-gw\n        params:\n          - gatewayname="+label+"\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := func(args ...string) {
+		t.Helper()
+		if res := cmdtest.Run(t, cmd.Cmd, args...); res.Err != nil {
+			t.Fatalf("%v: %v\n%s%s", args, res.Err, res.Stdout, res.Stderr)
+		}
+	}
+	check := func(path, policy, label string) {
+		t.Helper()
+		for _, want := range []struct{ component, dir, key, value string }{
+			{"profile", "profile/profiles/custom", "config.profiles", path},
+			{"profile", "profile/profiles/custom", "config.rebuild", policy},
+			{"gateway", "gateway/gateways/custom-gw", "gatewayname", label},
+		} {
+			cf, err := config.Read(want.component, config.FromDir(filepath.Join(root, want.dir)), config.UseDefaults(false), config.MustExist())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := config.Get[string](cf, want.key); got != want.value {
+				t.Errorf("%s %s = %q, want %q", want.component, want.key, got, want.value)
+			}
+		}
+	}
+
+	writeProfile(source, "original")
+	writeProfile(override, "override")
+	run("add", "profile", "custom", "--insecure", "--profiles", source)
+	check(source, "always", "original")
+
+	writeProfile(source, "updated")
+	run("rebuild", "profile", "custom")
+	check(source, "always", "updated")
+	run("rebuild", "profile", "custom", "--profiles", override)
+	check(source, "always", "override")
+	run("set", "profile", "custom", "config.rebuild=never")
+	run("set", "profile", "custom", "--force", "site=changed")
+	run("rebuild", "profile", "custom", "--force")
+	check(source, "never", "override")
+
+	writeProfile(override, "redeployed")
+	run("deploy", "profile", "custom", "--insecure", "--local", "--profiles", override)
+	check(override, "never", "override")
+	run("set", "profile", "custom", "config.rebuild=always")
+	check(override, "always", "redeployed")
+
+	run("set", "profile", "custom", "config.profiles="+source)
+	check(source, "always", "updated")
+	if err := os.MkdirAll(filepath.Join(root, "packages", "gateway", "active_prod"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	run("deploy", "profile", "custom", "--insecure", "--local", "--profiles", override)
+	check(override, "always", "redeployed")
+	run("deploy", "profile", "custom", "--insecure", "--local")
+	check(override, "always", "redeployed")
+	run("profile", "install")
+	run("rebuild", "profile", "custom")
+	check(override, "always", "redeployed")
+
+	if err := os.Remove(override); err != nil {
+		t.Fatal(err)
+	}
+	if res := cmdtest.Run(t, cmd.Cmd, "rebuild", "profile", "custom"); res.Err == nil ||
+		!strings.Contains(res.Err.Error()+res.Stdout+res.Stderr, override) {
+		t.Fatalf("rebuild with missing saved source: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+}
+
+func TestProfileInstallOutput(t *testing.T) {
+	cmdtest.Env(t)
+	dir := t.TempDir()
+	yamlDir := filepath.Join(dir, "profiles.yaml")
+	if err := os.Mkdir(yamlDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	defaultDir, err := config.UserConfigPath(cordial.ExecutableName())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name string
+		args []string
+		path string
+	}{
+		{"default", []string{"install"}, filepath.Join(defaultDir, "profiles.yaml")},
+		{"directory with YAML suffix", []string{"install", "--output", yamlDir}, filepath.Join(yamlDir, "profiles.yaml")},
+		{"named YAML file via extract alias", []string{"extract", "-o", filepath.Join(dir, "custom.YML")}, filepath.Join(dir, "custom.YML")},
+		{"invalid output", []string{"install", "-o", filepath.Join(dir, "missing-directory")}, ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			res := cmdtest.Run(t, cmd.Cmd, append([]string{"profile"}, test.args...)...)
+			if test.path == "" {
+				if res.Err == nil || !strings.Contains(res.Err.Error(), "must be an existing directory or a .yaml/.yml file") {
+					t.Fatalf("invalid output: %v", res.Err)
+				}
+				return
+			}
+			if res.Err != nil {
+				t.Fatalf("%v: %v\n%s%s", test.args, res.Err, res.Stdout, res.Stderr)
+			}
+			contents, err := os.ReadFile(test.path)
+			if err != nil || !strings.Contains(string(contents), "profiles:") {
+				t.Fatalf("expected profile YAML at %q: %v", test.path, err)
+			}
+		})
 	}
 }
 

@@ -8,10 +8,8 @@ import (
 	"log/slog"
 	"strings"
 
-	goversion "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -24,7 +22,8 @@ var includesUpdateCmdVersion string
 func init() {
 	includesCmd.AddCommand(includesUpdateCmd)
 
-	includesUpdateCmd.Flags().StringVarP(&includesUpdateCmdVersion, "version", "V", "", "Specify version to update includes to")
+	includesUpdateCmd.Flags().StringVarP(&includesUpdateCmdVersion, "version", "V", "", "Select a version or full source-version directory")
+	includesUpdateCmd.Flags().String("prefix", "itrs", "Select the include source prefix")
 }
 
 var includesUpdateCmd = &cobra.Command{
@@ -34,15 +33,27 @@ var includesUpdateCmd = &cobra.Command{
 	Long:         includeUpdateCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:       "false",
-		cmd.CmdRequireHome:  "true",
-		cmd.CmdAuditCommand: "never",
-		cmd.CmdAuditActions: "never",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
+		prefix, err := commandIncludePrefix(command, false)
+		if err != nil {
+			return err
+		}
+		version, err := includeVersionForPrefix(includesUpdateCmdVersion, prefix, command.Flags().Changed("prefix"))
+		if err != nil {
+			return err
+		}
 		h := geneos.GetHost(cmd.Hostname)
+		if version == "" {
+			version, err = latestIncludeVersion(h, prefix)
+			if err != nil {
+				return err
+			}
+		}
 
-		err = Update(h, includesUpdateCmdVersion, true)
+		err = Update(h, version, true)
 		if err != nil {
 			return err
 		}
@@ -56,11 +67,11 @@ var includesUpdateCmd = &cobra.Command{
 func Update(h *geneos.Host, version string, override bool) (err error) {
 	ct := geneos.ParseComponent("gateway")
 	if version == "" {
-		version = cordial.VERSION
+		version = embeddedIncludeVersion()
 	}
 	version = strings.TrimSpace(version)
-	if _, err := goversion.NewVersion(version); err != nil {
-		return fmt.Errorf("invalid include version %q: %w", version, err)
+	if _, _, err := parseIncludeVersion(version); err != nil {
+		return err
 	}
 
 	fmt.Println("Updating include file links to version", version)
@@ -70,7 +81,7 @@ func Update(h *geneos.Host, version string, override bool) (err error) {
 	dir := h.PathTo(ct, "includes", version)
 	_, err = h.Stat(dir)
 	if err != nil && errors.Is(err, fs.ErrNotExist) {
-		if version == cordial.VERSION {
+		if version == embeddedIncludeVersion() {
 			log.Debug("Version directory does not exist, extracting includes for version", slog.String("version", version))
 			err = Install(h, "", override, false)
 			if err != nil {
@@ -80,6 +91,8 @@ func Update(h *geneos.Host, version string, override bool) (err error) {
 		} else {
 			return fmt.Errorf("directory not found for version %s", version)
 		}
+	} else if err != nil {
+		return err
 	}
 
 	// now update the include file symlinks for the given version

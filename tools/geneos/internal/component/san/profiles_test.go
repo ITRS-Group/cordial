@@ -1,13 +1,54 @@
 package san
 
 import (
+	"errors"
+	"net"
 	"slices"
 	"testing"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	pkggeneos "github.com/itrs-group/cordial/pkg/geneos"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
+
+// mockHost implements hostNamer for isMatchingHost tests.
+type mockHost struct {
+	local    bool
+	hostname string
+}
+
+func (m mockHost) IsLocalhost() bool { return m.local }
+func (m mockHost) Hostname() string  { return m.hostname }
+
+// stubNet replaces the network lookups used by isMatchingHost for the
+// duration of the test. resolved maps host names to addresses, any
+// other name fails to resolve.
+func stubNet(t *testing.T, local []string, resolved map[string][]string) {
+	t.Helper()
+	origLookup, origAddrs := lookupIP, interfaceAddrs
+	t.Cleanup(func() { lookupIP, interfaceAddrs = origLookup, origAddrs })
+
+	interfaceAddrs = func() ([]net.Addr, error) {
+		addrs := []net.Addr{&net.IPNet{IP: net.IPv4(127, 0, 0, 1), Mask: net.CIDRMask(8, 32)}}
+		for _, a := range local {
+			addrs = append(addrs, &net.IPNet{IP: net.ParseIP(a), Mask: net.CIDRMask(24, 32)})
+		}
+		return addrs, nil
+	}
+	lookupIP = func(name string) ([]net.IP, error) {
+		addrs, ok := resolved[name]
+		if !ok {
+			return nil, errors.New("no such host")
+		}
+		ips := make([]net.IP, 0, len(addrs))
+		for _, a := range addrs {
+			ips = append(ips, net.ParseIP(a))
+		}
+		return ips, nil
+	}
+}
 
 func TestApplyManagedEntityCommon(t *testing.T) {
 	common := ManagedEntityCommon{
@@ -94,6 +135,111 @@ func TestEmbeddedHealthManagedEntityCommon(t *testing.T) {
 				t.Errorf("entity %q did not inherit variable %q: %v", entity.ForEach, name, entity.Variables)
 			}
 		}
+	}
+}
+
+func TestIsMatchingHost(t *testing.T) {
+	stubNet(t,
+		[]string{"10.0.0.5", "fe80::1"},
+		map[string][]string{"remote.example.com": {"192.168.1.10", "192.168.1.11"}},
+	)
+
+	local := func(name string) mockHost { return mockHost{local: true, hostname: name} }
+	remote := func(name string) mockHost { return mockHost{local: false, hostname: name} }
+
+	tests := []struct {
+		name       string
+		host       mockHost
+		configured string
+		want       bool
+	}{
+		// IP addresses
+		{"remote IP resolves", remote("remote.example.com"), "192.168.1.11", true},
+		{"remote IP not resolved", remote("remote.example.com"), "192.168.1.99", false},
+		{"remote IP lookup fails", remote("unknown.example.com"), "192.168.1.10", false},
+		{"remote host is IP", remote("192.168.1.10"), "192.168.1.10", true},
+		{"remote host is other IP", remote("192.168.1.10"), "192.168.1.12", false},
+		{"local IP on interface", local("local.example.com"), "10.0.0.5", true},
+		{"local IPv6 on interface", local("local.example.com"), "fe80::1", true},
+		{"local IP not on interface", local("local.example.com"), "192.168.1.1", false},
+		{"local loopback ignored", local("local.example.com"), "127.0.0.1", false},
+
+		// names with domains on both sides need an exact match
+		{"remote FQDN exact", remote("remote.example.com"), "remote.example.com", true},
+		{"remote FQDN case", remote("Remote.Example.COM"), "remote.example.com", true},
+		{"remote FQDN other domain", remote("remote.example.com"), "remote.example.org", false},
+		{"local FQDN exact", local("local.example.com"), "local.example.com", true},
+		{"local FQDN other domain", local("local.example.com"), "local.example.org", false},
+
+		// a short name on either side compares only short names
+		{"remote short configured", remote("remote.example.com"), "remote", true},
+		{"remote short host", remote("remote"), "remote.example.com", true},
+		{"remote short mismatch", remote("remote.example.com"), "wrongbase", false},
+		{"local short configured", local("local.example.com"), "local", true},
+		{"local short both", local("shortname"), "shortname", true},
+		{"local short both mismatch", local("shortname"), "othername", false},
+		{"local short host FQDN mismatch", local("shortname"), "othername.example.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isMatchingHost(tt.host, tt.configured); got != tt.want {
+				t.Errorf("isMatchingHost(%+v, %q) = %v, want %v", tt.host, tt.configured, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHotStandbyRole(t *testing.T) {
+	stubNet(t, nil, nil)
+
+	enabled, disabled := true, false
+	hs := func(en *bool, primary, secondary string) *pkggeneos.HotStandby {
+		h := &pkggeneos.HotStandby{Enabled: en}
+		if primary != "" {
+			h.Primary = &pkggeneos.HotStandbyGateway{Hostname: primary}
+		}
+		if secondary != "" {
+			h.Secondary = &pkggeneos.HotStandbyGateway{Hostname: secondary}
+		}
+		return h
+	}
+	hsPorts := func(primary string, pport int, secondary string, sport int) *pkggeneos.HotStandby {
+		return &pkggeneos.HotStandby{
+			Enabled:   &enabled,
+			Primary:   &pkggeneos.HotStandbyGateway{Hostname: primary, Port: &pport},
+			Secondary: &pkggeneos.HotStandbyGateway{Hostname: secondary, Port: &sport},
+		}
+	}
+	h := mockHost{local: true, hostname: "gw2.example.com"}
+
+	tests := []struct {
+		name string
+		hs   *pkggeneos.HotStandby
+		port int
+		want string
+	}{
+		{"no hot standby", nil, 0, "standalone"},
+		{"enabled unset", hs(nil, "gw2", ""), 0, "standalone"},
+		{"disabled", hs(&disabled, "gw2", "gw1"), 0, "standalone"},
+		{"primary", hs(&enabled, "gw2.example.com", "gw1.example.com"), 0, "primary"},
+		{"secondary", hs(&enabled, "gw1.example.com", "gw2"), 0, "secondary"},
+		{"neither", hs(&enabled, "gw1", "gw3"), 0, "standalone"},
+		{"both match, primary first", hs(&enabled, "gw2", "gw2.example.com"), 0, "primary"},
+
+		// loopback names, used only for testing with both gateways on
+		// one host, match on the port
+		{"loopback primary port", hsPorts("localhost", 7039, "127.0.0.1", 7040), 7039, "primary"},
+		{"loopback secondary port", hsPorts("localhost", 7039, "127.0.0.1", 7040), 7040, "secondary"},
+		{"loopback other port", hsPorts("localhost", 7039, "127.0.0.1", 7040), 7041, "standalone"},
+		{"loopback unknown port", hsPorts("localhost", 7039, "127.0.0.1", 7040), 0, "standalone"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := hotStandbyRole(h, tt.hs, tt.port); got != tt.want {
+				t.Errorf("hotStandbyRole() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

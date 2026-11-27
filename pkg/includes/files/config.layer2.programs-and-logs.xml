@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-27 09:06:32 by PeterGalbavy on ITRSLP372-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
+	<managedEntities>
+		<managedEntityGroup name="Layer 2 - Application Baseline">
+			<!--Managed entities placed in this group get the CATEGORY and COMPONENT
+attributes and the Application Baseline type, using the Local environment
+for site-specific variables such as LOGS_ACTIVE, PROCESSES_ACTIVE and
+processInstances.-->
+			<attribute name="CATEGORY">Application</attribute>
+			<attribute name="COMPONENT">Baseline</attribute>
+			<addTypes>
+				<type ref="Layer 2 - Application Baseline">
+					<environment ref="Layer 2 - Application Baseline Local"/>
+				</type>
+			</addTypes>
+		</managedEntityGroup>
+	</managedEntities>
+	<environments>
+		<environmentGroup name="Layer 2 - Application Baseline">
+			<environment name="Layer 2 - Application Baseline Local"/>
+		</environmentGroup>
+	</environments>
+</gateway>

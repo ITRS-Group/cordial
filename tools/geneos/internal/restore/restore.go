@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"maps"
 	"os"
@@ -232,7 +233,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 
 		// check for shared directories for given nct and restore if asked to
 		if opts.shared {
-			if slices.Contains(nct.SharedDirectories, path.Join(nct.String(), ctSubdir)) {
+			if slices.Contains(nct.AllSharedDirectories(), path.Join(nct.String(), ctSubdir)) {
 				if ct == nil || ct == nct {
 					if err = restoreShared(stats, files, nct.String()+":!SHARED", hdr, opts, func() error {
 						return writeSharedFile(path.Join(nct.String(), ctSubdir, rest), tr, hdr, opts)
@@ -296,6 +297,12 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 
 	extracted = true
 
+	if !opts.list && opts.beforeRebuild != nil {
+		if err := opts.beforeRebuild(); err != nil {
+			return fmt.Errorf("preparing restored instances for rebuild: %w", err)
+		}
+	}
+
 	// the names that were asked for but are not in the archive are an
 	// error, but the instances that are in the archive are still
 	// restored
@@ -321,6 +328,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		} else if !opts.list && !stat.skipped {
 			// rebuild the configuration of each instance restored
 			i, gerr := instance.GetWithHost(opts.host, geneos.ParseComponent(ctName), name)
+			restoredOK := false
 			if gerr != nil {
 				log.Debug("getting instance for final rebuild", slog.Any("error", gerr), slog.String("ctName", ctName), slog.String("name", name))
 				errs = append(errs, fmt.Errorf("%s %s: %w", ctName, name, gerr))
@@ -328,9 +336,15 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				if !errors.Is(rerr, geneos.ErrNotSupported) {
 					i.Log().Debug("rebuild of instance failed", slog.Any("error", rerr), slog.String("ctName", ctName), slog.String("name", name))
 					errs = append(errs, fmt.Errorf("%s %s: rebuild failed: %w", ctName, name, rerr))
+				} else {
+					restoredOK = true
 				}
 			} else {
 				fmt.Fprintf(opts.progress, "%s %s config rebuild complete\n", ctName, name)
+				restoredOK = true
+			}
+			if restoredOK && opts.afterRestore != nil {
+				opts.afterRestore(i)
 			}
 		}
 
@@ -440,6 +454,14 @@ func writeFile(instanceName string, instRelFilePath string, tr *tar.Reader, hdr 
 	}
 
 	destPath := h.PathTo(ct, ct.String()+"s", instanceName, instRelFilePath)
+	if err := checkRestorePath(h, destPath); err != nil {
+		return err
+	}
+	if fi, err := h.Lstat(destPath); err == nil && fi.Mode()&fs.ModeSymlink != 0 {
+		return fmt.Errorf("cannot overwrite restored symlink %q", destPath)
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
 
 	switch hdr.Typeflag {
 	case tar.TypeDir:
@@ -502,19 +524,35 @@ func writeSharedTLSFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restor
 func writeSharedEntry(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOptions, tls bool) (err error) {
 	h := opts.host
 	destPath := h.PathTo(fp)
+	if err := checkRestorePath(h, destPath); err != nil {
+		return err
+	}
 
 	switch hdr.Typeflag {
+	case tar.TypeSymlink:
+		return restoreSymlink(h, destPath, hdr.Linkname)
 	case tar.TypeDir:
 		// create and set permissions
-		if _, err := h.Stat(destPath); err == nil {
+		if _, err := h.Lstat(destPath); err == nil {
 			return os.ErrExist
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return err
 		}
 		return h.MkdirAll(destPath, hdr.FileInfo().Mode().Perm())
 	case tar.TypeReg:
 		var w io.WriteCloser
 
-		if _, err := h.Stat(destPath); err == nil {
+		if fi, err := h.Lstat(destPath); err == nil {
+			if fi.Mode()&fs.ModeSymlink != 0 {
+				return os.ErrExist
+			}
 			if tls && path.Base(fp) == geneos.CABundleBasename+certs.PEMExtension {
+				truststore := h.PathTo(path.Dir(fp), geneos.CABundleBasename+certs.KeystoreExtension)
+				if fi, err := h.Lstat(truststore); err == nil && fi.Mode()&fs.ModeSymlink != 0 {
+					return fmt.Errorf("cannot merge CA bundle through symlink %q", truststore)
+				} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
 				roots, err := certs.ReadCertificatesFrom(tr)
 				if err != nil {
 					return err
@@ -530,6 +568,8 @@ func writeSharedEntry(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreO
 			}
 			// UpdateCACertsFiles writes both PEM and Java truststores.
 			return os.ErrExist
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return err
 		}
 
 		// create intermediate dirs, write, set perms
@@ -551,6 +591,56 @@ func writeSharedEntry(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreO
 		// ignore
 	}
 	return
+}
+
+func checkRestorePath(h *geneos.Host, destPath string) error {
+	relative, err := h.Rel(h.PathTo(), destPath)
+	if err != nil {
+		return err
+	}
+	relative, err = geneos.CleanRelativePath(h.ToSlash(relative))
+	if err != nil {
+		return err
+	}
+	parent := h.PathTo()
+	parts := strings.Split(relative, "/")
+	for _, part := range parts[:len(parts)-1] {
+		parent = h.Join(parent, part)
+		fi, err := h.Lstat(parent)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if fi.Mode()&fs.ModeSymlink != 0 {
+			return fmt.Errorf("restore path %q traverses symlink %q", destPath, parent)
+		}
+	}
+	return nil
+}
+
+func restoreSymlink(h *geneos.Host, destination, target string) error {
+	if _, err := h.Lstat(destination); err == nil {
+		return fs.ErrExist
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	name, err := h.Rel(h.PathTo(), destination)
+	if err != nil {
+		return err
+	}
+	target, err = geneos.ArchiveSymlinkTarget(h, h.PathTo(), name, target)
+	if err != nil {
+		return err
+	}
+	if err := h.MkdirAll(h.Dir(destination), 0o775); err != nil {
+		return err
+	}
+	if err := h.Symlink(target, destination); err != nil {
+		return fmt.Errorf("restore symlink %q -> %q: %w", destination, target, err)
+	}
+	return nil
 }
 
 // rebuildConfig reads the component config file from the tar reader,

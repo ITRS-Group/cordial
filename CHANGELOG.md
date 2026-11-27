@@ -13,7 +13,7 @@
 
 * **Geneos management:** Improved profiles, rebuilds, TLS, package installation and Active Dashboard editing.
 
-* **Gateway includes (preview):** Independently versioned includes, site-specific configuration, and new commands to install, repair and prune them.
+* **Gateway includes (preview):** Source-aware versioned includes, site-specific configuration, and new commands to install, repair and prune them.
 
 * **Incident integrations:** More reliable ServiceNow and ServiceDesk Plus workflows, with stricter authentication, correlation and error handling.
 
@@ -27,7 +27,7 @@ See [highlights](HIGHLIGHTS.md#v1310-in-development) for more context and [updat
 
 ## Version v1.31.0 New Features
 
-* **`geneos includes` (preview):** Install versioned includes independently of the program, with site-specific configuration and a separate release archive. New `install`, `delete`/`remove` and `fix` commands complement improved listing and updates; `extract` is now an alias for `install`.
+* **`geneos includes` (preview):** Install versioned includes independently of the program, with separate sources, site-specific configuration and a separate release archive. New `install`, `delete`/`remove` and `fix` commands complement improved listing, updates and file-action auditing; `extract` is now an alias for `install`.
 
 * **`geneos` configuration and profiles:** Improved saved profile options, secure-value handling and member rebuild/reload reporting. `set` and `unset` can explicitly rebuild and reload after changes. TLS import and inspection handle more certificate sources, package installation accepts multiple archive sources, and Active Dashboard tools gain XPath/URL inspection, URL editing and an `adb edit` alias.
 
@@ -112,7 +112,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
   * The `geneos` command now supports pre-defined configurations with _profiles_. A profile is a pseudo-component type that uses an configuration file to control the creation and management of other components with various contextual settings to help automate common deployment scenarios. As part of this new feature, the the `geneos init demo` and `geneos init all` commands are now implemented as profiles and the `geneos init` and `geneos deploy` commands are the principle ways of creating configurations based on profiles. Many other commands treat profiles as groups of components, such as `geneos start profile demo`, for example. The new command subsystem `geneos profiles` has been introduced to manage profiles (with an alias of `geneos profile` for convenience).
 
-    The `geneos` command extracts the embedded profile configuration automatically when no user profile file exists. Run `geneos profile extract` to explicitly write the embedded defaults; an existing profile file is backed up before replacement, and no changes are made when it already matches the embedded defaults. The default file contains the `demo` and `all` profiles, as well as `motm` and `motm-gateway` profiles for Monitor-Of-The-Monitors setups. You can add your own custom profiles to support your deployment scenarios. See the [profile documentation](tools/geneos/internal/component/profile/profile.md) for details.
+    The `geneos` command extracts the embedded profile configuration automatically when no user profile file exists. Run `geneos profile install` to explicitly write the embedded defaults; an existing profile file is backed up before replacement, and no changes are made when it already matches the embedded defaults. The default file contains the `demo` and `all` profiles, as well as `motm` and `motm-gateway` profiles for Monitor-Of-The-Monitors setups. You can add your own custom profiles to support your deployment scenarios. See the [profile documentation](tools/geneos/internal/component/profile/profile.md) for details.
 
   * The `geneos includes` subsystem has been introduced (with an alias of `geneos include` for convenience). A number of _Geneos Best Practice_ includes files are now embedded in the `geneos` command and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios. For existing deployments use the `geneos includes extract` command to write-out the embedded include files to the local filesystem.
 

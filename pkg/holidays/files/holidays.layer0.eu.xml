@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.1-261009/gateway.xsd">
+    <!-- Full-day local-time overrides. Annual dates (DD/MM) precede dated exceptions (DD/MM/YYYY).
+See holiday-calendars-eu.md for Europe including GB coverage and source confidence.
+Confidence varies by calendar and source format; it is not a guarantee of accuracy or completeness. -->
+	<activeTimes>
+		<activeTimeGroup name="Layer 0 - Holidays">
+			<activeTimeGroup name="Layer 0 - EU - France">
+                <!-- France calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-eu.md. -->
+				<activeTime name="Holidays - FR Metropolitan - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: High - official machine-readable JSON calendar API with
+explicit dates; jurisdiction and published coverage still need checking.
+
+Sources:
+- https://calendrier.api.gouv.fr/jours-feries/metropole.json (French government calendar API, metropolitan France)
+
+Notes:
+Timezone: Europe/Paris.
+
+See the shared Euronext calendar under Amsterdam. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/07</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/08</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/11</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/06/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/04/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/05/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/05/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/04/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/05/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/06/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2031</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/05/2031</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/06/2031</date><override>true</override></scheduledPeriod>
+					<timezone><Europe>Paris</Europe></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - EU - Germany">
+                <!-- Germany calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-eu.md. -->
+				<activeTime name="Holidays - DE Hesse - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML statutory holiday guidance;
+applying date rules requires interpretation.
+
+Sources:
+- https://innen.hessen.de/buerger-staat/feiertage (Hesse Ministry of the Interior)
+
+Notes:
+Timezone: Europe/Berlin. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/10</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/06/2026</date><override>true</override></scheduledPeriod>
+					<timezone><Europe>Berlin</Europe></timezone>
+				</activeTime>
+				<activeTime name="Holidays - DE Xetra and Frankfurt - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable exchange schedule;
+trading dates and venue-specific exceptions require interpretation.
+
+Sources:
+- https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours (Deutsche Börse trading calendar)
+
+Notes:
+Timezone: Europe/Berlin. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/03/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/04/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/04/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/04/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/04/2031</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2031</date><override>true</override></scheduledPeriod>
+					<timezone><Europe>Berlin</Europe></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - EU - Netherlands">
+                <!-- Netherlands calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-eu.md. -->
+				<activeTime name="Holidays - NL - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML public-holiday guidance;
+human-readable dates and scope require interpretation.
+
+Sources:
+- https://www.government.nl/documents/question-and-answer/work/public-holidays-in-the-netherlands (Government of the Netherlands)
+
+Notes:
+Timezone: Europe/Amsterdam. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/04/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/05/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Europe>Amsterdam</Europe></timezone>
+				</activeTime>
+				<activeTime name="Holidays - Euronext Amsterdam and Paris - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable exchange schedules linked
+from an HTML page; market scope and closure footnotes require review.
+
+Sources:
+- https://www.euronext.com/en/trading/trading-hours-holidays (Euronext cash and derivatives trading calendars)
+
+Notes:
+Timezone: Europe/Amsterdam (same local clock as Paris). -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<timezone><Europe>Amsterdam</Europe></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - EU - United Kingdom">
+                <!-- United Kingdom calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-eu.md. -->
+				<activeTime name="Holidays - GB England and Wales - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: High for dates from the official machine-readable JSON feed.
+The LSE applicability cross-check is Medium: a human-readable HTML table
+with half-day and trade-reporting footnotes.
+
+Sources:
+- https://www.gov.uk/bank-holidays.json (GOV.UK bank holiday feed)
+- https://www.londonstockexchange.com/en/resources/markets-products/business-days (LSE business days table)
+
+Notes:
+Timezone: Europe/London. Source: GOV.UK bank holiday feed.
+
+Annually recurring: None on a fixed date. The calendar follows the published
+bank holiday dates. For example, Christmas Day is observed on December 27 in
+2027, so a yearless 25/12 would incorrectly add an override on December 25 as
+well.
+
+London Stock Exchange on-exchange non-trading days match this list in the
+published horizon, so reuse the public calendar. The LSE business days table
+also specifies half-days and trade-reporting exceptions that are not encoded. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>30/08/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/08/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12/2028</date><override>true</override></scheduledPeriod>
+					<timezone><Europe>London</Europe></timezone>
+				</activeTime>
+			</activeTimeGroup>
+		</activeTimeGroup>
+	</activeTimes>
+</gateway>

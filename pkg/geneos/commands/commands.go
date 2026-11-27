@@ -216,6 +216,15 @@ func (c *Connection) Do(endpoint string, command *Command) (response CommandResp
 		return
 	}
 	u := c.baseURL.ResolveReference(r)
+	if basePath := strings.TrimSuffix(c.baseURL.Path, "/"); basePath != "" {
+		endpointPath := strings.TrimPrefix(r.Path, "/rest")
+		r = &url.URL{
+			Path:     basePath + endpointPath,
+			RawQuery: r.RawQuery,
+			Fragment: r.Fragment,
+		}
+		u = c.baseURL.ResolveReference(r)
+	}
 
 	q, err := json.Marshal(command)
 	if err != nil {

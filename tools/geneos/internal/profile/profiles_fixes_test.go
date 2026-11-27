@@ -210,6 +210,17 @@ func TestJoinPathUsesHostAndKeepsOptionalSegments(t *testing.T) {
 	if err != nil || got != "/opt/gw/gateway.log" {
 		t.Errorf("JoinPathPrefix() = %q, %v", got, err)
 	}
+
+	for logdir, want := range map[string]string{
+		"logs":     "/opt/gw/logs/gateway.log",
+		"/var/log": "/var/log/gateway.log",
+	} {
+		ci["logdir"] = logdir
+		got, err := profile.JoinPathPrefix(ci, "joinpath:home:logdir:logfile", false, geneos.LOCAL)
+		if err != nil || got != want {
+			t.Errorf("logdir %q: JoinPathPrefix() = %q, %v, want %q", logdir, got, err, want)
+		}
+	}
 }
 
 func TestSetExpandOptionsCoercesLegacyBooleans(t *testing.T) {
@@ -385,7 +396,7 @@ func TestEmbeddedHealthGatewayIncludePriorities(t *testing.T) {
 	}
 	slices.Sort(priorities)
 	// decimal priorities, and not leading zero octal numbers
-	if want := []string{"10000", "1010", "1020", "11000", "500", "510", "520"}; !slices.Equal(priorities, want) {
+	if want := []string{"10000", "1020", "1050", "11000", "500", "520", "550"}; !slices.Equal(priorities, want) {
 		t.Errorf("include priorities = %v, want %v", priorities, want)
 	}
 }

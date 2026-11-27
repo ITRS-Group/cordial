@@ -82,6 +82,38 @@ func TestFixFindsSiteIncludes(t *testing.T) {
 	}
 }
 
+func TestFixPrefersActiveIncludeLink(t *testing.T) {
+	h := newTestGatewayHost(t)
+	root := h.PathTo("gateway")
+	for _, version := range []string{"v1.0.0", "v2.0.0"} {
+		filename := filepath.Join(root, "includes", version, "shared.xml")
+		if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filename, []byte("<gateway/>"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(filepath.Join("v2.0.0", "shared.xml"), filepath.Join(root, "includes", "shared.xml")); err != nil {
+		t.Fatal(err)
+	}
+	writeTestGatewaySetup(t, h, `<gateway><includes><include><location>missing/shared.xml</location></include></includes></gateway>`, "prod-a")
+	if err := os.WriteFile(h.PathTo("gateway", "gateways", "prod-a", "gateway.json"), []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Fix(h, false, "prod-a"); err != nil {
+		t.Fatal(err)
+	}
+	setup, err := os.ReadFile(h.PathTo("gateway", "gateways", "prod-a", "gateway.setup.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(setup), "../../includes/shared.xml") {
+		t.Fatalf("active include link was not preferred: %s", setup)
+	}
+}
+
 func TestFixGatewayIncludes(t *testing.T) {
 	for _, test := range []struct {
 		name    string
@@ -396,8 +428,8 @@ func TestFixMigratesUnchangedLegacyConfig(t *testing.T) {
 		"includes/config/config.changed.xml": "old",
 		"includes/config/config.nosite.xml":  "nosite",
 		"includes/config/nested/other.xml":   "nested",
-		"acme/acme.same.xml":                 "same",
-		"acme/acme.changed.xml":              "new",
+		"acme/acme-config.same.xml":          "same",
+		"acme/acme-config.changed.xml":       "new",
 		"acme/nested/other.xml":              "nested",
 	}
 	for name, contents := range files {
@@ -434,7 +466,7 @@ func TestFixMigratesUnchangedLegacyConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"../../acme/acme.same.xml",
+		"../../acme/acme-config.same.xml",
 		"../../acme/nested/other.xml",
 		"../../includes/config/config.changed.xml",
 		"../../includes/config/config.nosite.xml",
@@ -447,7 +479,7 @@ func TestFixMigratesUnchangedLegacyConfig(t *testing.T) {
 		t.Errorf("unchanged legacy reference not migrated:\n%s", data)
 	}
 	conf, err := os.ReadFile(h.PathTo("gateway", "gateways", "prod-a", "gateway.json"))
-	if err != nil || !strings.Contains(string(conf), "../../acme/acme.same.xml") {
+	if err != nil || !strings.Contains(string(conf), "../../acme/acme-config.same.xml") {
 		t.Errorf("instance config = %s, %v", conf, err)
 	}
 }

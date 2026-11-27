@@ -10,13 +10,27 @@ New features and notable capabilities, grouped by version, newest first. Version
 > [!NOTE]
 > Built with Go 1.27.4.
 
+### New capabilities and business value
+
+* **Reduce administration effort:** New versioned Gateway includes can be installed, updated, repaired and removed independently of the Cordial release, while improved profile and Active Dashboard tools simplify recurring management work.
+
+* **Improve operational resilience:** New lifecycle commands for `servicenow2 proxy`, `ims-gateway` and `gdna`, together with checked startup and controlled reloads, make long-running services easier to operate and less dependent on manual process handling.
+
+* **Increase monitoring visibility:** Monitoring Health profiles replace the previous preview framework and provide a consistent view of installed Geneos components, supported by more reliable GDNA coverage reporting.
+
+* **Strengthen incident handling:** ServiceNow and ServiceDesk Plus integrations now provide stricter authentication, correlation and failure reporting, helping ensure accepted incidents and subsequent updates follow established service-management processes.
+
+* **Improve release quality:** A release-wide LLM-assisted review examined workflows, failure handling and user-facing behaviour alongside normal testing. The resulting feedback and fixes are intended to improve stability, reduce avoidable defects, and make issues and recovery steps clearer to users.
+
+Together, these capabilities reduce repetitive work, support more consistent operations, and help organisations use their existing Geneos investment more effectively.
+
 * **Automation and reliability:** `geneos` reports failures consistently and returns a non-zero status when any requested item fails. Significant fixes protect existing files, instance directories and certificate stores after failed operations, restore broken installation workflows, and prevent credential exposure through logs, redirects or unintended configuration expansion.
 
 * **Monitoring Health:** The supplied `health-agent` and `health-gateway` profiles replace Monitor-Of-The-Monitors. Monitoring includes, identifiers, GDNA reports and dashboards use `layer` rather than `level` names. Existing installations need migration; see the [update notes](UPDATENOTES.md#v1310-in-development).
 
-* **Geneos management:** Profile options persist correctly, secrets are encoded before saving, and rebuilds show member actions. `set` and `unset` can rebuild and reload in one operation. TLS import and inspection support more certificate sources, package installation handles multiple archives, and `adb info`, `clean` and the new `edit` alias improve XPath and URL inspection and editing. Gateway XML updates better preserve existing content.
+* **Geneos management:** Profile options persist correctly, secrets are encoded before saving, and rebuilds show member actions. `set` and `unset` can rebuild and reload in one operation. TLS import and inspection support more certificate sources, package installation handles multiple archives, and `adb info`, `clean` and the new `edit` alias improve XPath and URL inspection and editing. Gateway XML updates better preserve existing content. **New deployment guardrails** warn before TLS initialization or package installation about conflicting GENEOS_HOME directories and fresh or restored installations that lack signing material, with guidance for the `tls export`, `import`, `renew` and central `tls create` workflows.
 
-* **Gateway includes (preview):** Manage includes and templates independently of the `geneos` version, with site-specific configuration and a separate versioned archive. New `geneos includes install`, `delete`/`remove` and `fix` commands install releases, prune unused versions and repair references. Existing setups using the old `config` includes can move to the site layout with `fix`. This remains a preview.
+* **Gateway includes (preview):** Manage includes and templates independently of the `geneos` version, with source-prefixed versions, site-specific configuration and a separate archive. Different sources can coexist without one source's updates pruning another's links. New `geneos includes install`, `delete`/`remove` and `fix` commands install releases, prune unused versions and repair references. Existing setups using the old configuration naming can move to the site layout with `fix`. This remains a preview.
 
 * **Incident integrations:** ServiceNow and ServiceDesk Plus handling now requires authentication and correlation, reports failures to clients, and avoids duplicate submissions after an incident is accepted. Request data stays literal, and configuration reloads refresh connection credentials.
 

@@ -89,6 +89,8 @@ Removing a name predicate broadens the data-item path. It does not delete the da
 
 After each file is processed, `clean` and `edit` report the number of updated XPath and URL links, which XPath components changed, and any modifier aliases or startup-data entries removed. A file with no changes is reported as such.
 
+Use `--verbose` (`-v`) to include each changed XPath and web-page URL with its before and after values, each cleared modifier alias, and each removed startup-data entry. The report identifies the archive entry and dashboard line. Use `--log FILE` (`-l FILE`) to append reports and processing diagnostics to a file instead of the console. The log may contain dashboard names and URLs. `--output` still selects the cleaned-file directory.
+
 1. Inspect the source with `geneos adb info`.
 2. Write a cleaned copy:
 

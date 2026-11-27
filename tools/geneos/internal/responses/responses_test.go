@@ -75,6 +75,7 @@ func TestFormattedCSVOrdersResponsesAndSkipsErrors(t *testing.T) {
 		"a": {Dataview: &Dataview{Table: [][]string{{"a", "first"}}}},
 		"x": {Err: errors.New("failed"), Dataview: &Dataview{Table: [][]string{{"x", "hidden"}}}},
 	}
+
 	var output bytes.Buffer
 	if err := responses.Formatted(&output, "csv", []string{"name", "value"}, nil, StderrWriter(io.Discard)); !errors.Is(err, ErrReported) {
 		t.Fatalf("Formatted() error = %v, want ErrReported", err)
@@ -90,6 +91,21 @@ func TestFormattedCSVOrdersResponsesAndSkipsErrors(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("CSV rows = %#v, want %#v", got, want)
+	}
+}
+
+func TestFormattedToolkitReportsResponseErrors(t *testing.T) {
+	var out, stderr bytes.Buffer
+	responses := GeneralResponses{
+		"bad": NewFailed(errors.New("line one\nline two\x00")),
+	}
+	err := responses.Formatted(&out, "toolkit", []string{"id"}, nil, StderrWriter(&stderr))
+	if !errors.Is(err, ErrReported) {
+		t.Fatalf("Formatted() error = %v, want ErrReported", err)
+	}
+	want := "<!>samplingStatus,bad: line one\\nline two\n"
+	if !strings.Contains(out.String(), want) {
+		t.Errorf("output = %q, want %q", out.String(), want)
 	}
 }
 

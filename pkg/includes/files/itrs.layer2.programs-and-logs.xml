@@ -1,0 +1,657 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-27 09:42:02 by PeterGalbavy on ITRSLP372-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
+	<types>
+		<typeGroup name="Layer 2 - Application Baseline">
+			<type name="Layer 2 - Application Baseline">
+				<!--The Application Baseline type adds the shared Logs, Processes and Services
+samplers to a managed entity. The Logs and Processes samplers are empty here
+and are populated by sampler includes from Layer 3 application types, such as
+those in itrs.layer3.geneos.xml, or by your own sampler includes.
+
+The Logs and Processes samplers are shown in the "Programs and Logs" group,
+set by the SAMPLER_GROUP variable.-->
+				<environment ref="Layer 2 - Application Baseline Defaults"/>
+				<var name="SAMPLER_GROUP">
+					<string>Programs and Logs</string>
+				</var>
+				<sampler ref="Logs"/>
+				<sampler ref="Processes"/>
+				<sampler ref="Services"/>
+			</type>
+		</typeGroup>
+	</types>
+	<samplers>
+		<samplerGroup name="Layer 2 - Application Baseline">
+			<sampler name="Logs">
+				<!--File Keyword Monitor sampler for application log files. No files are defined
+here; add them with sampler includes that reference this sampler. Files use
+LOGS_ACTIVE as their default active time, and persistent data is kept in the
+"fkm" save location so that monitoring resumes from the last position after a
+Netprobe restart.-->
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<plugin>
+					<fkm>
+						<display>
+							<columns>
+								<column>status</column>
+								<column>permissions</column>
+								<column>lastModificationTime</column>
+								<column>fileSize</column>
+								<column>updateRate</column>
+								<column>triggerDetails</column>
+								<column>fileOwner</column>
+								<column>absolutePath</column>
+							</columns>
+							<triggerMode>MULTIPLE_GROUPED_TRIGGER</triggerMode>
+							<lastTriggerInStatus>
+								<data>false</data>
+							</lastTriggerInStatus>
+						</display>
+						<isPCREMode>
+							<data>true</data>
+						</isPCREMode>
+						<defaultFileActiveTime>
+							<var ref="LOGS_ACTIVE"/>
+						</defaultFileActiveTime>
+						<extendedNTEventLogOutput>
+							<data>true</data>
+						</extendedNTEventLogOutput>
+						<persistentData>
+							<enabled>
+								<data>true</data>
+							</enabled>
+							<saveLocation>
+								<data>fkm</data>
+							</saveLocation>
+						</persistentData>
+					</fkm>
+				</plugin>
+			</sampler>
+			<sampler name="Processes">
+				<!--Processes sampler for application processes. No processes are defined here;
+add them with sampler includes that reference this sampler. The sampler only
+runs during the PROCESSES_ACTIVE active time. Set the processInstances
+variable to check the expected number of instances of each process.-->
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<plugin>
+					<processes>
+						<regexMode>PCRE</regexMode>
+					</processes>
+				</plugin>
+				<activeTimes>
+					<activeTime>
+						<var ref="PROCESSES_ACTIVE"/>
+					</activeTime>
+				</activeTimes>
+			</sampler>
+			<sampler name="Services">
+				<!--Windows Services sampler with default settings, intended for managed
+entities on Windows Netprobes.-->
+				<plugin>
+					<win-services/>
+				</plugin>
+			</sampler>
+		</samplerGroup>
+	</samplers>
+	<rules>
+		<ruleGroup name="Layer 2 - Application Baseline">
+			<ruleGroup name="Processes">
+				<rule name="processInstances">
+					<!--Checks the instance count of each process row against an expected range
+taken from the processInstances variable, which should contain one entry for
+each process in the form "(ROWNAME,MIN..MAX)" or "(ROWNAME,COUNT)", where a
+single COUNT requires exactly that number of instances. An entry for the row
+name is matched exactly. The special entry "(*,MIN..MAX)" or "(*,COUNT)" is used
+for every row that has no entry of its own. The variable can be a
+string in this format, which is the user's responsibility to get right, or a
+name-value list in which each name must be the row name and each value must be
+either a single number or a range in the form num..num. Rows that match
+neither use a range of 1 to 99999, so that a monitored process must be running.
+A count outside the range becomes warning after 15 samples, or directly if the
+severity is undefined, for example after a restart, and critical after a
+further 45 samples. At the default 20 second interval that is 5 and 15 minutes.
+An empty count is undefined. Rows with "#" in their name are ignored.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Application Baseline&quot;)][(param(&quot;PluginName&quot;)=&quot;PROCESSES&quot;)]/dataview/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;instanceCount&quot;)]</target>
+					</targets>
+					<priority>10000</priority>
+					<block>
+						<set>
+							<var ref="rowname"/>
+							<target>
+								<rowName/>
+							</target>
+						</set>
+						<set>
+							<var ref="testRowname"/>
+							<format>
+								<string>(%s,</string>
+								<var ref="rowname"/>
+							</format>
+						</set>
+						<if>
+							<equal>
+								<strpos>
+									<var ref="processInstances"/>
+									<var ref="testRowname"/>
+								</strpos>
+								<integer>0</integer>
+							</equal>
+							<set>
+								<var ref="testRowname"/>
+								<string>(*,</string>
+							</set>
+						</if>
+						<set>
+							<var ref="sep"/>
+							<string>..</string>
+						</set>
+						<set>
+							<var ref="min"/>
+							<integer>1</integer>
+						</set>
+						<set>
+							<var ref="max"/>
+							<integer>99999</integer>
+						</set>
+						<if>
+							<notEqual>
+								<strpos>
+									<var ref="processInstances"/>
+									<var ref="testRowname"/>
+								</strpos>
+								<integer>0</integer>
+							</notEqual>
+							<block>
+								<set>
+									<var ref="range"/>
+									<stringBefore>
+										<stringAfter>
+											<var ref="processInstances"/>
+											<var ref="testRowname"/>
+										</stringAfter>
+										<string>)</string>
+									</stringBefore>
+								</set>
+								<if>
+									<notEqual>
+										<strpos>
+											<var ref="range"/>
+											<var ref="sep"/>
+										</strpos>
+										<integer>0</integer>
+									</notEqual>
+									<block>
+										<set>
+											<var ref="min"/>
+											<multiply>
+												<double>1.0</double>
+												<stringBefore>
+													<var ref="range"/>
+													<var ref="sep"/>
+												</stringBefore>
+											</multiply>
+										</set>
+										<set>
+											<var ref="max"/>
+											<multiply>
+												<double>1.0</double>
+												<stringAfter>
+													<var ref="range"/>
+													<var ref="sep"/>
+												</stringAfter>
+											</multiply>
+										</set>
+									</block>
+									<block>
+										<set>
+											<var ref="min"/>
+											<multiply>
+												<double>1.0</double>
+												<var ref="range"/>
+											</multiply>
+										</set>
+										<set>
+											<var ref="max"/>
+											<multiply>
+												<double>1.0</double>
+												<var ref="range"/>
+											</multiply>
+										</set>
+									</block>
+								</if>
+							</block>
+						</if>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<or>
+									<lt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<var ref="min"/>
+									</lt>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<var ref="max"/>
+									</gt>
+								</or>
+								<if>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>undefined</severity>
+									</equal>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<if>
+										<equal>
+											<dataItem>
+												<property>state/@severity</property>
+											</dataItem>
+											<severity>warning</severity>
+										</equal>
+										<transaction>
+											<delay unit="samples">45</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>critical</severity>
+											</update>
+										</transaction>
+										<if>
+											<notEqual>
+												<dataItem>
+													<property>state/@severity</property>
+												</dataItem>
+												<severity>critical</severity>
+											</notEqual>
+											<transaction>
+												<delay unit="samples">15</delay>
+												<update>
+													<property>state/@severity</property>
+													<severity>warning</severity>
+												</update>
+											</transaction>
+										</if>
+									</if>
+								</if>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Logs">
+				<rule name="logStatus">
+					<!--Sets the severity of the status cell of FKM samplers in the Application
+Baseline type, for the file rows only. The status values are "" (undefined),
+OK (ok), WARNING* (warning after 15 samples) and FAIL* (warning after 15
+samples, then critical after a further 45 samples). A cell whose severity is
+undefined, such as after a restart, goes directly to warning for WARNING* and
+FAIL*. Any other status is left unchanged. Key rows, which
+have "#" in their name, are not targeted, as their severity is set by the key.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Application Baseline&quot;)][(param(&quot;PluginName&quot;)=&quot;FKM&quot;)]/dataview/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;status&quot;)]</target>
+					</targets>
+					<priority>10000</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string>OK</string>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+							<if>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string/>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+								<if>
+									<like>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string>WARNING*</string>
+									</like>
+									<if>
+										<equal>
+											<dataItem>
+												<property>state/@severity</property>
+											</dataItem>
+											<severity>undefined</severity>
+										</equal>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>warning</severity>
+											</update>
+										</transaction>
+										<transaction>
+											<delay unit="samples">15</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>warning</severity>
+											</update>
+										</transaction>
+									</if>
+									<if>
+										<like>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<string>FAIL*</string>
+										</like>
+										<if>
+											<equal>
+												<dataItem>
+													<property>state/@severity</property>
+												</dataItem>
+												<severity>undefined</severity>
+											</equal>
+											<transaction>
+												<update>
+													<property>state/@severity</property>
+													<severity>warning</severity>
+												</update>
+											</transaction>
+											<if>
+												<equal>
+													<dataItem>
+														<property>state/@severity</property>
+													</dataItem>
+													<severity>warning</severity>
+												</equal>
+												<transaction>
+													<delay unit="samples">45</delay>
+													<update>
+														<property>state/@severity</property>
+														<severity>critical</severity>
+													</update>
+												</transaction>
+												<if>
+													<notEqual>
+														<dataItem>
+															<property>state/@severity</property>
+														</dataItem>
+														<severity>critical</severity>
+													</notEqual>
+													<transaction>
+														<delay unit="samples">15</delay>
+														<update>
+															<property>state/@severity</property>
+															<severity>warning</severity>
+														</update>
+													</transaction>
+												</if>
+											</if>
+										</if>
+									</if>
+								</if>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+		</ruleGroup>
+	</rules>
+	<activeTimes>
+		<activeTimeGroup name="Layer 2 - Application Baseline">
+			<activeTime name="Application - Always">
+				<scheduledPeriod>
+					<days>
+						<monday>true</monday>
+						<tuesday>true</tuesday>
+						<wednesday>true</wednesday>
+						<thursday>true</thursday>
+						<friday>true</friday>
+						<saturday>true</saturday>
+						<sunday>true</sunday>
+					</days>
+				</scheduledPeriod>
+			</activeTime>
+		</activeTimeGroup>
+	</activeTimes>
+	<environments>
+		<environmentGroup name="Layer 2 - Application Baseline">
+			<environment name="Layer 2 - Application Baseline Defaults">
+				<!--Default active times for the Logs and Processes samplers. Override
+LOGS_ACTIVE and PROCESSES_ACTIVE in your site configuration to limit
+monitoring to application hours.-->
+				<var name="LOGS_ACTIVE">
+					<activeTime>
+						<activeTime ref="Application - Always"/>
+					</activeTime>
+				</var>
+				<var name="PROCESSES_ACTIVE">
+					<activeTime>
+						<activeTime ref="Application - Always"/>
+					</activeTime>
+				</var>
+			</environment>
+		</environmentGroup>
+	</environments>
+	<staticVars>
+		<fkmTables>
+			<fkmTableGroup name="Layer 2 - Application Baseline">
+				<fkmTable name="Layer 2 - Fallback Ignore Noise">
+					<!--Fallback table that ignores debug and trace lines. Add it to a Logs file
+after any application specific tables, as the first match wins in both table
+and key order and so lines claimed by an earlier table are not affected.
+
+The single key is a regular expression that looks for the word debug or trace
+in the first 80 characters of the line, where the level is in the common log
+layouts, such as " DEBUG ", "[DEBUG]", "|DEBUG|", level=debug and JSON
+"level":"debug". Looking only at the start of the line avoids ignoring a line
+that just mentions the word debug later in its message.-->
+					<keys>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>^.{0,80}\b(debug|trace)\b</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</ignoreKey>
+					</keys>
+				</fkmTable>
+				<fkmTable name="Layer 2 - Fallback Common Errors">
+					<!--Fallback table for common error strings, for applications that have no
+specific table. Add it to a Logs file after any application specific tables
+and after the Layer 2 - Fallback Ignore Noise table, so that debug and trace
+lines are ignored first. The first matching key wins, so fatal conditions come
+before errors. Fatal conditions are fail and errors are warning.
+
+The level keys are regular expressions that look for the level as a word in the
+first 80 characters of the line, so that a message which only mentions the
+word error is not matched. The other keys are plain strings, which are not
+case sensitive.-->
+					<keys>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>^.{0,80}\b(fatal|panic)\b</data>
+									</searchString>
+									<rules>REGEXP_IGNORE_CASE</rules>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>out of memory</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>OutOfMemoryError</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>segmentation fault</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>core dumped</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>no space left on device</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>^.{0,80}\b(error|err|severe)\b</data>
+									</searchString>
+									<rules>REGEXP_IGNORE_CASE</rules>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>exception:</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>Exception in thread</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>Traceback (most recent call last)</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>permission denied</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>connection refused</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>connection reset</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+					</keys>
+				</fkmTable>
+			</fkmTableGroup>
+		</fkmTables>
+	</staticVars>
+	<exportedData>
+		<dataSet name="Layer 2 - Application Baseline">
+			<paths>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 2 - Application Baseline&quot;)]</path>
+			</paths>
+		</dataSet>
+	</exportedData>
+</gateway>

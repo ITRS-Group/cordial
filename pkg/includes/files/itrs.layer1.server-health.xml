@@ -1,0 +1,857 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-27 09:07:23 by PeterGalbavy on ITRSLP372-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.2-261105/gateway.xsd">
+	<types>
+		<typeGroup name="Layer 1 - Server Health">
+			<type name="Layer 1 - Server Health">
+				<environment ref="Layer 1 - Server Health Defaults"/>
+				<var name="SAMPLER_GROUP">
+					<string>System</string>
+				</var>
+				<sampler ref="CPU"/>
+				<sampler ref="Disk"/>
+				<sampler ref="Hardware"/>
+				<sampler ref="Network"/>
+			</type>
+		</typeGroup>
+	</types>
+	<samplers>
+		<samplerGroup name="Layer 1 - Server Health">
+			<sampler name="CPU">
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<sampleInterval>
+					<var ref="FAST_SAMPLE"/>
+				</sampleInterval>
+				<plugin>
+					<cpu/>
+				</plugin>
+			</sampler>
+			<sampler name="Disk">
+				<!--Auto-detects local partitions. Pseudo file systems (/dev, /run, /proc,
+/sys), overlay, tmpfs, fuse.snapfuse, 9p, squashfs and optical media (/cdrom,
+CDFS, UDF) are excluded, and NFS partitions are not checked.
+
+Set EXPECTED_PARTITIONS to list partitions that must always be shown.-->
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<sampleInterval>
+					<var ref="SLOW_SAMPLE"/>
+				</sampleInterval>
+				<expectRows>
+					<var ref="EXPECTED_PARTITIONS"/>
+				</expectRows>
+				<plugin>
+					<disk>
+						<excludePartitions>
+							<excludePartition>
+								<path>/dev/*</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/run/*</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/proc/*</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/sys/*</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/dev/pts</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/cdrom/*</path>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>overlay</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>tmpfs</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>fuse.snapfuse</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>9p</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>squashfs</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>CDFS</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>UDF</fileSystem>
+							</excludePartition>
+						</excludePartitions>
+						<autoDetect>
+							<data>true</data>
+						</autoDetect>
+						<checkNFSPartitions>
+							<data>false</data>
+						</checkNFSPartitions>
+					</disk>
+				</plugin>
+			</sampler>
+			<sampler name="Hardware">
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<sampleInterval>
+					<var ref="NORMAL_SAMPLE"/>
+				</sampleInterval>
+				<plugin>
+					<hardware>
+						
+					</hardware>
+				</plugin>
+				<dataviews>
+					<dataview name="NT-HARDWARE">
+						<displayName>Hardware</displayName>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="Network">
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<sampleInterval>
+					<var ref="FAST_SAMPLE"/>
+				</sampleInterval>
+				<plugin>
+					<network>
+						<showVirtualInterface>
+							<data>true</data>
+						</showVirtualInterface>
+						<showLoopback>
+							<data>false</data>
+						</showLoopback>
+						<showMBits>
+							<data>true</data>
+						</showMBits>
+						<showAbsolute>
+							<data>true</data>
+						</showAbsolute>
+						<showUnconfiguredNics>
+							<data>false</data>
+						</showUnconfiguredNics>
+					</network>
+				</plugin>
+				<dataviews>
+					<dataview name="NT-NETWORK">
+						<displayName>Network</displayName>
+					</dataview>
+				</dataviews>
+			</sampler>
+		</samplerGroup>
+	</samplers>
+	<rules>
+		<ruleGroup name="Layer 1 - Server Health">
+			<ruleGroup name="CPU">
+				<rule name="averageCPUUtilisation">
+					<!--Checks the Average_cpu row (Unix) and the _Total row (Windows).
+
+Critical if above 95% for 12 samples. Warning above 80% while not falling,
+becoming critical if the warning continues for 12 samples. Otherwise OK.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[(@name=&quot;Average_cpu&quot;)]/cell[(@column=&quot;percentUtilisation&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[(@name=&quot;_Total&quot;)]/cell[(@column=&quot;%processorTime&quot;)]</target>
+					</targets>
+					<priority>1005</priority>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>95</integer>
+							</gt>
+							<transaction>
+								<delay unit="samples">12</delay>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<if>
+								<and>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>80</integer>
+									</gt>
+									<gte>
+										<rate>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+										</rate>
+										<integer>0</integer>
+									</gte>
+								</and>
+								<if>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>undefined</severity>
+									</equal>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<if>
+										<equal>
+											<dataItem>
+												<property>state/@severity</property>
+											</dataItem>
+											<severity>warning</severity>
+										</equal>
+										<transaction>
+											<delay unit="samples">12</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>critical</severity>
+											</update>
+										</transaction>
+										<if>
+											<notEqual>
+												<dataItem>
+													<property>state/@severity</property>
+												</dataItem>
+												<severity>critical</severity>
+											</notEqual>
+											<transaction>
+												<delay unit="samples">12</delay>
+												<update>
+													<property>state/@severity</property>
+													<severity>warning</severity>
+												</update>
+											</transaction>
+										</if>
+									</if>
+								</if>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="stuckCPUCore">
+					<!--Checks each CPU core. Warning when a core is above 99%, becoming critical if
+the warning continues for 12 samples while not falling. Other cores have no
+severity.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;percentUtilisation&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;%processorTime&quot;)]</target>
+					</targets>
+					<priority>1005</priority>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>99</integer>
+							</gt>
+							<if>
+								<and>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>warning</severity>
+									</equal>
+									<gte>
+										<rate>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+										</rate>
+										<integer>0</integer>
+									</gte>
+								</and>
+								<transaction>
+									<delay unit="samples">12</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<notEqual>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>critical</severity>
+									</notEqual>
+									<transaction>
+										<delay unit="samples">12</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule name="hyperThreading">
+					<!--Warning when hyper-threading is ENABLED, unless the operating environment
+variable hyperThreadingOK is set to true.
+
+The targets do not name a dataview because the Hardware dataview is called
+NT-HARDWARE on Windows. Its display name does not apply to rule XPaths.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/headlines/cell[(@name=&quot;HyperThreadingStatus&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;hyperThreadingStatus&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<and>
+								<equal>
+									<var ref="hyperThreadingOK"/>
+									<boolean>false</boolean>
+								</equal>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>ENABLED</string>
+								</equal>
+							</and>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>warning</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Disk">
+				<rule name="percentageUsed">
+					<!--Ignore rows where the totalSpace column is 0, which are typically
+pseudo-devices.
+
+Critical at 98% used or more. Warning at 90% or more while usage is not
+falling, becoming critical if the warning continues for 12 samples (one hour
+at the default SLOW_SAMPLE of 300 seconds). Otherwise OK.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;DISK&quot;)]/dataview/rows/row/cell[(@column=&quot;percentageUsed&quot;)]</target>
+					</targets>
+					<priority>1005</priority>
+					<pathAliases>
+						<pathAlias name="totalSpace">parent::node()/cell[(@column=&quot;totalSpace&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<block>
+							<set>
+								<var ref="totalSpace"/>
+								<dataItem>
+									<pathAlias ref="totalSpace"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<if>
+								<equal>
+									<var ref="totalSpace"/>
+									<integer>0</integer>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+								<if>
+									<gte>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>98</integer>
+									</gte>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>critical</severity>
+										</update>
+									</transaction>
+									<if>
+										<and>
+											<gte>
+												<dataItem>
+													<property>@value</property>
+												</dataItem>
+												<integer>90</integer>
+											</gte>
+											<gte>
+												<rate>
+													<dataItem>
+														<property>@value</property>
+													</dataItem>
+												</rate>
+												<integer>0</integer>
+											</gte>
+										</and>
+										<if>
+											<equal>
+												<dataItem>
+													<property>state/@severity</property>
+												</dataItem>
+												<severity>warning</severity>
+											</equal>
+											<transaction>
+												<delay unit="samples">12</delay>
+												<update>
+													<property>state/@severity</property>
+													<severity>critical</severity>
+												</update>
+											</transaction>
+											<if>
+												<notEqual>
+													<dataItem>
+														<property>state/@severity</property>
+													</dataItem>
+													<severity>critical</severity>
+												</notEqual>
+												<transaction>
+													<update>
+														<property>state/@severity</property>
+														<severity>warning</severity>
+													</update>
+												</transaction>
+											</if>
+										</if>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>ok</severity>
+											</update>
+										</transaction>
+									</if>
+								</if>
+							</if>
+						</block>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Hardware">
+				<rule name="memoryUsedPercent">
+					<!--Critical above 98%. Warning above 90% for 15 samples while not falling,
+becoming critical if the warning continues for a further 45 samples. Otherwise
+OK.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;memoryUsedPercent&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>1005</priority>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>98</integer>
+							</gt>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<if>
+								<and>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>90</integer>
+									</gt>
+									<gte>
+										<rate>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+										</rate>
+										<integer>0</integer>
+									</gte>
+								</and>
+								<if>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>undefined</severity>
+									</equal>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<if>
+										<equal>
+											<dataItem>
+												<property>state/@severity</property>
+											</dataItem>
+											<severity>warning</severity>
+										</equal>
+										<transaction>
+											<delay unit="samples">45</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>critical</severity>
+											</update>
+										</transaction>
+										<if>
+											<notEqual>
+												<dataItem>
+													<property>state/@severity</property>
+												</dataItem>
+												<severity>critical</severity>
+											</notEqual>
+											<transaction>
+												<delay unit="samples">15</delay>
+												<update>
+													<property>state/@severity</property>
+													<severity>warning</severity>
+												</update>
+											</transaction>
+										</if>
+									</if>
+								</if>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="swapUsed">
+					<!--In general, swapping is considered bad. Let's allow a small amount.
+
+Warning above 10, or above 5 while not falling, for 15 samples, becoming
+critical if the warning continues for a further 45 samples. Otherwise OK.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;swapUsed&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>5</priority>
+					<block>
+						<if>
+							<or>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>10</integer>
+								</gt>
+								<and>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>5</integer>
+									</gt>
+									<gte>
+										<rate>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+										</rate>
+										<integer>0</integer>
+									</gte>
+								</and>
+							</or>
+							<if>
+								<equal>
+									<dataItem>
+										<property>state/@severity</property>
+									</dataItem>
+									<severity>undefined</severity>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<if>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>warning</severity>
+									</equal>
+									<transaction>
+										<delay unit="samples">45</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>critical</severity>
+										</update>
+									</transaction>
+									<if>
+										<notEqual>
+											<dataItem>
+												<property>state/@severity</property>
+											</dataItem>
+											<severity>critical</severity>
+										</notEqual>
+										<transaction>
+											<delay unit="samples">15</delay>
+											<update>
+												<property>state/@severity</property>
+												<severity>warning</severity>
+											</update>
+										</transaction>
+									</if>
+								</if>
+							</if>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule name="zombieProcesses">
+					<!--No severity when the value is 0 or NA. Any other value becomes warning after
+300 seconds and critical after a further 300 seconds, unless the value is falling.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;zombieProcesses&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>5</priority>
+					<activeStateAffectsCell>false</activeStateAffectsCell>
+					<block>
+						<if>
+							<or>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</equal>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>NA</string>
+								</equal>
+							</or>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<and>
+									<equal>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>warning</severity>
+									</equal>
+									<gte>
+										<rate>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+										</rate>
+										<integer>0</integer>
+									</gte>
+								</and>
+								<transaction>
+									<delay>300</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<notEqual>
+										<dataItem>
+											<property>state/@severity</property>
+										</dataItem>
+										<severity>critical</severity>
+									</notEqual>
+									<transaction>
+										<delay>300</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Network">
+				<rule name="networkStatus - Unix">
+					<!--Critical when an interface status is DOWN, OK when it is OK and warning for
+any other value. Empty values have no severity.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;NETWORK&quot;)]/dataview/rows/row/cell[(@column=&quot;status&quot;)]</target>
+					</targets>
+					<priority>5</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>DOWN</string>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<equal>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string>OK</string>
+									</equal>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="tcpRetransmissionRate - Windows">
+					<!--Checks the tcpRetransmissionRate headline on Windows. Warning above 20.
+
+The critical threshold of 999999 is a placeholder. Redefine the rule with a
+value suited to the server to enable it.-->
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)][(param(&quot;PluginName&quot;)=&quot;NETWORK&quot;)]/dataview[(@name=&quot;NT-NETWORK&quot;)]/headlines/cell[(@name=&quot;tcpRetransmissionRate&quot;)]</target>
+					</targets>
+					<priority>5</priority>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>999999</integer>
+							</gt>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>20</integer>
+								</gt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+		</ruleGroup>
+	</rules>
+	<environments>
+		<environmentGroup name="Layer 1 - Server Health">
+			<environment name="Layer 1 - Server Health Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+				<var name="EXPECTED_PARTITIONS">
+					<stringList/>
+				</var>
+			</environment>
+		</environmentGroup>
+	</environments>
+	<exportedData>
+		<dataSet name="Layer 1 - Server Health">
+			<paths>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Layer 1 - Server Health&quot;)]</path>
+			</paths>
+		</dataSet>
+	</exportedData>
+	<operatingEnvironment>
+		<var name="hyperThreadingOK">
+			<boolean>false</boolean>
+		</var>
+	</operatingEnvironment>
+</gateway>

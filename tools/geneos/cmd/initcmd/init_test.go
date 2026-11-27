@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -18,6 +19,64 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/licd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
+
+func TestInitRestoreInitialisesBeforeRebuild(t *testing.T) {
+	cmdtest.Env(t)
+	previousSite := config.Get[string](config.Global(), "site")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previousSite) })
+	config.Set(config.Global(), "site", "")
+	root := filepath.Join(t.TempDir(), "geneos")
+	templateDir := filepath.Join(root, "gateway", "templates")
+	if err := os.MkdirAll(templateDir, 0o775); err != nil {
+		t.Fatal(err)
+	}
+	const customTemplate = "<gateway><!-- custom instance template --></gateway>\n"
+	templatePath := filepath.Join(templateDir, "gateway-instance.setup.xml.gotmpl")
+	if err := os.WriteFile(templatePath, []byte(customTemplate), 0o664); err != nil {
+		t.Fatal(err)
+	}
+	backup := filepath.Join(t.TempDir(), "backup.tar.gz")
+	writeInitArchive(t, backup, map[string]string{
+		"gateway/gateways/restored/gateway.json":                     `{"name":"restored"}`,
+		"gateway/shared/restored.txt":                                "restored shared contents",
+		"gateway/config/config.layer0.foundation.xml":                "restored config contents",
+		"gateway/local/local-config.layer0.foundation.xml":           "restored site contents",
+		"gateway/includes/itrs.layer0.foundation.xml":                "restored primary include",
+		"gateway/includes/itrs-v0.0.1/itrs.layer1.server-health.xml": "restored linked include",
+	}, map[string]string{
+		"gateway/includes/itrs.layer1.server-health.xml": "itrs-v0.0.1/itrs.layer1.server-health.xml",
+	})
+
+	res := cmdtest.Run(t, cmd.Cmd, "init", "--insecure", "--force", "-R", backup, "-X", root)
+	if res.Err != nil {
+		t.Fatalf("init restore: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+	for path, want := range map[string]string{
+		templatePath: customTemplate,
+		filepath.Join(root, "gateway", "gateways", "restored", "instance.setup.xml"):  customTemplate,
+		filepath.Join(root, "gateway", "shared", "restored.txt"):                      "restored shared contents",
+		filepath.Join(root, "gateway", "config", "config.layer0.foundation.xml"):      "restored config contents",
+		filepath.Join(root, "gateway", "local", "local-config.layer0.foundation.xml"): "restored site contents",
+		filepath.Join(root, "gateway", "includes", "itrs.layer0.foundation.xml"):      "restored primary include",
+		filepath.Join(root, "gateway", "includes", "itrs.layer1.server-health.xml"):   "restored linked include",
+	} {
+		got, err := os.ReadFile(path)
+		if err != nil || string(got) != want {
+			t.Errorf("%s = %q, %v; want %q", path, got, err, want)
+		}
+		if target, err := os.Readlink(filepath.Join(root, "gateway", "includes", "itrs.layer1.server-health.xml")); err != nil || target != "itrs-v0.0.1/itrs.layer1.server-health.xml" {
+			t.Errorf("restored include link = %q, %v", target, err)
+		}
+	}
+	prepare := strings.Index(res.Stdout, "Extracting include files")
+	rebuild := strings.Index(res.Stdout, "gateway restored config rebuild complete")
+	if prepare < 0 || rebuild < 0 || prepare >= rebuild {
+		t.Errorf("components must be initialised before restore rebuild:\n%s", res.Stdout)
+	}
+	if strings.Contains(res.Stderr, "No templates found") || strings.Contains(res.Stderr, "Cannot parse template") {
+		t.Errorf("restore rebuilt before templates were ready:\n%s", res.Stderr)
+	}
+}
 
 func TestInitRejectsEmptyArchive(t *testing.T) {
 	flag := initCmd.PersistentFlags().Lookup("archive")
@@ -70,6 +129,29 @@ func TestInitRestore(t *testing.T) {
 	}
 }
 
+func TestInitRestoreStart(t *testing.T) {
+	cmdtest.Env(t)
+	tmp := t.TempDir()
+	marker := filepath.Join(tmp, "started")
+	program := filepath.Join(tmp, "fixture-licd")
+	if err := os.WriteFile(program, []byte("#!/bin/sh\n: > "+marker+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	backup := filepath.Join(tmp, "backup.tar.gz")
+	writeInitArchive(t, backup, map[string]string{
+		"licd/licds/restored/licd.json": `{"name":"restored","program":` + strconv.Quote(program) + `}`,
+	})
+
+	root := filepath.Join(tmp, "geneos")
+	res := cmdtest.Run(t, cmd.Cmd, "init", "--insecure", "--restore", backup, "--no-install", "--start", root)
+	if res.Err != nil {
+		t.Fatalf("init --start: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("restored instance was not started: %v", err)
+	}
+}
+
 func TestInitRestoreMissingBackup(t *testing.T) {
 	cmdtest.Env(t)
 	tmp := t.TempDir()
@@ -80,7 +162,28 @@ func TestInitRestoreMissingBackup(t *testing.T) {
 	}
 }
 
-func writeInitArchive(t *testing.T, path string, entries map[string]string) {
+func TestInitRestoreWarnsWithoutSigningBundle(t *testing.T) {
+	cmdtest.Env(t)
+	tmp := t.TempDir()
+	backup := filepath.Join(tmp, "backup.tar.gz")
+	writeInitArchive(t, backup, map[string]string{
+		"gateway/shared/restored.txt": "shared contents",
+	})
+
+	res := cmdtest.Run(t, cmd.Cmd, "init", "--restore", backup, "--no-install", filepath.Join(tmp, "geneos"))
+	if res.Err != nil {
+		t.Fatalf("init: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+	if !strings.Contains(res.Stderr, "Restoring without the original signing bundle") {
+		t.Fatalf("restore warning missing from stderr:\n%s", res.Stderr)
+	}
+	if !strings.Contains(res.Stderr, "geneos tls renew") ||
+		!strings.Contains(res.Stderr, "geneos tls create") {
+		t.Fatalf("restore warning lacks recovery commands:\n%s", res.Stderr)
+	}
+}
+
+func writeInitArchive(t *testing.T, path string, entries map[string]string, links ...map[string]string) {
 	t.Helper()
 	f, err := os.Create(path)
 	if err != nil {
@@ -94,6 +197,13 @@ func writeInitArchive(t *testing.T, path string, entries map[string]string) {
 		}
 		if _, err := tw.Write([]byte(body)); err != nil {
 			t.Fatal(err)
+		}
+	}
+	for _, group := range links {
+		for name, target := range group {
+			if err := tw.WriteHeader(&tar.Header{Name: name, Linkname: target, Mode: 0o777, Typeflag: tar.TypeSymlink}); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	if err := errors.Join(tw.Close(), gz.Close(), f.Close()); err != nil {

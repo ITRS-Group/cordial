@@ -21,10 +21,12 @@ limitations under the License.
 // Only the well-known pairs of insecure and secure ports are ever
 // switched and only when the instance is configured with one of the
 // pair and its TLS state disagrees with it. Every other port is
-// user-defined and is always preserved.
+// user-defined and is always preserved. If the port to switch to is
+// in use then another free port is allocated.
 package tlsports
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -66,17 +68,30 @@ func Target(pairs []Pair, port uint16, secure bool) (target uint16, ok bool) {
 	return 0, false
 }
 
+// functions that find out which ports are in use and allocate new ones,
+// these are variables so that tests can replace them
+var (
+	checkPort    = instance.CheckPort
+	allPorts     = instance.GetAllPorts
+	nextFreePort = instance.NextFreePort
+	freePortFrom = instance.FreePortFrom
+)
+
 // Apply updates the "port" of instance i in-memory, if the instance's
 // TLS capability does not match the member of a pair that it is
-// configured to use and the other member is free. It returns true if
-// the port was changed and the caller is responsible for saving the
-// configuration.
+// configured to use. It returns true if the port was changed and the
+// caller is responsible for saving the configuration.
 //
-// If the other member of the pair is in use by another instance or
-// process then the configured port is kept and a warning logged, it
-// never moves to any other port.
+// The other member of the pair is used if it is free. If it is in use,
+// by another instance or by any other process, then the next free port
+// in the range for the component type is allocated instead, and if
+// there is none then the next free port above the configured one. A
+// port is always allocated, so that the instance does not keep a port
+// that does not match its TLS state, and the user is told which port
+// was wanted, which is used and why.
 func Apply(i geneos.Instance, pairs []Pair) (changed bool) {
 	cf := i.Config()
+	h := i.Host()
 	secure := instance.IsTLSCapable(i)
 	port := config.Get[uint16](cf, "port")
 
@@ -86,14 +101,29 @@ func Apply(i geneos.Instance, pairs []Pair) (changed bool) {
 	}
 
 	// do not move if this instance is already listening on the other port
-	if inUse, _ := instance.CheckPort(i, target); inUse {
+	if inUse, _ := checkPort(i, target); inUse {
 		return false
 	}
 
-	if _, used := instance.GetAllPorts(i.Host())[target]; used {
-		i.Log().Warn("port conventionally used for the TLS configuration is already in use, keeping configured port",
-			slog.Int("port", int(port)), slog.Int("preferred", int(target)), slog.Bool("tls", secure))
-		return false
+	if _, used := allPorts(h)[target]; used {
+		allocated := nextFreePort(h, i.Type())
+		if allocated == 0 {
+			allocated = freePortFrom(h, port+1)
+		}
+		if allocated == 0 {
+			// every port is used, keep what there is
+			i.Log().Warn("port conventionally used for the TLS configuration is already in use and no other port is free, keeping configured port",
+				slog.Int("port", int(port)), slog.Int("preferred", int(target)), slog.Bool("tls", secure))
+			return false
+		}
+		kind := "non-TLS"
+		if secure {
+			kind = "TLS"
+		}
+		fmt.Printf("%s: port %d, the conventional %s port, is in use so using port %d instead\n", i, target, kind, allocated)
+		i.Log().Warn("port conventionally used for the TLS configuration is already in use, using another port",
+			slog.Int("port", int(port)), slog.Int("preferred", int(target)), slog.Int("allocated", int(allocated)), slog.Bool("tls", secure))
+		target = allocated
 	}
 
 	i.Log().Debug("switching port to match TLS configuration",

@@ -136,6 +136,10 @@ func (fr *FormattedReporter) Prepare(report Report) (err error) {
 // is preserved, and the headlines are rendered in the order they were
 // added.
 func (fr *FormattedReporter) AddHeadline(name, value string) {
+	if fr.format == "csv" || fr.format == "tsv" {
+		name = EscapeControl(name)
+		value = EscapeControl(value)
+	}
 	fr.headlines.add(name, value)
 }
 
@@ -143,11 +147,31 @@ func (fr *FormattedReporter) AddHeadline(name, value string) {
 // of a map is undefined they are added in sorted name order, after any
 // headlines already added.
 func (fr *FormattedReporter) AddHeadlines(headlines map[string]string) {
-	fr.headlines.addAll(headlines)
+	escaped := headlines
+	if fr.format == "csv" || fr.format == "tsv" {
+		escaped = make(map[string]string, len(headlines))
+		for name, value := range headlines {
+			escaped[EscapeControl(name)] = EscapeControl(value)
+		}
+	}
+	fr.headlines.addAll(escaped)
 }
 
 // UpdateTable TODO: Document its behavior, inputs, and effects.
 func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
+	if fr.format == "csv" || fr.format == "tsv" {
+		columns = slices.Clone(columns)
+		for i := range columns {
+			columns[i] = EscapeControl(columns[i])
+		}
+		data = slices.Clone(data)
+		for i := range data {
+			data[i] = slices.Clone(data[i])
+			for j := range data[i] {
+				data[i][j] = EscapeControl(data[i][j])
+			}
+		}
+	}
 	if len(fr.columns) == 0 {
 		// init
 		fr.columns = columns

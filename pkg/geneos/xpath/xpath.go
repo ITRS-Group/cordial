@@ -32,8 +32,9 @@ have the form:
 
 Each component except "geneos", "directory", "headlines" and "rows" can
 have a name and other predicates. The path can terminate at any level
-that can carry a name. Apart from names, only attributes in
-managedEntities are currently handled in anyway.
+that can carry a name. Names, managed-entity attributes, sampler types,
+and cell columns are interpreted structurally. Other predicates are
+retained verbatim for transmission to and from a Gateway.
 */
 package xpath
 
@@ -74,12 +75,30 @@ type XPath struct {
 	// headlines is set by Parse for a path that ends at ".../headlines",
 	// so that the suffix is kept when the path is formatted again
 	headlines bool
+
+	// predicates retains predicates not represented by the structured
+	// component fields so they can be passed back to the Gateway.
+	predicates map[string][]string
 }
 
 // Elements TODO: Describe its purpose and intended use.
 type Elements interface {
 	Gateway | Probe | Entity | Sampler | Dataview | Headline | Row | Column
+	xpathElement()
 }
+
+type element interface {
+	xpathElement()
+}
+
+func (Gateway) xpathElement()  {}
+func (Probe) xpathElement()    {}
+func (Entity) xpathElement()   {}
+func (Sampler) xpathElement()  {}
+func (Dataview) xpathElement() {}
+func (Headline) xpathElement() {}
+func (Row) xpathElement()      {}
+func (Column) xpathElement()   {}
 
 // Gateway TODO: Describe its purpose and intended use.
 type Gateway struct {
@@ -127,7 +146,7 @@ type Column struct {
 // populated with fields.
 func New[E Elements](element *E) *XPath {
 	x := &XPath{}
-	if r := x.ResolveTo(element); r != nil {
+	if r := x.ResolveTo(*element); r != nil {
 		return r
 	}
 	return x
@@ -200,7 +219,32 @@ func (x *XPath) Clone() *XPath {
 		v := *x.Column
 		nx.Column = &v
 	}
+	nx.predicates = clonePredicates(x.predicates)
 	return &nx
+}
+
+func clonePredicates(predicates map[string][]string) map[string][]string {
+	if predicates == nil {
+		return nil
+	}
+	clone := make(map[string][]string, len(predicates))
+	for component, values := range predicates {
+		clone[component] = slices.Clone(values)
+	}
+	return clone
+}
+
+func selectPredicates(predicates map[string][]string, components ...string) map[string][]string {
+	var out map[string][]string
+	for _, component := range components {
+		if values, ok := predicates[component]; ok {
+			if out == nil {
+				out = make(map[string][]string, len(components))
+			}
+			out[component] = slices.Clone(values)
+		}
+	}
+	return out
 }
 
 // cloneAttributes returns a copy of attrs, never nil
@@ -222,8 +266,51 @@ func cloneAttributes(attrs map[string]string) map[string]string {
 //
 //	x := x.ResolveTo(&Dataview{})
 //	y := xpath.ResolveTo(&Headline{Name: "headlineName"})
-func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
-	if element == nil {
+func (x *XPath) ResolveTo(element element) *XPath {
+	switch e := element.(type) {
+	case Gateway, Probe, Entity, Sampler, Dataview, Headline, Row, Column:
+		// already a value
+	case *Gateway:
+		if e == nil {
+			return nil
+		}
+		element = *e
+	case *Probe:
+		if e == nil {
+			return nil
+		}
+		element = *e
+	case *Entity:
+		if e == nil {
+			return nil
+		}
+		element = *e
+	case *Sampler:
+		if e == nil {
+			return nil
+		}
+		element = *e
+	case *Dataview:
+		if e == nil {
+			return nil
+		}
+		element = *e
+	case *Headline:
+		if e == nil {
+			return nil
+		}
+		element = *e
+	case *Row:
+		if e == nil {
+			return nil
+		}
+		element = *e
+	case *Column:
+		if e == nil {
+			return nil
+		}
+		element = *e
+	default:
 		return nil
 	}
 
@@ -236,7 +323,7 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 	var nx XPath
 
 	// set the element, remove others
-	switch e := any(*element).(type) {
+	switch e := element.(type) {
 	case Gateway:
 		nx = XPath{
 			Gateway: c.Gateway,
@@ -244,6 +331,7 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		if nx.Gateway == nil {
 			nx.Gateway = &e
 		}
+		nx.predicates = selectPredicates(c.predicates, "gateway")
 	case Probe:
 		nx = XPath{
 			Gateway: c.Gateway,
@@ -255,6 +343,7 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		if nx.Probe == nil {
 			nx.Probe = &e
 		}
+		nx.predicates = selectPredicates(c.predicates, "gateway", "probe")
 	case Entity:
 		nx = XPath{
 			Gateway: c.Gateway,
@@ -271,6 +360,7 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 			e.Attributes = cloneAttributes(e.Attributes)
 			nx.Entity = &e
 		}
+		nx.predicates = selectPredicates(c.predicates, "gateway", "probe", "entity")
 	case Sampler:
 		nx = XPath{
 			Gateway: c.Gateway,
@@ -296,6 +386,7 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 			}
 			nx.Sampler = &e
 		}
+		nx.predicates = selectPredicates(c.predicates, "gateway", "probe", "entity", "sampler")
 	case Dataview:
 		nx = XPath{
 			Gateway:  c.Gateway,
@@ -321,6 +412,7 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		if nx.Dataview == nil {
 			nx.Dataview = &e
 		}
+		nx.predicates = selectPredicates(c.predicates, "gateway", "probe", "entity", "sampler", "dataview")
 	case Headline:
 		nx = XPath{
 			Gateway:  c.Gateway,
@@ -351,6 +443,7 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		if nx.Headline == nil {
 			nx.Headline = &e
 		}
+		nx.predicates = selectPredicates(c.predicates, "gateway", "probe", "entity", "sampler", "dataview", "headline")
 	case Row:
 		nx = XPath{
 			Gateway:  c.Gateway,
@@ -381,6 +474,7 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		if nx.Row == nil {
 			nx.Row = &e
 		}
+		nx.predicates = selectPredicates(c.predicates, "gateway", "probe", "entity", "sampler", "dataview", "row")
 	case Column:
 		nx = XPath{
 			Gateway:  c.Gateway,
@@ -415,6 +509,7 @@ func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 		if nx.Column == nil {
 			nx.Column = &e
 		}
+		nx.predicates = selectPredicates(c.predicates, "gateway", "probe", "entity", "sampler", "dataview", "row", "column")
 	}
 
 	return &nx
@@ -469,10 +564,13 @@ func (x *XPath) IsGateway() bool {
 
 // writeComponent appends a path component with an optional name
 // predicate
-func writeComponent(b *strings.Builder, component, attr, value string) {
+func writeComponent(b *strings.Builder, component, attr, value string, predicates ...string) {
 	b.WriteString(component)
 	if value != "" {
 		fmt.Fprintf(b, "[(@%s=%q)]", attr, value)
+	}
+	for _, predicate := range predicates {
+		b.WriteString(predicate)
 	}
 }
 
@@ -485,13 +583,13 @@ func (x *XPath) String() string {
 		return ""
 	}
 	var p strings.Builder
-	writeComponent(&p, "/geneos/gateway", "name", x.Gateway.Name)
+	writeComponent(&p, "/geneos/gateway", "name", x.Gateway.Name, x.predicates["gateway"]...)
 	p.WriteString("/directory")
 
 	if x.Probe == nil {
 		return p.String()
 	}
-	writeComponent(&p, "/probe", "name", x.Probe.Name)
+	writeComponent(&p, "/probe", "name", x.Probe.Name, x.predicates["probe"]...)
 
 	if x.Entity == nil {
 		return p.String()
@@ -499,6 +597,9 @@ func (x *XPath) String() string {
 	writeComponent(&p, "/managedEntity", "name", x.Entity.Name)
 	for _, name := range slices.Sorted(maps.Keys(x.Entity.Attributes)) {
 		fmt.Fprintf(&p, "[(attr(%q)=%q)]", name, x.Entity.Attributes[name])
+	}
+	for _, predicate := range x.predicates["entity"] {
+		p.WriteString(predicate)
 	}
 
 	if x.Sampler == nil {
@@ -508,22 +609,25 @@ func (x *XPath) String() string {
 	if x.Sampler.Type != nil {
 		fmt.Fprintf(&p, "[(@type=%q)]", *x.Sampler.Type)
 	}
+	for _, predicate := range x.predicates["sampler"] {
+		p.WriteString(predicate)
+	}
 
 	if x.Dataview == nil {
 		return p.String()
 	}
-	writeComponent(&p, "/dataview", "name", x.Dataview.Name)
+	writeComponent(&p, "/dataview", "name", x.Dataview.Name, x.predicates["dataview"]...)
 
 	if x.Rows {
 		p.WriteString("/rows")
 		if x.Row == nil {
 			return p.String()
 		}
-		writeComponent(&p, "/row", "name", x.Row.Name)
+		writeComponent(&p, "/row", "name", x.Row.Name, x.predicates["row"]...)
 		if x.Column == nil {
 			return p.String()
 		}
-		writeComponent(&p, "/cell", "column", x.Column.Name)
+		writeComponent(&p, "/cell", "column", x.Column.Name, x.predicates["column"]...)
 	} else {
 		if x.Headline == nil {
 			if x.headlines {
@@ -532,7 +636,7 @@ func (x *XPath) String() string {
 			return p.String()
 		}
 		p.WriteString("/headlines")
-		writeComponent(&p, "/cell", "name", x.Headline.Name)
+		writeComponent(&p, "/cell", "name", x.Headline.Name, x.predicates["headline"]...)
 	}
 	return p.String()
 }
@@ -550,11 +654,13 @@ func (x *XPath) String() string {
 // Full wildcards, e.g. `//*`, are not supported as it is not possible
 // to determine the terminating level.
 //
-// Support for predicates is limited. Currently all components
-// understand "name", e.g. //probe[(@name="probeName")], while
-// "managedEntity" supports multiple "attribute" predicates and table
-// cells (under "rows/row/cell") support "column" (which is used instead
-// of "name").
+// Common predicates are represented by structured component fields:
+// all components understand "name", managedEntity supports multiple
+// "attr" predicates, sampler supports "type", and table cells support
+// "column". Other predicates are retained verbatim and included when the
+// XPath is formatted or marshalled, so callers can pass expressions
+// supported by the Gateway without requiring this package to interpret
+// them.
 func Parse(s string) (xpath *XPath, err error) {
 	xpath = &XPath{}
 
@@ -612,6 +718,7 @@ func Parse(s string) (xpath *XPath, err error) {
 		}
 		column, _ := getAttr(parts[p-1], "column")
 		xpath.Column = &Column{Name: column}
+		xpath.setPredicates("column", parts[p-1])
 		p--
 		fallthrough
 	case 10:
@@ -619,9 +726,11 @@ func Parse(s string) (xpath *XPath, err error) {
 			xpath.Rows = true
 			row, _ := getAttr(parts[p-1], "name")
 			xpath.Row = &Row{Name: row}
+			xpath.setPredicates("row", parts[p-1])
 		} else if strings.HasPrefix(parts[p-1], "cell") {
 			headline, _ := getAttr(parts[p-1], "name")
 			xpath.Headline = &Headline{Name: headline}
+			xpath.setPredicates("headline", parts[p-1])
 		} else {
 			err = ErrInvalidPath
 			return
@@ -648,6 +757,7 @@ func Parse(s string) (xpath *XPath, err error) {
 		}
 		dataview, _ := getAttr(parts[p-1], "name")
 		xpath.Dataview = &Dataview{Name: dataview}
+		xpath.setPredicates("dataview", parts[p-1])
 		p--
 		fallthrough
 	case 7:
@@ -665,6 +775,7 @@ func Parse(s string) (xpath *XPath, err error) {
 			Name: name,
 			Type: tp,
 		}
+		xpath.setPredicates("sampler", parts[p-1])
 		p--
 		fallthrough
 	case 6:
@@ -678,6 +789,7 @@ func Parse(s string) (xpath *XPath, err error) {
 			Name:       entity,
 			Attributes: getAttributes(parts[p-1]),
 		}
+		xpath.setPredicates("entity", parts[p-1])
 		p--
 		fallthrough
 	case 5:
@@ -688,6 +800,7 @@ func Parse(s string) (xpath *XPath, err error) {
 		}
 		probe, _ := getAttr(parts[p-1], "name")
 		xpath.Probe = &Probe{Name: probe}
+		xpath.setPredicates("probe", parts[p-1])
 		p--
 		fallthrough
 	case 4:
@@ -706,6 +819,7 @@ func Parse(s string) (xpath *XPath, err error) {
 		}
 		gateway, _ := getAttr(parts[p-1], "name")
 		xpath.Gateway = &Gateway{Name: gateway}
+		xpath.setPredicates("gateway", parts[p-1])
 		p--
 		fallthrough
 	case 2:
@@ -727,6 +841,71 @@ func Parse(s string) (xpath *XPath, err error) {
 		err = ErrInvalidPath
 		return
 	}
+}
+
+func (x *XPath) setPredicates(component, pathComponent string) {
+	for _, raw := range splitPredicates(pathComponent) {
+		_, predicates := parsePredicates(raw)
+		if len(predicates) != 1 || !supportedPredicate(component, predicates[0]) {
+			if x.predicates == nil {
+				x.predicates = make(map[string][]string)
+			}
+			x.predicates[component] = append(x.predicates[component], raw)
+		}
+	}
+}
+
+func supportedPredicate(component string, p predicate) bool {
+	switch component {
+	case "entity":
+		return (!p.attr && p.name == "name") || p.attr
+	case "sampler":
+		return !p.attr && (p.name == "name" || p.name == "type")
+	case "column":
+		return !p.attr && p.name == "column"
+	default:
+		return !p.attr && p.name == "name"
+	}
+}
+
+func splitPredicates(component string) (predicates []string) {
+	for i := 0; i < len(component); {
+		if component[i] != '[' {
+			i++
+			continue
+		}
+		start := i
+		depth := 0
+		var quote byte
+		for ; i < len(component); i++ {
+			switch component[i] {
+			case '\\':
+				i++
+			case '"', '\'':
+				if quote == 0 {
+					quote = component[i]
+				} else if quote == component[i] {
+					quote = 0
+				}
+			case '[':
+				if quote == 0 {
+					depth++
+				}
+			case ']':
+				if quote == 0 {
+					depth--
+					if depth == 0 {
+						i++
+						predicates = append(predicates, component[start:i])
+						goto next
+					}
+				}
+			}
+		}
+		predicates = append(predicates, component[start:])
+	next:
+	}
+	return
 }
 
 // matchName reports whether name matches the glob pattern. Unlike
@@ -894,15 +1073,19 @@ func (x *XPath) UnmarshalJSON(b []byte) (err error) {
 // processed by the predicate parser.
 func splitPath(s string) (parts []string) {
 	var start int
-	var inQuote bool
+	var quote byte
 	for i := 0; i < len(s); i++ {
 		switch s[i] {
 		case '\\':
 			i++ // skip the escaped character
-		case '"':
-			inQuote = !inQuote
+		case '"', '\'':
+			if quote == 0 {
+				quote = s[i]
+			} else if quote == s[i] {
+				quote = 0
+			}
 		case '/':
-			if !inQuote {
+			if quote == 0 {
 				parts = append(parts, s[start:i])
 				start = i + 1
 			}
@@ -951,8 +1134,9 @@ func parseQuoted(s string, i int) (value string, next int, ok bool) {
 }
 
 // parsePredicates splits a path component into its element name and
-// predicates. Parsing stops at the first predicate that is not in one
-// of the expected forms.
+// structurally supported predicates. Parsing stops at the first
+// predicate that is not in an expected form; callers retain that and
+// subsequent predicates verbatim for Gateway round trips.
 func parsePredicates(s string) (element string, preds []predicate) {
 	// find the end of the element name, which cannot be quoted
 	i := strings.IndexByte(s, '[')
@@ -1000,10 +1184,12 @@ func parsePredicates(s string) (element string, preds []predicate) {
 // extract the value of the first attribute from the xpath component in
 // the form [(@attr="value")]
 func getAttr(s string, attr string) (v string, ok bool) {
-	_, preds := parsePredicates(s)
-	for _, p := range preds {
-		if !p.attr && p.name == attr {
-			return p.value, true
+	for _, raw := range splitPredicates(s) {
+		_, preds := parsePredicates(raw)
+		for _, p := range preds {
+			if !p.attr && p.name == attr {
+				return p.value, true
+			}
 		}
 	}
 	return
@@ -1013,10 +1199,12 @@ func getAttr(s string, attr string) (v string, ok bool) {
 // [(attr("KEY")="value")]
 func getAttributes(s string) (attrs map[string]string) {
 	attrs = map[string]string{}
-	_, preds := parsePredicates(s)
-	for _, p := range preds {
-		if p.attr {
-			attrs[p.name] = p.value
+	for _, raw := range splitPredicates(s) {
+		_, preds := parsePredicates(raw)
+		for _, p := range preds {
+			if p.attr {
+				attrs[p.name] = p.value
+			}
 		}
 	}
 	return

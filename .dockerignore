@@ -39,3 +39,10 @@ libraries/*/libalert
 **/*.history
 **/*.log
 **/gdna.sqlite*
+
+# doc build tracking (prevents accidental inclusion in context)
+docs/.last-docs-timestamp
+
+# temporary files
+*.tmp
+*~

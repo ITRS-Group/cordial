@@ -8,6 +8,32 @@ import (
 	"testing"
 )
 
+func TestDeletePrefixSelection(t *testing.T) {
+	for _, prefix := range []string{"itrs", "holidays", ""} {
+		t.Run("prefix="+prefix, func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			parent := h.PathTo("gateway", "includes")
+			versions := []string{"itrs-v1.0.0", "v1.0.0", "holidays-v1.0.0"}
+			for _, version := range versions {
+				if err := os.MkdirAll(filepath.Join(parent, version), 0755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := deleteIncludes(h, prefix, "*"); err != nil {
+				t.Fatal(err)
+			}
+			for _, version := range versions {
+				source, _, _ := parseIncludeVersion(version)
+				_, err := os.Stat(filepath.Join(parent, version))
+				wantRemoved := prefix == "" || source == prefix
+				if wantRemoved && !os.IsNotExist(err) || !wantRemoved && err != nil {
+					t.Fatalf("%s stat = %v; want removed %v", version, err, wantRemoved)
+				}
+			}
+		})
+	}
+}
+
 func TestDeleteProtectsEntireSelectedVersion(t *testing.T) {
 	for _, kind := range []string{"relative", "absolute", "chain", "nested", "dangling", "directory", "external-target"} {
 		t.Run(kind, func(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"slices"
 	"strings"
 
-	goversion "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -23,6 +23,7 @@ var ErrIncludeVersionLinked = errors.New("include version is referenced by a gat
 func init() {
 	includesCmd.AddCommand(includesDeleteCmd)
 	includesDeleteCmd.Flags().StringP("version", "V", "", "Select include versions using a shell-style pattern")
+	includesDeleteCmd.Flags().String("prefix", "itrs", "Select the include source prefix, or '*' for all sources")
 }
 
 var includesDeleteCmd = &cobra.Command{
@@ -38,12 +39,14 @@ var includesDeleteCmd = &cobra.Command{
 	Long:         includeDeleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:       "false",
-		cmd.CmdRequireHome:  "true",
-		cmd.CmdAuditCommand: "never",
-		cmd.CmdAuditActions: "never",
+		cmd.CmdGlobal:      "false",
+		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, args []string) error {
+		prefix, err := commandIncludePrefix(command, true)
+		if err != nil {
+			return err
+		}
 		pattern, err := command.Flags().GetString("version")
 		if err != nil {
 			return err
@@ -57,13 +60,17 @@ var includesDeleteCmd = &cobra.Command{
 				return fmt.Errorf("include version pattern must not be empty")
 			}
 		}
-		return Delete(geneos.GetHost(cmd.Hostname), patterns...)
+		return deleteIncludes(geneos.GetHost(cmd.Hostname), prefix, patterns...)
 	},
 }
 
 func Delete(h *geneos.Host, patterns ...string) error {
+	return deleteIncludes(h, "", patterns...)
+}
+
+func deleteIncludes(h *geneos.Host, prefix string, patterns ...string) error {
 	if len(patterns) == 0 {
-		return deleteIncludeVersionPattern(h, "")
+		return deleteIncludeVersionPattern(h, "", prefix)
 	}
 	if len(patterns) > 1 {
 		for _, pattern := range patterns {
@@ -74,14 +81,14 @@ func Delete(h *geneos.Host, patterns ...string) error {
 	}
 	var failures []error
 	for _, pattern := range patterns {
-		if err := deleteIncludeVersionPattern(h, pattern); err != nil {
+		if err := deleteIncludeVersionPattern(h, pattern, prefix); err != nil {
 			failures = append(failures, fmt.Errorf("version pattern %q: %w", pattern, err))
 		}
 	}
 	return errors.Join(failures...)
 }
 
-func deleteIncludeVersionPattern(h *geneos.Host, pattern string) error {
+func deleteIncludeVersionPattern(h *geneos.Host, pattern, prefix string) error {
 	pattern = strings.TrimSpace(pattern)
 	allUnlinked := pattern == ""
 	if allUnlinked {
@@ -107,7 +114,8 @@ func deleteIncludeVersionPattern(h *geneos.Host, pattern string) error {
 		if !entry.IsDir() {
 			continue
 		}
-		if _, err := goversion.NewVersion(entry.Name()); err != nil {
+		source, _, err := parseIncludeVersion(entry.Name())
+		if err != nil || prefix != "" && source != prefix {
 			continue
 		}
 		if matched, _ := path.Match(pattern, entry.Name()); !matched {
@@ -160,10 +168,31 @@ func deleteIncludeVersionPattern(h *geneos.Host, pattern string) error {
 		if err := removeIncludeLinks(h, links); err != nil {
 			return err
 		}
-		if err := h.RemoveAll(directory); err != nil {
+		if err := removeIncludeVersion(h, directory); err != nil {
 			return fmt.Errorf("failed to delete include version %q: %w", h.Base(directory), err)
 		}
 		fmt.Println("Deleted include version", h.Base(directory))
+	}
+	return nil
+}
+
+func removeIncludeVersion(h *geneos.Host, directory string) error {
+	var paths []string
+	if err := h.WalkDir(directory, func(name string, _ fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		paths = append(paths, h.Join(directory, name))
+		return nil
+	}); err != nil {
+		return fmt.Errorf("scan include version %q before deletion: %w", directory, err)
+	}
+	for _, path := range slices.Backward(paths) {
+		err := h.Remove(path)
+		auditIncludeFile(h, "delete", path, err)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

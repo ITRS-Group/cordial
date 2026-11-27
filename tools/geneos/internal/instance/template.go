@@ -131,6 +131,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	m["root"] = config.Get[string](h.Config, cordial.ExecutableName())
 	m["name"] = i.Name()
 	m["home"] = i.Home()
+	m["logfilepath"] = LogFilePath(i)
 
 	// remove aliases and expand the rest
 	for _, k := range cf.AllKeys() {

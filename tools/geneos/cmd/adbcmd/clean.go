@@ -28,8 +28,9 @@ import (
 var cleanCmdDescription string
 
 var cleanCmdKeepAll, cleanCmdKeepStartupData, cleanCmdSkipModifiers, cleanCmdSkipLinks bool
+var cleanCmdVerbose bool
 var cleanOptions cleaningOptions
-var cleanCmdOutput string
+var cleanCmdOutput, cleanCmdLog string
 
 type filterType struct {
 	XPath      string
@@ -69,6 +70,9 @@ original files in place and a backup of the original
 will be created with a timestamp added before the ".adb"
 extension.
 `)
+
+	cleanCmd.Flags().BoolVarP(&cleanCmdVerbose, "verbose", "v", false, "Report each change made to the dashboard")
+	cleanCmd.Flags().StringVarP(&cleanCmdLog, "log", "l", "", "Append command output to `file` instead of the console")
 
 	cleanCmd.Flags().Var(&cleanOptions.Gateways, "gateway", "Gateway name updates. Default 'remove-all'")
 
@@ -280,6 +284,35 @@ var cleanCmd = &cobra.Command{
 			cleanURLFilters = append(cleanURLFilters, re)
 		}
 
+		report := command.OutOrStdout()
+		if cleanCmdLog != "" {
+			if err := checkCleanLogPath(cleanCmdLog, cleanCmdOutput, paths); err != nil {
+				return err
+			}
+			logFile, err := os.OpenFile(cleanCmdLog, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+			if err != nil {
+				return fmt.Errorf("open log file: %w", err)
+			}
+			originalLog := log
+			defer func() {
+				log = originalLog
+				if closeErr := logFile.Close(); closeErr != nil {
+					if err != nil {
+						err = fmt.Errorf("%v; close log file: %w", err, closeErr)
+					} else {
+						err = fmt.Errorf("close log file: %w", closeErr)
+					}
+				}
+			}()
+			// A newly created log can resolve through a symlinked directory
+			// to a destination that did not exist during the first check.
+			if err := checkCleanLogPath(cleanCmdLog, cleanCmdOutput, paths); err != nil {
+				return err
+			}
+			report = &cleanLogWriter{Writer: logFile}
+			log = slog.New(slog.NewTextHandler(report, &slog.HandlerOptions{Level: &logger.LogLevel})).With("command", "adb clean")
+		}
+
 		// these have to be evaluated in order as ResolveTo() will
 		// remove items to the right of the element passed
 
@@ -323,23 +356,56 @@ var cleanCmd = &cobra.Command{
 		}
 
 		// carry on with the other files after a failure
+		commandLog := log
+		defer func() { log = commandLog }()
 		for _, file := range paths {
-			stats, cleanErr := cleanCommand(file, cleanCmdOutput)
+			log = commandLog.With("file", file)
+			stats, cleanErr := cleanCommand(file, cleanCmdOutput, cleanCmdVerbose)
+			if logWriter, ok := report.(*cleanLogWriter); ok && logWriter.err != nil {
+				return fmt.Errorf("write log: %w", logWriter.err)
+			}
 			if cleanErr != nil {
-				err = cmd.ReportFailure(file, cleanErr)
+				if cleanCmdLog == "" {
+					err = cmd.ReportFailure(file, cleanErr)
+				} else {
+					if _, writeErr := fmt.Fprintf(report, "%s: %s\n", file, cleanErr); writeErr != nil {
+						return fmt.Errorf("write log: %w", writeErr)
+					}
+					err = cmd.ErrReported
+				}
 				continue
 			}
-			fmt.Printf("%s: %s\n", file, stats.summary())
+			if _, writeErr := fmt.Fprintf(report, "%s: %s\n", file, stats.summary()); writeErr != nil {
+				return fmt.Errorf("write report: %w", writeErr)
+			}
+			for _, change := range stats.mutations {
+				if _, writeErr := fmt.Fprintf(report, "  %s\n", change); writeErr != nil {
+					return fmt.Errorf("write report: %w", writeErr)
+				}
+			}
 		}
 
 		return
 	},
 }
 
-// cleanCommand processes a single Activedashboard file, creating a
-// cleaned version with updated XPaths and optionally keeping startup
-// data (any `.dbo` files in the archive).
+type cleanLogWriter struct {
+	io.Writer
+	err error
+}
+
+func (w *cleanLogWriter) Write(p []byte) (int, error) {
+	n, err := w.Writer.Write(p)
+	if err != nil {
+		w.err = err
+	}
+	return n, err
+}
+
 type cleanStats struct {
+	verbose                bool
+	entry                  string
+	mutations              []string
 	xpathLinks             int
 	urlLinks               int
 	modifierAliasesCleared int
@@ -351,6 +417,12 @@ type cleanStats struct {
 	samplersChanged        int
 	typesChanged           int
 	dataviewsChanged       int
+}
+
+func (s *cleanStats) recordMutation(location, kind, before, after string) {
+	if s != nil && s.verbose {
+		s.mutations = append(s.mutations, fmt.Sprintf("%s%s: %s: %q -> %q", s.entry, location, kind, before, after))
+	}
 }
 
 func (s *cleanStats) recordXPathChange(before, after *xpath.XPath) {
@@ -458,7 +530,39 @@ func pluralCount(count int, singular string) string {
 	return fmt.Sprintf("%d %ss", count, singular)
 }
 
-func cleanCommand(file, outputDir string) (stats cleanStats, err error) {
+func checkCleanLogPath(logPath, outputDir string, files []string) error {
+	logAbs, err := filepath.Abs(logPath)
+	if err != nil {
+		return err
+	}
+	logInfo, err := os.Stat(logPath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("inspect log file: %w", err)
+	}
+	for _, file := range files {
+		dest := file
+		if outputDir != "" {
+			dest = filepath.Join(outputDir, filepath.Base(file))
+		}
+		for _, protected := range []string{file, dest, dest + ".cleaned"} {
+			abs, err := filepath.Abs(protected)
+			if err != nil {
+				return err
+			}
+			info, statErr := os.Stat(protected)
+			if statErr != nil && !os.IsNotExist(statErr) {
+				return fmt.Errorf("inspect dashboard path: %w", statErr)
+			}
+			if abs == logAbs || logInfo != nil && info != nil && os.SameFile(logInfo, info) {
+				return fmt.Errorf("log file %q conflicts with dashboard path %q", logPath, protected)
+			}
+		}
+	}
+	return nil
+}
+
+func cleanCommand(file, outputDir string, verbose bool) (stats cleanStats, err error) {
+	stats.verbose = verbose
 	dest := file
 
 	// create output directory if specified, or fail
@@ -489,6 +593,7 @@ func cleanCommand(file, outputDir string) (stats cleanStats, err error) {
 
 	// Look for the Activedashboard extension file
 	for _, f := range zr.File {
+		stats.entry = f.Name
 		switch path.Ext(f.Name) {
 		case extension:
 			// do stuff and write it to the archive
@@ -515,6 +620,7 @@ func cleanCommand(file, outputDir string) (stats cleanStats, err error) {
 				}
 			} else {
 				stats.startupDataRemoved++
+				stats.recordMutation("", "startup-data entry removed", f.Name, "")
 			}
 		default:
 			// copy everything else as-is
@@ -580,7 +686,10 @@ func cleanActivedashboardWithStats(r io.Reader, w io.Writer, stats *cleanStats) 
 	scanner := bufio.NewScanner(r)
 	// lines can be longer than the default limit of the scanner
 	scanner.Buffer(make([]byte, 0, 64*1024), maxSize)
+	lineNumber := 0
 	for scanner.Scan() {
+		lineNumber++
+		location := fmt.Sprintf(":%d", lineNumber)
 		line := scanner.Text()
 		switch {
 		// both these classes have the URLTarget in field 4
@@ -614,6 +723,9 @@ func cleanActivedashboardWithStats(r io.Reader, w io.Writer, stats *cleanStats) 
 					}
 					originalPath := xpp.String()
 					updatedPath := updateDataitemXpath(xpp, cleanOptions).String()
+					if updatedPath != target {
+						stats.recordMutation(location, "dataitem", target, updatedPath)
+					}
 					if updatedPath != originalPath {
 						modifierChanged = true
 						if stats != nil {
@@ -626,6 +738,7 @@ func cleanActivedashboardWithStats(r io.Reader, w io.Writer, stats *cleanStats) 
 					updatedURL := updateWebPageURL(target, cleanOptions.WebPages, cleanURLFilters)
 					if updatedURL != target && stats != nil {
 						stats.urlLinks++
+						stats.recordMutation(location, "wwwpage", target, updatedURL)
 					}
 					return updatedURL
 				default:
@@ -635,6 +748,7 @@ func cleanActivedashboardWithStats(r io.Reader, w io.Writer, stats *cleanStats) 
 			if modifierChanged {
 				if parts[5] != EMPTY_STRING && stats != nil {
 					stats.modifierAliasesCleared++
+					stats.recordMutation(location, "modifier alias cleared", parts[5], EMPTY_STRING)
 				}
 				parts[5] = EMPTY_STRING
 			}
@@ -650,7 +764,7 @@ func cleanActivedashboardWithStats(r io.Reader, w io.Writer, stats *cleanStats) 
 				break
 			}
 			if err := unmarshalLineToStruct(line, &gu); err != nil {
-				fmt.Println("Error parsing GeneosURL line:", err)
+				log.Warn("Error parsing GeneosURL line", slog.Any("error", err))
 				break
 			}
 			targets := findLinkTargets(gu.URLTarget)
@@ -683,6 +797,7 @@ func cleanActivedashboardWithStats(r io.Reader, w io.Writer, stats *cleanStats) 
 				}
 			}
 			if updatedTarget != target.value {
+				stats.recordMutation(location, target.kind, target.value, updatedTarget)
 				parts := strings.Split(line, string(fieldSeparator))
 				parts[2] = target.kind + "(" + updatedTarget + ")"
 				line = strings.Join(parts, string(fieldSeparator))

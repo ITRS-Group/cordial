@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.12.1-261009/gateway.xsd">
+    <!-- Full-day local-time overrides. Annual dates (DD/MM) precede dated exceptions (DD/MM/YYYY).
+See holiday-calendars-na.md for North America coverage and source confidence.
+Confidence varies by calendar and source format; it is not a guarantee of accuracy or completeness. -->
+	<activeTimes>
+		<activeTimeGroup name="Layer 0 - Holidays">
+			<activeTimeGroup name="Layer 0 - NA - Canada">
+                <!-- Canada calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-na.md. -->
+				<activeTime name="Holidays - CA Ontario - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML statutory guidance; applying date rules
+and distinguishing substitute days requires interpretation.
+
+Sources:
+- https://www.ontario.ca/document/your-guide-employment-standards-act-0/public-holidays (Ontario Employment Standards Act guide)
+
+Notes:
+Timezone: America/Toronto. Nominal dates only; workplace-specific substitute
+days are not included. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/07</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/10/2027</date><override>true</override></scheduledPeriod>
+					<timezone><America>Toronto</America></timezone>
+				</activeTime>
+				<activeTime name="Holidays - CA TSX - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML exchange calendar; trading holidays
+must be distinguished from settlement-only dates.
+
+Sources:
+- https://www.tsx.com/en/trading/calendars-and-trading-hours/calendar (TSX, TSXV and Alpha market calendar)
+
+Notes:
+Timezone: America/Toronto. US settlement-only holidays are not encoded. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/07/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/08/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/07/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/08/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><America>Toronto</America></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - NA - Mexico">
+                <!-- Mexico calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-na.md. -->
+				<activeTime name="Holidays - MX - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML statutory guidance, intended for human
+readers rather than a structured calendar feed.
+
+Sources:
+- https://www.gob.mx/profedet/articulos/sabes-cuales-son-los-dias-de-descanso-obligatorio-para-este-2026 (PROFEDET mandatory rest days)
+
+Notes:
+Timezone: America/Mexico_City. Federal statutory dates; election days and
+presidential transition days are not inferred. -->
+					<scheduledPeriod><date>01/01</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/09</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/11/2026</date><override>true</override></scheduledPeriod>
+					<timezone><America>Mexico_City</America></timezone>
+				</activeTime>
+				<activeTime name="Holidays - MX BMV - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML exchange holiday calendar;
+human-readable dates must be interpreted.
+
+Sources:
+- https://www.bmv.com.mx/es/Grupo_BMV/Calendario_de_dias_festivos (BMV market holidays)
+
+Notes:
+Timezone: America/Mexico_City. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/03/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<timezone><America>Mexico_City</America></timezone>
+				</activeTime>
+			</activeTimeGroup>
+			<activeTimeGroup name="Layer 0 - NA - United States">
+                <!-- United States calendars, sorted with public holidays before collective leave and exchanges.
+Named calendars retain their own scope and timezone; a group is not a business-hours schedule.
+Confidence varies by calendar; see the source comments and holiday-calendars-na.md. -->
+				<activeTime name="Holidays - US Central - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML federal holiday tables and observance
+rules; human-readable dates must be interpreted.
+
+Sources:
+- https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/ (US Office of Personnel Management)
+
+Notes:
+Timezone: America/Chicago. Same dates as Holidays - US Eastern - Public,
+applied at Central time. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/07/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/07/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/02/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/09/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/10/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/11/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/11/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/01/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/02/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/05/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/09/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/10/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/11/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/11/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/01/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/05/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/09/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/10/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/11/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2030</date><override>true</override></scheduledPeriod>
+					<timezone><America>Chicago</America></timezone>
+				</activeTime>
+				<activeTime name="Holidays - US Eastern - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML federal holiday tables and observance
+rules; human-readable dates must be interpreted.
+
+Sources:
+- https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/ (US Office of Personnel Management)
+
+Notes:
+The public calendars use the US federal employee schedule, not state or city
+employee calendars. East and Pacific versions have the same dates but are
+separate because they switch at different local midnights. San Francisco and
+Las Vegas can share the Pacific version.
+
+Timezone: America/New_York. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/07/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/07/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/02/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/09/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/10/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/11/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/11/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/01/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/02/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/05/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/09/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/10/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/11/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/11/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/01/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/05/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/09/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/10/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/11/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2030</date><override>true</override></scheduledPeriod>
+					<timezone><America>New_York</America></timezone>
+				</activeTime>
+				<activeTime name="Holidays - US Pacific - Public">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML federal holiday tables and observance
+rules; human-readable dates must be interpreted.
+
+Sources:
+- https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/ (US Office of Personnel Management)
+
+Notes:
+The public calendars use the US federal employee schedule, not state or city
+employee calendars. East and Pacific versions have the same dates but are
+separate because they switch at different local midnights. San Francisco and
+Las Vegas can share the Pacific version.
+
+Timezone: America/Los_Angeles. Same dates as Holidays - US Eastern - Public.
+December 31, 2027 is the federal observance of New Year's Day 2028. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/07/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/10/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/07/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/10/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/02/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/09/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>09/10/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>10/11/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/11/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/01/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/02/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/05/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/09/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>08/10/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>12/11/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>22/11/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2029</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/01/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/02/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>27/05/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>02/09/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/10/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>11/11/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>28/11/2030</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2030</date><override>true</override></scheduledPeriod>
+					<timezone><America>Los_Angeles</America></timezone>
+				</activeTime>
+				<activeTime name="Holidays - US Cboe Options - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official human-readable trading-hours schedules;
+product scope and shortened sessions require interpretation.
+
+Sources:
+- https://www.cboe.com/about/hours/us-options/ (Cboe options hours and holidays)
+- https://www.cmegroup.com/trading-hours.html (CME Group product-specific schedules)
+
+Notes:
+Timezone: America/New_York (the venue publishes in Eastern Time). Only dates
+with neither regular nor global trading hours. For a schedule that monitors
+regular hours only, the other holidays on the Cboe page also matter. Do not
+use this calendar for CME or CBOT futures: consult the CME Group
+product-specific schedules. -->
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2027</date><override>true</override></scheduledPeriod>
+					<timezone><America>New_York</America></timezone>
+				</activeTime>
+				<activeTime name="Holidays - US NYSE - Exchange">
+                    <!-- Gathered: 2026-11-20
+
+Confidence: Medium - official HTML exchange calendar; full-day holidays
+must be distinguished from early closes.
+
+Sources:
+- https://www.nyse.com/trade/hours-calendars (NYSE holidays and trading hours)
+
+Notes:
+Timezone: America/New_York. Applies to NYSE markets, including NYSE Arca; use
+it for monitoring those markets from any office. No separate Las Vegas
+equities venue is listed. -->
+					<scheduledPeriod><date>01/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/01/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>16/02/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/04/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/05/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>03/07/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>07/09/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/11/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2026</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>01/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/01/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>15/02/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>26/03/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>31/05/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>18/06/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>05/07/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>06/09/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/11/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>24/12/2027</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>17/01/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>21/02/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>14/04/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>29/05/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>19/06/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/07/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>04/09/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>23/11/2028</date><override>true</override></scheduledPeriod>
+					<scheduledPeriod><date>25/12/2028</date><override>true</override></scheduledPeriod>
+					<timezone><America>New_York</America></timezone>
+				</activeTime>
+			</activeTimeGroup>
+		</activeTimeGroup>
+	</activeTimes>
+</gateway>

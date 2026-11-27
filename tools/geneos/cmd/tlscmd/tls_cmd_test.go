@@ -2,6 +2,7 @@ package tlscmd
 
 import (
 	"crypto/sha1"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -217,6 +218,75 @@ func TestTLSInfoLeafOnlyNeedsPrivateKey(t *testing.T) {
 	res = cmdtest.Run(t, cmd.Cmd, "tls", "info", "-L", withKey)
 	if res.Err != nil || !strings.Contains(res.Stdout, "withkey") {
 		t.Errorf("leaf with key not listed: %v\n%s", res.Err, res.Stdout)
+	}
+	if strings.Contains(res.Stdout, "withkey/1") {
+		t.Errorf("leaf-only output should show the path without a certificate index:\n%s", res.Stdout)
+	}
+
+	for _, format := range []string{"column", "table", "csv", "toolkit"} {
+		t.Run(format, func(t *testing.T) {
+			for _, tc := range []struct {
+				long     bool
+				leafOnly bool
+				old      string
+			}{
+				{old: "FileAndIndex"},
+				{long: true, old: "PathAndIndex"},
+				{leafOnly: true, old: "FileAndIndex"},
+				{long: true, leafOnly: true, old: "PathAndIndex"},
+			} {
+				args := []string{"tls", "info", "--format", format}
+				if tc.leafOnly {
+					args = append(args, "--leaf-only")
+				}
+				if tc.long {
+					args = append(args, "--long")
+				}
+				args = append(args, withKey)
+				res := cmdtest.Run(t, cmd.Cmd, args...)
+				if res.Err != nil {
+					t.Fatalf("tls info --format %s: %v\n%s", format, res.Err, res.Stdout)
+				}
+				if !strings.Contains(res.Stdout, "Source") || strings.Contains(res.Stdout, tc.old) {
+					t.Errorf("first column should be named Source:\n%s", res.Stdout)
+				}
+				if !tc.leafOnly && !strings.Contains(res.Stdout, "withkey.pem/1") {
+					t.Errorf("normal output should retain the certificate index:\n%s", res.Stdout)
+				}
+			}
+		})
+	}
+
+	certificate, err := tls.LoadX509KeyPair(withKey, withKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listener, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{
+		Certificates: []tls.Certificate{certificate},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			if tlsConn, ok := conn.(*tls.Conn); ok {
+				_ = tlsConn.Handshake()
+			}
+			_ = conn.Close()
+		}
+	}()
+
+	res = cmdtest.Run(t, cmd.Cmd, "tls", "info", "--leaf-only", "--connect", listener.Addr().String())
+	_ = listener.Close()
+	<-done
+	if res.Err != nil || !strings.Contains(res.Stdout, "127.0.0.1") {
+		t.Errorf("remote leaf certificate not listed without a local private key: %v\n%s", res.Err, res.Stdout)
 	}
 }
 

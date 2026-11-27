@@ -5,10 +5,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -69,10 +71,17 @@ type tarEntry struct {
 }
 
 // makeTar returns a tar archive of the entries
-func makeTar(t *testing.T, entries []tarEntry) []byte {
+func makeTar(t *testing.T, entries []tarEntry, links ...map[string]string) []byte {
 	t.Helper()
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
+	for _, group := range links {
+		for name, target := range group {
+			if err := tw.WriteHeader(&tar.Header{Name: name, Linkname: target, Mode: 0o777, Typeflag: tar.TypeSymlink}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 	for _, e := range entries {
 		hdr := &tar.Header{Name: e.name, Mode: 0o644, Size: int64(len(e.body)), Typeflag: tar.TypeReg}
 		if strings.HasSuffix(e.name, "/") {
@@ -116,10 +125,10 @@ func compress(t *testing.T, kind string, data []byte) []byte {
 	return buf.Bytes()
 }
 
-func writeArchive(t *testing.T, name string, kind string, entries []tarEntry) string {
+func writeArchive(t *testing.T, name string, kind string, entries []tarEntry, links ...map[string]string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)
-	if err := os.WriteFile(path, compress(t, kind, makeTar(t, entries)), 0o600); err != nil {
+	if err := os.WriteFile(path, compress(t, kind, makeTar(t, entries, links...)), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	return path
@@ -129,6 +138,34 @@ var licdEntries = []tarEntry{
 	{"licd/licds/restored/", ""},
 	{"licd/licds/restored/licd.json", `{"name":"restored"}`},
 	{"licd/licds/restored/licd.txt", "some content"},
+}
+
+func TestRestoreGatewaySiteShared(t *testing.T) {
+	previous := config.Get[string](config.Global(), "site")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+	for _, test := range []struct{ site, directory string }{
+		{"", "local"},
+		{"Acme Site", "Acme_Site"},
+	} {
+		t.Run(test.directory, func(t *testing.T) {
+			root := newTestRoot(t)
+			config.Set(config.Global(), "site", test.site)
+			name := "gateway/" + test.directory + "/site.xml"
+			archive := writeArchive(t, "backup.tar", "none", []tarEntry{{name, "site configuration"}})
+			if err := restore.Restore(archive, restore.Host(geneos.LOCAL)); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(filepath.Join(root, name)); !errors.Is(err, os.ErrNotExist) {
+				t.Errorf("site file restored without shared option: %v", err)
+			}
+			if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Shared(true)); err != nil {
+				t.Fatal(err)
+			}
+			if got, err := os.ReadFile(filepath.Join(root, name)); err != nil || string(got) != "site configuration" {
+				t.Errorf("restored site file = %q, %v", got, err)
+			}
+		})
+	}
 }
 
 func TestRestoreCompressionByFileName(t *testing.T) {
@@ -149,6 +186,151 @@ func TestRestoreCompressionByFileName(t *testing.T) {
 			}
 			if data, err := os.ReadFile(filepath.Join(root, "licd", "licds", "restored", "licd.txt")); err != nil || string(data) != "some content" {
 				t.Errorf("restored file = %q, %v\n%s", data, err, progress.String())
+			}
+		})
+	}
+}
+
+func TestRestoreSharedSymlinks(t *testing.T) {
+	root := newTestRoot(t)
+	const linkedFile = "gateway/includes/itrs-v0.0.1/itrs.custom.xml"
+	const includeLink = "gateway/includes/itrs.custom.xml"
+	const danglingLink = "gateway/includes/itrs.dangling.xml"
+	const existingLink = "gateway/includes/itrs.existing.xml"
+	if err := os.MkdirAll(filepath.Join(root, "gateway", "includes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("primary-missing.xml", filepath.Join(root, existingLink)); err != nil {
+		t.Fatal(err)
+	}
+	archive := writeArchive(t, "backup.tar.gz", "gzip", []tarEntry{
+		{linkedFile, "primary include contents"},
+	}, map[string]string{
+		includeLink:                          "itrs-v0.0.1/itrs.custom.xml",
+		danglingLink:                         "itrs-v0.0.1/missing.xml",
+		existingLink:                         "itrs-v0.0.1/itrs.custom.xml",
+		"gateway/includes/itrs.absolute.xml": filepath.Join(root, linkedFile),
+	})
+	if err := restore.Restore(archive, restore.Host(geneos.LOCAL)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(filepath.Join(root, includeLink)); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("shared link restored without --shared: %v", err)
+	}
+	if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Shared(true)); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{
+		includeLink:                          "itrs-v0.0.1/itrs.custom.xml",
+		danglingLink:                         "itrs-v0.0.1/missing.xml",
+		existingLink:                         "primary-missing.xml",
+		"gateway/includes/itrs.absolute.xml": "itrs-v0.0.1/itrs.custom.xml",
+	} {
+		if got, err := os.Readlink(filepath.Join(root, name)); err != nil || got != want {
+			t.Errorf("%s link = %q, %v; want %q", name, got, err, want)
+		}
+	}
+	if got, err := os.ReadFile(filepath.Join(root, includeLink)); err != nil || string(got) != "primary include contents" {
+		t.Errorf("restored include = %q, %v", got, err)
+	}
+}
+
+func TestRestoreRejectsUnsafeSymlinks(t *testing.T) {
+	for _, kind := range []string{"relative-escape", "absolute-escape", "indirect-escape", "write-through-link"} {
+		t.Run(kind, func(t *testing.T) {
+			root := newTestRoot(t)
+			outside := t.TempDir()
+			victim := filepath.Join(outside, "primary.xml")
+			if err := os.WriteFile(victim, []byte("unchanged"), 0o664); err != nil {
+				t.Fatal(err)
+			}
+			target := "../../../" + filepath.Base(outside) + "/primary.xml"
+			var entries []tarEntry
+			switch kind {
+			case "absolute-escape":
+				target = victim
+			case "indirect-escape":
+				dir := filepath.Join(root, "gateway", "includes")
+				if err := os.MkdirAll(dir, 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(outside, filepath.Join(dir, "external")); err != nil {
+					t.Fatal(err)
+				}
+				target = "external/primary.xml"
+			case "write-through-link":
+				target = "targets"
+				entries = []tarEntry{{"gateway/includes/alias/primary.xml", "must not be written"}}
+			}
+			archive := writeArchive(t, "backup.tar", "none", entries, map[string]string{
+				"gateway/includes/alias": target,
+			})
+			if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Shared(true)); err == nil {
+				t.Fatal("unsafe symlink archive was accepted")
+			}
+			if got, err := os.ReadFile(victim); err != nil || string(got) != "unchanged" {
+				t.Errorf("outside file changed: %q, %v", got, err)
+			}
+			if kind == "write-through-link" {
+				if _, err := os.Stat(filepath.Join(root, "gateway", "includes", "targets", "primary.xml")); !errors.Is(err, os.ErrNotExist) {
+					t.Errorf("file written through restored symlink: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestRestoreRejectsSymlinkedTruststore(t *testing.T) {
+	root := newTestRoot(t)
+	dir := filepath.Join(root, "tls")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "ca-bundle.pem"), []byte("existing bundle"), 0o664); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "primary.db")
+	if err := os.WriteFile(target, []byte("primary truststore"), 0o664); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(dir, "ca-bundle.db")); err != nil {
+		t.Fatal(err)
+	}
+	archive := writeArchive(t, "backup.tar", "none", []tarEntry{{"tls/ca-bundle.pem", "incoming bundle"}})
+	if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Shared(true)); err == nil || !strings.Contains(err.Error(), "symlink") {
+		t.Fatalf("restore error = %v, want symlink rejection", err)
+	}
+	if got, err := os.ReadFile(target); err != nil || string(got) != "primary truststore" {
+		t.Errorf("symlinked truststore was changed: %q, %v", got, err)
+	}
+}
+
+func TestRestoreBeforeRebuildFailureAndListing(t *testing.T) {
+	for _, list := range []bool{false, true} {
+		t.Run(fmt.Sprintf("list=%t", list), func(t *testing.T) {
+			root := newTestRoot(t)
+			archive := writeArchive(t, "backup.tar.gz", "gzip", licdEntries)
+			wantErr := errors.New("cannot prepare components")
+			called := false
+			var progress bytes.Buffer
+			err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.List(list), restore.ProgressTo(&progress),
+				restore.BeforeRebuild(func() error {
+					called = true
+					if data, err := os.ReadFile(filepath.Join(root, "licd", "licds", "restored", "licd.txt")); err != nil || string(data) != "some content" {
+						t.Errorf("callback must run after extraction: %q, %v", data, err)
+					}
+					return wantErr
+				}),
+			)
+			if list {
+				if err != nil || called {
+					t.Errorf("listing: error = %v, callback called = %t", err, called)
+				}
+			} else if !errors.Is(err, wantErr) || !called {
+				t.Errorf("restore: error = %v, callback called = %t; want callback error", err, called)
+			}
+			if strings.Contains(progress.String(), "config rebuild complete") {
+				t.Errorf("instances rebuilt despite preparation error:\n%s", progress.String())
 			}
 		})
 	}
@@ -222,6 +404,41 @@ func TestRestoreFirstEntryWithNoSize(t *testing.T) {
 	}
 	if !strings.Contains(progress.String(), "licd zero 4 files") {
 		t.Errorf("progress = %q, want 4 files restored", progress.String())
+	}
+}
+
+func TestRestoreAfterRestoreSkipsExistingAndListings(t *testing.T) {
+	root := newTestRoot(t)
+	archive := writeArchive(t, "backup.tar.gz", "gzip", licdEntries)
+	var restored []string
+	afterRestore := restore.AfterRestore(func(i geneos.Instance) {
+		restored = append(restored, i.Type().String()+":"+i.Name())
+	})
+
+	if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Component(&licd.Component), afterRestore); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(restored, []string{"licd:restored"}) {
+		t.Fatalf("restored callbacks = %q", restored)
+	}
+
+	restored = nil
+	if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Component(&licd.Component), afterRestore); err != nil {
+		t.Fatal(err)
+	}
+	if len(restored) != 0 {
+		t.Fatalf("callback ran for an existing instance: %q", restored)
+	}
+
+	if err := restore.Restore(archive, restore.Host(geneos.LOCAL), restore.Component(&licd.Component), restore.List(true), afterRestore); err != nil {
+		t.Fatal(err)
+	}
+	if len(restored) != 0 {
+		t.Fatalf("callback ran while listing: %q", restored)
+	}
+
+	if _, err := os.Stat(filepath.Join(root, "licd", "licds", "restored")); err != nil {
+		t.Fatal(err)
 	}
 }
 

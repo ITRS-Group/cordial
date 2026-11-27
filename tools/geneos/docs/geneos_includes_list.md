@@ -2,20 +2,23 @@
 
 List include files found in the selected Geneos installation and include references used by its Gateways. The default view groups shared and versioned includes by file name. Use one of `--include`, `--version`, or `--gateway` to select a view.
 
+`--prefix` selects the include source and defaults to `itrs`. Use `--prefix holidays` for holiday includes or quote `--prefix '*'` for the previous complete inventory, including site templates, unprefixed local files and remote references. The filter applies to every view and to `--all`. Source ownership is taken from the version directory when available (legacy semantic-version directories belong to ITRS); otherwise the file basename must start with `<prefix>.`. Gateway usage and safety checks still inspect all sources.
+
 The include view reports copies, Gateway usage, status flags, modification time, size, and location. Shared and versioned paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files, whose locations are shown exactly as configured in the Gateway setup. The main Gateway setup file is an exception: its local path is shown relative to that Gateway's instance directory in both the include and Gateway views.
 
-The version view lists the current include links and available semantic-version directories. Use `--all` to list each file inside those directories.
+The version view lists the current include links and available source-prefixed version directories, such as `itrs-v1.0.0`, `holidays-v2026.11.20` and `acme-ops-v2.0.0-rc.1`, as well as legacy unprefixed versions. The prefix identifies the include **source**. Standard includes use an independent semantic version; holidays use the source-fetch date `vYYYY.MM.DD`, not the Cordial release version. Version columns retain the full directory name, including the source, wherever shown. Use `--all` to list each file inside those directories. In long and machine-readable version views, `TargetVersion` (`targetVersion`) identifies each current link's target version separately from the `Version` row label.
 
-The Gateway view lists includes configured for each Gateway, ordered by priority. The `File` field contains only the include file's basename; nested group names do not change it. Gateway-local includes are omitted unless `--all` is set.
+The Gateway view lists includes configured for each Gateway, ordered by priority. The `File` field contains only the include file's basename; nested group names do not change it. In machine-readable output, `ID` is the Gateway name and priority joined by a colon (for example, `gateway-a:3`); priority is unique within each Gateway. Gateway-local includes are omitted unless `--all` is set.
 
 With `--gateway`, optional instance names or shell-style glob patterns limit output to matching Gateways. Patterns support `*`, `?`, and character classes such as `[ab]`; quote them to prevent shell expansion. Multiple names or patterns are combined without duplicate rows. With no names, all Gateways are listed; patterns matching no Gateways produce no rows. Name filtering applies only to the Gateway view.
 
 ```shell
-geneos includes list --gateway 'prod-*'
-geneos includes list --gateway gateway-a gateway-b
+geneos includes list --prefix '*' --gateway 'prod-*'
+geneos includes list --prefix '*' --gateway gateway-a gateway-b
+geneos includes list --prefix holidays --version --all
 ```
 
-Use `--long` for version, permissions, owner, remote latency, and certificate-validity columns where available. Owner information is not currently collected. The `--format` option accepts `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`; column output uses human-readable sizes, while machine-readable formats use byte counts. CSV, toolkit, JSON, and pretty outputs always use the long columns. CSV and toolkit headings use camelCase; column and table headings use NormalCase. Headings contain no spaces.
+Use `--long` for version, permissions, owner, remote latency, and certificate-validity columns where available. Owner information is not currently collected. The `--format` option accepts `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`; column, table, CSV, and toolkit output use human-readable sizes, while JSON and pretty output use byte counts. CSV, toolkit, JSON, and pretty outputs always use the long columns. CSV and toolkit headings use camelCase; column and table headings use NormalCase. Headings contain no spaces.
 
 Set `--format json` to output the selected view as a compact array of objects using the long fields regardless of `--long`. Permission values use octal strings such as `"0644"`; table output retains symbolic permissions. Fields use lower-camel-case names. Counts, priorities, and byte sizes are JSON numbers. Unknown or missing sizes are `-1`; a known empty file has size `0`. Set `--format pretty` for the same JSON output with indentation.
 
@@ -24,12 +27,19 @@ Machine-readable formats include `status`, `shared`, `gatewayLocal`, `remote`, `
 Flags identify include properties:
 
 * `D` - Disabled in the Gateway setup
+
 * `G` - Gateway-local include
+
 * `o` - Optional include
+
 * `R` - Read-only file
+
 * `S` - Shared include
+
 * `U` - HTTP or HTTPS URL include
+
 * `V` - Versioned include
+
 * `X` - Local file is missing
 
 Remote locations are queried with HTTP HEAD requests for modification time and size unless `--no-remote` is set. Failures to retrieve remote metadata do not prevent listing the configured location.
@@ -52,6 +62,7 @@ geneos includes list [NAMES...] [flags]
   -i, --include[=true|false]      List include files by shared include files
   -l, --long[=true|false]         Long format with extra information
   -n, --no-remote[=true|false]    Exclude remote include files lookups
+      --prefix string             Select the include source prefix, defaults to '*' for all sources (default "*")
       --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -v, --version[=true|false]      List include files by version
 ```

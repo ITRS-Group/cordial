@@ -4,6 +4,22 @@ Cordial is a practical toolkit for the day-to-day operation of ITRS Geneos. It b
 
 Cordial works alongside your Geneos environment; it does not replace its monitoring components. Use it to make routine work more consistent and reduce one-off scripts, manual exports, and hand-offs. This can leave you and your team with more time to review monitoring results and act on them.
 
+## Business and operational benefits
+
+- **Reduce operational overhead:** Common administration, reporting, and alert-routing tasks are available as ready-made tools rather than requiring teams to build and maintain local scripts. This can reduce repetitive effort and allow skilled staff to spend more time on higher-value service improvements.
+
+- **Improve consistency and control:** Repeatable commands, standard deployment options, and recorded operational actions help organisations apply the same practices across Geneos estates. This supports more predictable delivery, clearer accountability, and easier onboarding of operational staff.
+
+- **Strengthen risk management:** Secure deployment defaults, redaction of recognized sensitive values, audit records, and automated reporting can reduce avoidable configuration, communication, and information-handling risks. Teams should still apply their organisation's security, access-control, and retention policies.
+
+- **Increase service visibility:** Coverage reports can highlight where monitoring is in place and where there may be gaps. This provides a basis for prioritising improvement work, discussing operational exposure, and tracking progress over time.
+
+- **Speed up incident response:** Dataview exports and ServiceNow integrations can place relevant monitoring information into established reporting and service-management workflows. Faster access to consistent information can reduce hand-offs and improve incident coordination.
+
+- **Make better use of the existing platform:** Cordial extends existing Geneos installations and supports local and remote operations, integrations, and reusable components. Organisations can improve the value and efficiency of their current investment without replacing the monitoring platform.
+
+- **Support scalable growth:** Standard tooling and reusable workflows make it easier to manage a growing or distributed monitoring estate with less dependence on individual scripts or specialist knowledge. The result is a more maintainable operating model as the estate and team evolve.
+
 ## Operational workflows
 
 ### Manage Geneos with one command
