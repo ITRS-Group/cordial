@@ -204,24 +204,39 @@ func TestHotStandbyRole(t *testing.T) {
 		}
 		return h
 	}
+	hsPorts := func(primary string, pport int, secondary string, sport int) *pkggeneos.HotStandby {
+		return &pkggeneos.HotStandby{
+			Enabled:   &enabled,
+			Primary:   &pkggeneos.HotStandbyGateway{Hostname: primary, Port: &pport},
+			Secondary: &pkggeneos.HotStandbyGateway{Hostname: secondary, Port: &sport},
+		}
+	}
 	h := mockHost{local: true, hostname: "gw2.example.com"}
 
 	tests := []struct {
 		name string
 		hs   *pkggeneos.HotStandby
+		port int
 		want string
 	}{
-		{"no hot standby", nil, "standalone"},
-		{"enabled unset", hs(nil, "gw2", ""), "standalone"},
-		{"disabled", hs(&disabled, "gw2", "gw1"), "standalone"},
-		{"primary", hs(&enabled, "gw2.example.com", "gw1.example.com"), "primary"},
-		{"secondary", hs(&enabled, "gw1.example.com", "gw2"), "secondary"},
-		{"neither", hs(&enabled, "gw1", "gw3"), "standalone"},
-		{"both match, primary first", hs(&enabled, "gw2", "gw2.example.com"), "primary"},
+		{"no hot standby", nil, 0, "standalone"},
+		{"enabled unset", hs(nil, "gw2", ""), 0, "standalone"},
+		{"disabled", hs(&disabled, "gw2", "gw1"), 0, "standalone"},
+		{"primary", hs(&enabled, "gw2.example.com", "gw1.example.com"), 0, "primary"},
+		{"secondary", hs(&enabled, "gw1.example.com", "gw2"), 0, "secondary"},
+		{"neither", hs(&enabled, "gw1", "gw3"), 0, "standalone"},
+		{"both match, primary first", hs(&enabled, "gw2", "gw2.example.com"), 0, "primary"},
+
+		// loopback names, used only for testing with both gateways on
+		// one host, match on the port
+		{"loopback primary port", hsPorts("localhost", 7039, "127.0.0.1", 7040), 7039, "primary"},
+		{"loopback secondary port", hsPorts("localhost", 7039, "127.0.0.1", 7040), 7040, "secondary"},
+		{"loopback other port", hsPorts("localhost", 7039, "127.0.0.1", 7040), 7041, "standalone"},
+		{"loopback unknown port", hsPorts("localhost", 7039, "127.0.0.1", 7040), 0, "standalone"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := hotStandbyRole(h, tt.hs); got != tt.want {
+			if got := hotStandbyRole(h, tt.hs, tt.port); got != tt.want {
 				t.Errorf("hotStandbyRole() = %q, want %q", got, tt.want)
 			}
 		})

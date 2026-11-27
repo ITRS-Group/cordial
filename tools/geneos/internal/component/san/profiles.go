@@ -247,7 +247,7 @@ func processSANManagedEntity(pf *config.Config, h *geneos.Host, entity ManagedEn
 					if err != nil {
 						log.Debug("cannot read gateway setup to determine role", slog.String("setup", setupParam), slog.Any("error", err))
 					} else {
-						role = hotStandbyRole(h, gatewaySetup.HotStandby)
+						role = hotStandbyRole(h, gatewaySetup.HotStandby, int(config.Get[uint16](i.Config(), "port")))
 					}
 					lookup["role"] = role
 				}
@@ -345,7 +345,8 @@ var (
 // gateway hot standby configuration, refers to host h.
 //
 // If configuredHostname is an IP address then for a local host it is
-// compared to the addresses of the local, non-loopback interfaces and
+// compared to the addresses of the local, non-loopback interfaces (see
+// [matchesGateway] for how loopback names are handled) and
 // for a remote host to the resolved addresses of the remote host name.
 //
 // Otherwise, if both names include a domain they must match exactly,
@@ -394,19 +395,51 @@ func isMatchingHost(h hostNamer, configuredHostname string) bool {
 	return strings.EqualFold(hostBase, configuredBase)
 }
 
-// hotStandbyRole returns the role of a gateway on host h based on its
-// hot standby configuration. As per the Geneos documentation the
-// primary hostname is checked first, then the secondary, and the first
-// match determines the role. If hot standby is not enabled or neither
-// hostname matches then the gateway runs as "standalone".
-func hotStandbyRole(h hostNamer, hs *pkggeneos.HotStandby) string {
+// isLoopbackName reports whether name is a loopback address or the
+// name "localhost".
+func isLoopbackName(name string) bool {
+	if ip := net.ParseIP(name); ip != nil {
+		return ip.IsLoopback()
+	}
+	return strings.EqualFold(name, "localhost")
+}
+
+// matchesGateway reports whether the hot standby gateway configuration
+// gw refers to the gateway running on host h and listening on port.
+//
+// A loopback address or "localhost" is only meaningful for a hot
+// standby pair when testing, with both gateways on the same host and
+// using different ports. This is a rare edge case and is not something
+// Geneos recommends or that we document for users. Because the host name
+// cannot tell the two gateways apart, for a local host such a name
+// matches only if the configured port is the gateway's own port. In
+// every other case, including a loopback name for a remote host, the
+// normal host comparison in [isMatchingHost] applies, which never
+// matches a loopback address against a local interface.
+func matchesGateway(h hostNamer, gw *pkggeneos.HotStandbyGateway, port int) bool {
+	if gw == nil {
+		return false
+	}
+	if h.IsLocalhost() && isLoopbackName(gw.Hostname) {
+		return port != 0 && gw.Port != nil && *gw.Port == port
+	}
+	return isMatchingHost(h, gw.Hostname)
+}
+
+// hotStandbyRole returns the role of a gateway on host h, listening on
+// port, based on its hot standby configuration. As per the Geneos
+// documentation the primary hostname is checked first, then the
+// secondary, and the first match determines the role. If hot standby is
+// not enabled or neither hostname matches then the gateway runs as
+// "standalone".
+func hotStandbyRole(h hostNamer, hs *pkggeneos.HotStandby, port int) string {
 	if hs == nil || hs.Enabled == nil || !*hs.Enabled {
 		return "standalone"
 	}
-	if hs.Primary != nil && isMatchingHost(h, hs.Primary.Hostname) {
+	if matchesGateway(h, hs.Primary, port) {
 		return "primary"
 	}
-	if hs.Secondary != nil && isMatchingHost(h, hs.Secondary.Hostname) {
+	if matchesGateway(h, hs.Secondary, port) {
 		return "secondary"
 	}
 	return "standalone"
