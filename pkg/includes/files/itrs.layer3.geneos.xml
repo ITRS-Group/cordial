@@ -3109,7 +3109,7 @@ in info lines clear keys here even though the ignore table discards those lines.
 						<setKey>
 							<match>
 								<searchString>
-									<data>^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+[+-]\d{4} +FATAL:</data>
+									<data>^[\d-]+ [\d:.+-]+ +FATAL:</data>
 								</searchString>
 								<rules>REGEXP_IGNORE_CASE</rules>
 							</match>
@@ -3120,7 +3120,7 @@ in info lines clear keys here even though the ignore table discards those lines.
 						<setKey>
 							<match>
 								<searchString>
-									<data>^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+[+-]\d{4} +ERROR: Sampling stopped</data>
+									<data>^[\d-]+ [\d:.+-]+ +ERROR: Sampling stopped</data>
 								</searchString>
 								<rules>REGEXP_IGNORE_CASE</rules>
 							</match>
@@ -3131,7 +3131,7 @@ in info lines clear keys here even though the ignore table discards those lines.
 						<setKey>
 							<match>
 								<searchString>
-									<data>^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+[+-]\d{4} +WARN: GatewayLicenceManager Gateway is not licensed</data>
+									<data>^[\d-]+ [\d:.+-]+ +WARN: GatewayLicenceManager Gateway is not licensed</data>
 								</searchString>
 								<rules>REGEXP_IGNORE_CASE</rules>
 							</match>
@@ -3150,7 +3150,7 @@ in info lines clear keys here even though the ignore table discards those lines.
 						<setKey>
 							<match>
 								<searchString>
-									<data>^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+[+-]\d{4} +ERROR: encryption Cannot decrypt AES password</data>
+									<data>^[\d-]+ [\d:.+-]+ +ERROR: encryption Cannot decrypt AES password</data>
 								</searchString>
 								<rules>REGEXP_IGNORE_CASE</rules>
 							</match>
@@ -3181,7 +3181,7 @@ in info lines clear keys here even though the ignore table discards those lines.
 						<setKey>
 							<match>
 								<searchString>
-									<data>^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+[+-]\d{4} +WARN: LicenceManager Licence Daemon not running/disconnected</data>
+									<data>^[\d-]+ [\d:.+-]+ +WARN: LicenceManager Licence Daemon not running/disconnected</data>
 								</searchString>
 								<rules>REGEXP_IGNORE_CASE</rules>
 							</match>
@@ -3200,7 +3200,7 @@ in info lines clear keys here even though the ignore table discards those lines.
 						<setKey>
 							<match>
 								<searchString>
-									<data>^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+[+-]\d{4} +WARN: RuleManager Worker \d+ appears to have stopped responding</data>
+									<data>^[\d-]+ [\d:.+-]+ +WARN: RuleManager Worker \d+ appears to have stopped responding</data>
 								</searchString>
 								<rules>REGEXP_IGNORE_CASE</rules>
 							</match>
@@ -3219,7 +3219,7 @@ in info lines clear keys here even though the ignore table discards those lines.
 						<setKey>
 							<match>
 								<searchString>
-									<data>^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+[+-]\d{4} +WARN: SetupManager Setup Validation Problems</data>
+									<data>^[\d-]+ [\d:.+-]+ +WARN: SetupManager Setup Validation Problems</data>
 								</searchString>
 								<rules>REGEXP_IGNORE_CASE</rules>
 							</match>
@@ -3230,7 +3230,7 @@ in info lines clear keys here even though the ignore table discards those lines.
 						<setKey>
 							<match>
 								<searchString>
-									<data>^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+[+-]\d{4} +ERROR: SSL</data>
+									<data>^[\d-]+ [\d:.+-]+ +ERROR: SSL</data>
 								</searchString>
 								<rules>REGEXP_IGNORE_CASE</rules>
 							</match>
@@ -3244,7 +3244,7 @@ in info lines clear keys here even though the ignore table discards those lines.
 						<setKey>
 							<match>
 								<searchString>
-									<data>^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+[+-]\d{4} +WARN: ConManager:heartbeat DROP</data>
+									<data>^[\d-]+ [\d:.+-]+ +WARN: ConManager:heartbeat DROP</data>
 								</searchString>
 								<rules>REGEXP_IGNORE_CASE</rules>
 							</match>
