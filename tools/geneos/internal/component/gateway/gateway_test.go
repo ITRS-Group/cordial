@@ -119,3 +119,23 @@ func TestRebuildNeverJumpsToAnotherPort(t *testing.T) {
 		t.Errorf("listen ports:\n%s", xml)
 	}
 }
+
+func TestInstanceSetupGatewayLogFile(t *testing.T) {
+	root := geneostest.NewRoot(t, "", "gateway")
+	i := addTestGateway(t, root, "logdir", 7110, false)
+
+	for logdir, want := range map[string]string{
+		"":                            filepath.Join(i.Home(), "gateway.log"),
+		"logs":                        filepath.Join(i.Home(), "logs", "gateway.log"),
+		filepath.Join(root, "abslog"): filepath.Join(root, "abslog", "gateway.log"),
+	} {
+		config.Set(i.Config(), "logdir", logdir)
+		if _, err := i.Rebuild(true); err != nil {
+			t.Fatal(err)
+		}
+		setup := listenPorts(t, i)
+		if !strings.Contains(setup, "<var name=\"_gatewayLogFile\">\n\t\t\t<string>"+want+"</string>") {
+			t.Errorf("logdir %q: _gatewayLogFile is not %q in:\n%s", logdir, want, setup)
+		}
+	}
+}

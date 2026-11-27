@@ -74,7 +74,7 @@
 			<string>{{.version}}</string>
 		</var>
 		<var name="_gatewayLogFile">
-			<string>{{join .home .logfile}}</string>
+			<string>{{.logfilepath}}</string>
 		</var>
 		{{range $value := .variables -}}
 		<var name="{{$value.name}}">

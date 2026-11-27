@@ -192,7 +192,9 @@ type joinPathSegment struct {
 // JoinPathPrefix joins path segments separated by colons. Unquoted
 // segments are resolved as configuration items; double-quoted segments
 // are treated as literal path components. Unquoted segments that are
-// not set, such as an optional `logdir`, are left out of the path.
+// not set, such as an optional `logdir`, are left out of the path. An
+// absolute segment replaces the path built so far, so an absolute
+// `logdir` is not joined to `home`.
 //
 // If a [*geneos.Host] is passed in the extra data then it is used to
 // join the segments using the path conventions of that host, otherwise
@@ -206,10 +208,10 @@ func JoinPathPrefix(ci map[string]any, s string, trim bool, data ...any) (string
 
 	expand := newExpander(ci, data)
 
-	join := path.Join
+	join, isAbs := path.Join, path.IsAbs
 	for _, item := range data {
 		if h, ok := item.(*geneos.Host); ok && h != nil && h != geneos.ALL {
-			join = h.Join
+			join, isAbs = h.Join, h.IsAbs
 			break
 		}
 	}
@@ -242,6 +244,14 @@ func JoinPathPrefix(ci map[string]any, s string, trim bool, data ...any) (string
 			parts[idx] = expand(str)
 		} else {
 			parts[idx] = fmt.Sprint(value)
+		}
+	}
+
+	// restart from the last absolute segment
+	for idx := len(parts) - 1; idx > 0; idx-- {
+		if parts[idx] != "" && isAbs(parts[idx]) {
+			parts = parts[idx:]
+			break
 		}
 	}
 

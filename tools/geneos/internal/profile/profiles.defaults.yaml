@@ -359,12 +359,7 @@ profiles:
             ITRS Geneos Best Practice |
             Configuration |
             ../../${site}/${site}-config.layer3.geneos.xml
-            
-        variables:
-          - type: string
-            name: logFilePath
-            value: ${config:home}/${config:logfile}
-           
+
     netprobes:
       - name: ${option:minimal?"minimal:":""}${hostname} Probe Health
 
