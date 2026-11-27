@@ -139,6 +139,22 @@ func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
 	return firstFreePort(from, GetAllPorts(h))
 }
 
+// FreePortFrom returns the first port at or above start, and not below
+// 1024, that is neither allocated to an instance on host h nor in use by
+// any process. It ignores the port ranges of the components and is the
+// last resort when none of those has a free port. It returns 0 only if
+// every port up to 65535 is used.
+func FreePortFrom(h *geneos.Host, start uint16) uint16 {
+	used := GetAllPorts(h)
+	// use an int to loop to avoid wrapping at the top of the range
+	for p := max(int(start), 1024); p <= math.MaxUint16; p++ {
+		if _, ok := used[uint16(p)]; !ok {
+			return uint16(p)
+		}
+	}
+	return 0
+}
+
 // firstFreePort returns the first port in the comma separated list of
 // ports and ranges in ranges that is not in used, or 0 if there is
 // none. Entries can have surrounding white space, and invalid entries,

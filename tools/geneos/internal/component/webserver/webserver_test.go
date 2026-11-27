@@ -23,6 +23,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -178,10 +179,13 @@ func TestRebuildKeystoreAndTruststore(t *testing.T) {
 		if err != nil || !slices.Contains(tk.Aliases(), "other-ca") || !slices.Contains(tk.Aliases(), "test-root-ca") {
 			t.Errorf("truststore entries %v, want other-ca preserved and the root added (%v)", tk.Aliases(), err)
 		}
-		if port := config.Get[uint16](i.Config(), "port"); port != 8443 {
-			t.Errorf("port = %d, want 8443", port)
+		// 8443 is used for TLS unless it is in use on this host, in which
+		// case another free port is allocated, and 8080 is never kept
+		port := config.Get[uint16](i.Config(), "port")
+		if port == 8080 || port == 0 {
+			t.Errorf("port = %d, want 8443 or another free port", port)
 		}
-		if data, _ := os.ReadFile(sp); !bytes.Contains(data, []byte("trustStore="+ts)) || !bytes.Contains(data, []byte("port=8443")) {
+		if data, _ := os.ReadFile(sp); !bytes.Contains(data, []byte("trustStore="+ts)) || !bytes.Contains(data, []byte(fmt.Sprintf("port=%d", port))) {
 			t.Errorf("security.properties does not refer to the truststore:\n%s", data)
 		}
 	})

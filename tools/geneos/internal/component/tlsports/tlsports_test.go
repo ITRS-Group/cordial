@@ -155,17 +155,73 @@ func TestApply(t *testing.T) {
 		}
 	})
 
-	t.Run("a port in use is never replaced by another", func(t *testing.T) {
+	t.Run("a port in use is replaced by the next free port", func(t *testing.T) {
 		insecure, secure, pairs := newPair(t)
 		logs.Reset()
 		// an instance already using the TLS port
 		newInstance(t, secure, true)
 		i := newInstance(t, insecure, true)
+		if !tlsports.Apply(i, pairs) {
+			t.Fatalf("port = %d, want a new port", port(i))
+		}
+		if p := port(i); p == 0 || p == insecure || p == secure {
+			t.Errorf("port = %d, want a free port other than %d or %d", p, insecure, secure)
+		}
+		if !strings.Contains(logs.String(), "using another port") {
+			t.Errorf("no warning logged: %q", logs.String())
+		}
+	})
+
+	// the port lookups are replaced to test the choices made
+	t.Run("the range for the component is used", func(t *testing.T) {
+		insecure, secure, pairs := newPair(t)
+		i := newInstance(t, insecure, true)
+		tlsports.Stub(t, nil,
+			func(*geneos.Host) map[uint16]struct{} { return map[uint16]struct{}{secure: {}} },
+			func(*geneos.Host, *geneos.Component) uint16 { return 7777 },
+			func(*geneos.Host, uint16) uint16 { t.Error("fallback used"); return 0 })
+		if !tlsports.Apply(i, pairs) || port(i) != 7777 {
+			t.Errorf("port = %d, want 7777", port(i))
+		}
+	})
+
+	t.Run("the next port above is used if the range is full", func(t *testing.T) {
+		insecure, secure, pairs := newPair(t)
+		i := newInstance(t, insecure, true)
+		var gotStart uint16
+		tlsports.Stub(t, nil,
+			func(*geneos.Host) map[uint16]struct{} { return map[uint16]struct{}{secure: {}} },
+			func(*geneos.Host, *geneos.Component) uint16 { return 0 },
+			func(_ *geneos.Host, start uint16) uint16 { gotStart = start; return 9999 })
+		if !tlsports.Apply(i, pairs) || port(i) != 9999 {
+			t.Errorf("port = %d, want 9999", port(i))
+		}
+		if gotStart != insecure+1 {
+			t.Errorf("search started at %d, want %d", gotStart, insecure+1)
+		}
+	})
+
+	t.Run("the port is kept if nothing is free", func(t *testing.T) {
+		insecure, secure, pairs := newPair(t)
+		i := newInstance(t, insecure, true)
+		tlsports.Stub(t, nil,
+			func(*geneos.Host) map[uint16]struct{} { return map[uint16]struct{}{secure: {}} },
+			func(*geneos.Host, *geneos.Component) uint16 { return 0 },
+			func(*geneos.Host, uint16) uint16 { return 0 })
 		if tlsports.Apply(i, pairs) || port(i) != insecure {
 			t.Errorf("port = %d, want unchanged %d", port(i), insecure)
 		}
-		if !strings.Contains(logs.String(), "already in use") {
-			t.Errorf("no warning logged: %q", logs.String())
+	})
+
+	t.Run("an instance already listening on the other port is kept", func(t *testing.T) {
+		insecure, secure, pairs := newPair(t)
+		i := newInstance(t, insecure, true)
+		tlsports.Stub(t,
+			func(_ geneos.Instance, p uint16) (bool, error) { return p == secure, nil },
+			func(*geneos.Host) map[uint16]struct{} { return map[uint16]struct{}{secure: {}} },
+			func(*geneos.Host, *geneos.Component) uint16 { t.Error("allocated a port"); return 0 }, nil)
+		if tlsports.Apply(i, pairs) || port(i) != insecure {
+			t.Errorf("port = %d, want unchanged %d", port(i), insecure)
 		}
 	})
 }

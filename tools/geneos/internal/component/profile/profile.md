@@ -342,7 +342,7 @@ The licence daemon settings are cleared and set again whenever the profile is ap
 
 ### Gateway Ports
 
-A TLS capable Gateway on the conventional insecure port 7039 is moved to the TLS port 7038, and a Gateway without TLS on 7038 is moved to 7039, but only if the other port is free. Any other port is never changed, and if the other port is in use then the Gateway keeps its configured port.
+A TLS capable Gateway on the conventional insecure port 7039 is moved to the TLS port 7038, and a Gateway without TLS on 7038 is moved to 7039, unless that port is in use. If it is in use, the next free port in the range for Gateways is allocated instead, and the `geneos` command reports which port was wanted and which was used. Any other port is never changed.
 
 ## Changing TLS when a Profile Is Applied Again
 
