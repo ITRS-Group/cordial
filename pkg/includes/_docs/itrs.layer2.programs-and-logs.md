@@ -198,6 +198,19 @@ Sampler includes add configuration to an existing sampler of the same name on th
 
 These sampler includes do nothing unless `Layer 2 - Application Baseline` is also attached to the Managed Entity. See also [Layer 3 Geneos site configuration](config.layer3.geneos.md).
 
+### Fallback key tables
+
+The include defines two File Keyword Monitor key tables in the `Layer 2 - Application Baseline` group, for applications that have no key tables of their own:
+
+| Key table | Purpose |
+| --------- | ------- |
+| `Layer 2 - Fallback Ignore Noise` | Ignores lines with the word `debug` or `trace` in the first 80 characters, which is where the level is in the common layouts, such as ` DEBUG `, `[DEBUG]`, `level=debug` and JSON `"level":"debug"` |
+| `Layer 2 - Fallback Common Errors` | Critical for the word `fatal` or `panic` in the first 80 characters and for out of memory, segmentation fault, core dumped and no space left on device. Warning for the word `error`, `err` or `severe` in the first 80 characters and for exceptions, tracebacks, permission denied, connection refused and connection reset |
+
+The first match wins, in both table order and key order within a table. List these tables last in the key tables of each file, after any application specific tables, with the ignore table before the errors table, so that debug and trace lines are discarded before the error keys are tested and lines that an earlier table has already matched are not affected.
+
+The level keys are regular expressions, not case sensitive, that look for the level only in the first 80 characters of a line, so a message that merely mentions the word error or debug later in the line is not matched. The other keys are plain strings, which need no escaping and are not case sensitive. An info line that has the word error near its start, such as `INFO no error found`, is still matched. In the XML the severities are `fail`, shown as critical in the table above, and `warning`. Key tables are not attached to any file by default.
+
 ## Review Notes
 
 - The `Services` sampler does not use `SAMPLER_GROUP`, so it is not shown in the `Programs and Logs` sampler group with the other two samplers.

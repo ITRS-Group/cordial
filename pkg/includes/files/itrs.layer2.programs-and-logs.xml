@@ -457,6 +457,179 @@ monitoring to application hours.-->
 			</environment>
 		</environmentGroup>
 	</environments>
+	<staticVars>
+		<fkmTables>
+			<fkmTableGroup name="Layer 2 - Application Baseline">
+				<fkmTable name="Layer 2 - Fallback Ignore Noise">
+					<!--Fallback table that ignores debug and trace lines. Add it to a Logs file
+after any application specific tables, as the first match wins in both table
+and key order and so lines claimed by an earlier table are not affected.
+
+The single key is a regular expression that looks for the word debug or trace
+in the first 80 characters of the line, where the level is in the common log
+layouts, such as " DEBUG ", "[DEBUG]", "|DEBUG|", level=debug and JSON
+"level":"debug". Looking only at the start of the line avoids ignoring a line
+that just mentions the word debug later in its message.-->
+					<keys>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>^.{0,80}\b(debug|trace)\b</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</ignoreKey>
+					</keys>
+				</fkmTable>
+				<fkmTable name="Layer 2 - Fallback Common Errors">
+					<!--Fallback table for common error strings, for applications that have no
+specific table. Add it to a Logs file after any application specific tables
+and after the Layer 2 - Fallback Ignore Noise table, so that debug and trace
+lines are ignored first. The first matching key wins, so fatal conditions come
+before errors. Fatal conditions are fail and errors are warning.
+
+The level keys are regular expressions that look for the level as a word in the
+first 80 characters of the line, so that a message which only mentions the
+word error is not matched. The other keys are plain strings, which are not
+case sensitive.-->
+					<keys>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>^.{0,80}\b(fatal|panic)\b</data>
+									</searchString>
+									<rules>REGEXP_IGNORE_CASE</rules>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>out of memory</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>OutOfMemoryError</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>segmentation fault</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>core dumped</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>no space left on device</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>fail</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>^.{0,80}\b(error|err|severe)\b</data>
+									</searchString>
+									<rules>REGEXP_IGNORE_CASE</rules>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>exception:</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>Exception in thread</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>Traceback (most recent call last)</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>permission denied</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>connection refused</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+						<key>
+							<setKey>
+								<match>
+									<searchString>
+										<data>connection reset</data>
+									</searchString>
+								</match>
+							</setKey>
+							<severity>warning</severity>
+						</key>
+					</keys>
+				</fkmTable>
+			</fkmTableGroup>
+		</fkmTables>
+	</staticVars>
 	<exportedData>
 		<dataSet name="Layer 2 - Application Baseline">
 			<paths>

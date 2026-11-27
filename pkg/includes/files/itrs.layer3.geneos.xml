@@ -1168,6 +1168,20 @@ of that Gateway, with credentials if it requires them.-->
 									<source>
 										<processDescriptor ref="Geneos Component Instance"/>
 									</source>
+									<tables>
+										<table>
+											<severity>warning</severity>
+											<keyTable>
+												<fkmTable ref="Layer 3 - Geneos Component Errors"/>
+											</keyTable>
+										</table>
+										<table>
+											<severity>warning</severity>
+											<keyTable>
+												<fkmTable ref="Layer 3 - Geneos Ignore Noise"/>
+											</keyTable>
+										</table>
+									</tables>
 									<alias>
 										<var ref="instanceType"/>
 										<data> </data>
@@ -1181,6 +1195,20 @@ of that Gateway, with credentials if it requires them.-->
 											<var ref="consoleLogFilePath"/>
 										</filename>
 									</source>
+									<tables>
+										<table>
+											<severity>warning</severity>
+											<keyTable>
+												<fkmTable ref="Layer 3 - Geneos Component Errors"/>
+											</keyTable>
+										</table>
+										<table>
+											<severity>warning</severity>
+											<keyTable>
+												<fkmTable ref="Layer 3 - Geneos Ignore Noise"/>
+											</keyTable>
+										</table>
+									</tables>
 									<alias>
 										<var ref="instanceType"/>
 										<data> </data>
@@ -1214,6 +1242,20 @@ path.-->
 											</pattern>
 										</dynamicFiles>
 									</source>
+									<tables>
+										<table>
+											<severity>warning</severity>
+											<keyTable>
+												<fkmTable ref="Layer 3 - Geneos Component Errors"/>
+											</keyTable>
+										</table>
+										<table>
+											<severity>warning</severity>
+											<keyTable>
+												<fkmTable ref="Layer 3 - Geneos Ignore Noise"/>
+											</keyTable>
+										</table>
+									</tables>
 									<alias>
 										<var ref="instanceType"/>
 										<data> </data>
@@ -2947,6 +2989,275 @@ Gateway load managed entity.-->
 		</environmentGroup>
 	</environments>
 	<staticVars>
+		<fkmTables>
+			<fkmTableGroup name="Layer 3 - Geneos">
+				<fkmTable name="Layer 3 - Geneos Ignore Noise">
+					<!--Ignores lines that should never raise an alert in the logs and console
+output of Geneos components: debug, trace and info lines in the layouts used by
+the Gateway, Netprobe and Licence Daemon (" INFO: "), Active Console 2 ("[INFO]"),
+the Collection Agent and Netprobe Router ("] INFO ") and the Collection Agent
+logback start-up messages ("|-INFO in"). It also ignores the Gateway publisher
+warning "Type changed from", which is raised whenever a cell changes between a
+string and a number and can occur thousands of times.
+
+Clear keys in other tables are processed independently of ignore keys, so the
+recovery messages in info lines still clear keys when they are ignored here.-->
+					<keys>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>DEBUG: </data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>TRACE: </data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>INFO: </data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>[DEBUG]</data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>[TRACE]</data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>[INFO]</data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>] DEBUG </data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>] TRACE </data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>] INFO </data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>|-INFO in</data>
+								</searchString>
+							</match>
+						</ignoreKey>
+						<ignoreKey>
+							<match>
+								<searchString>
+									<data>Type changed from</data>
+								</searchString>
+							</match>
+						</ignoreKey>
+					</keys>
+				</fkmTable>
+				<fkmTable name="Layer 3 - Geneos Component Errors">
+					<!--Alerts on the problems seen in the logs of Geneos components such as the
+Gateway, Netprobe, Licence Daemon, Collection Agent and Active Console 2. The
+first match wins, so critical conditions come first, then specific warnings.
+There is deliberately no generic ERROR key, as a busy system logs thousands of
+distinct errors from user configured samplers and each distinct line would
+raise a row.
+
+Each key is a regular expression anchored to the start of the line, so that it
+only matches when the log level is in its place in the layout. A line that only
+mentions a message in its text, such as the Gateway info line that reports an
+alert for a row of this sampler, is not matched. Warning level lines are only
+matched when they are in the list, as many are expected during normal operation.
+
+Conditions that heal are cleared in one of two ways. A clear key matches the
+message that reports recovery, such as "Connected to Licensing Daemon". Where a
+message is repeated for as long as the problem lasts, a clear time, in seconds,
+clears the key after that time without a new match. Fatal conditions and
+stopped sampling have no clear and need to be cleared by hand or by a restart.
+
+Clear keys are processed independently of ignore keys, so the recovery messages
+in info lines clear keys here even though the ignore table discards those lines.-->
+					<keys>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+[+-]\d{4} +FATAL:</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</setKey>
+						<severity>fail</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+[+-]\d{4} +ERROR: Sampling stopped</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</setKey>
+						<severity>fail</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+[+-]\d{4} +WARN: GatewayLicenceManager Gateway is not licensed</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</setKey>
+						<clearKey>
+							<match>
+								<searchString>
+									<data>Gateway is licenced</data>
+								</searchString>
+							</match>
+							<mode>all</mode>
+						</clearKey>
+						<severity>fail</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+[+-]\d{4} +ERROR: encryption Cannot decrypt AES password</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</setKey>
+						<severity>fail</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>OutOfMemoryError</data>
+								</searchString>
+							</match>
+						</setKey>
+						<severity>fail</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>out of memory</data>
+								</searchString>
+							</match>
+						</setKey>
+						<severity>fail</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+[+-]\d{4} +WARN: LicenceManager Licence Daemon not running/disconnected</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</setKey>
+						<clearKey>
+							<match>
+								<searchString>
+									<data>Connected to Licensing Daemon</data>
+								</searchString>
+							</match>
+							<mode>all</mode>
+						</clearKey>
+						<severity>warning</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+[+-]\d{4} +WARN: RuleManager Worker \d+ appears to have stopped responding</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</setKey>
+						<clearKey>
+							<match>
+								<searchString>
+									<data>responding again</data>
+								</searchString>
+							</match>
+							<mode>latest</mode>
+						</clearKey>
+						<severity>warning</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+[+-]\d{4} +WARN: SetupManager Setup Validation Problems</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</setKey>
+						<severity>warning</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+[+-]\d{4} +ERROR: SSL</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</setKey>
+						<clearTime>
+							<data>900</data>
+						</clearTime>
+						<severity>warning</severity>
+					</key>
+					<key>
+						<setKey>
+							<match>
+								<searchString>
+									<data>^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+[+-]\d{4} +WARN: ConManager:heartbeat DROP</data>
+								</searchString>
+								<rules>REGEXP_IGNORE_CASE</rules>
+							</match>
+						</setKey>
+						<clearTime>
+							<data>900</data>
+						</clearTime>
+						<severity>warning</severity>
+					</key>
+					</keys>
+				</fkmTable>
+			</fkmTableGroup>
+		</fkmTables>
 		<processDescriptors>
 			<processDescriptorGroup name="Layer 3 - Geneos Components">
 				<processDescriptor name="Geneos Component Instance">

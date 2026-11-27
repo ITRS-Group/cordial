@@ -153,6 +153,35 @@ The Gateway Info samplers, in the `Layer 3 - Geneos Gateway Info` sampler group,
 | Gateway Info - Licence | `Licence` | 2 |
 | Gateway Info - ITRS Analytics | `ITRS Analytics` | 4 |
 
+### Log key tables
+
+The `Layer 3 - Geneos Component Logs` and `Layer 3 - Geneos Collection Agent Logs` sampler includes attach two File Keyword Monitor key tables to each file they add, in this order. The first match wins, in table order and in key order within a table.
+
+| Order | Key table | Purpose |
+| ----- | --------- | ------- |
+| 1 | `Layer 3 - Geneos Component Errors` | Critical for `FATAL`, `Sampling stopped`, an unlicensed Gateway, AES passwords that cannot be decrypted and out of memory. Warning for a Licence Daemon that is not running, rule workers that have stopped responding, setup validation problems, TLS errors and dropped heartbeats. There is no generic `ERROR` key: a busy Gateway logs thousands of distinct errors from user configured samplers, and each distinct line would raise a row |
+| 2 | `Layer 3 - Geneos Ignore Noise` | Ignores debug, trace and info lines in the layouts of the Gateway, Netprobe and Licence Daemon (` INFO: `), Active Console 2 (`[INFO]`), the Collection Agent and Netprobe Router (`] INFO `) and logback start-up messages (`\|-INFO in`), and the Gateway warning `Type changed from` |
+
+Each key in the error table is a regular expression anchored to the start of the line, so it only matches when the log level is in its place in the layout. A line that only mentions an error in its text is not matched. An example is the Gateway info line that reports an alert for a row of the `Logs` sampler, which can contain the text `ERROR:` in the row name.
+
+Clear keys are processed independently of ignore keys, so the recovery messages, which are info lines, still clear keys when the ignore table discards them.
+
+Conditions that heal clear themselves in one of two ways:
+
+| Condition | How it clears |
+| --------- | ------------- |
+| Licence Daemon not running or disconnected | A `Connected to Licensing Daemon` message |
+| Gateway not licensed | A `Gateway is licenced` message |
+| Rule worker not responding | A `responding again` message, clearing the latest match |
+| TLS errors and dropped heartbeats | After 900 seconds without a new match, as these messages repeat while the problem lasts |
+
+Fatal conditions, stopped sampling, AES decryption failures, out of memory and setup validation problems have no automatic clear. Clear them by hand or by restarting the component. The clear times are in seconds.
+
+The keys were chosen from the Gateway, Netprobe, Licence Daemon, Collection Agent, Netprobe Router and Active Console 2 logs of a test system, so they follow the real message layouts. Warning level lines are only matched where they are listed, as many are expected in normal operation. The key tables are in the `Layer 3 - Geneos` group.
+
+>[!NOTE]
+>The XML severity values for keys are `fail` and `warning`. In the tables above `fail` is the critical severity.
+
 ## Variables
 
 ### Global Geneos Command Variables
